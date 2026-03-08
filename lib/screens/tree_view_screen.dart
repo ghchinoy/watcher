@@ -128,6 +128,28 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
           children: [
             ContentArea(
               builder: (context, scrollController) {
+                if (topLevelIssues.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        MacosIcon(
+                          CupertinoIcons.checkmark_seal_fill,
+                          size: 48,
+                          color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No open issues found',
+                          style: MacosTheme.of(context).typography.title2.copyWith(
+                                color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.5),
+                              ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return ListView.builder(
                   key: _treeKey,
                   controller: scrollController,

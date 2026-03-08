@@ -19,3 +19,8 @@ For detailed architectural decisions, always refer to and update `docs/ARCHITECT
 ## Interaction & Command Execution
 - Prefer using the `dart` tool integrations when manipulating Dart/Flutter code (e.g. `dart_format`, `dart_fix`, `analyze_files`, etc.).
 - When running shell commands that modify the filesystem, prefer non-interactive flags as outlined in `AGENTS.md` (e.g., `rm -f`, `cp -f`).
+
+## macOS UI & Flutter Quirks
+- **Sidebar & Inspector Panels:** Never set `MacosWindow.endSidebar` or `sidebar` to `null` dynamically, as it crashes the internal layout builder. Instead, maintain the widget in the tree (e.g., with 0 width) and use `MacosWindowScope.of(context).toggleEndSidebar()` to animate it open and closed. Use `ValueKey` on the `Sidebar` if you need to force a rebuild for a new data selection.
+- **ToolBar Layout:** Be cautious of `RenderFlex` overflows in the `ToolBar`. The `title` property has a strict width constraint. Interactive widgets like Segmented Controls should be placed in the `actions` array using `CustomToolbarItem`.
+- **Shared Preferences:** macOS uses `NSUserDefaults` keyed to the `PRODUCT_BUNDLE_IDENTIFIER` in `macos/Runner/Configs/AppInfo.xcconfig`. Changing this ID will effectively wipe all saved `shared_preferences` for the application.

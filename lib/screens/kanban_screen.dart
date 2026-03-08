@@ -87,6 +87,28 @@ class KanbanScreen extends StatelessWidget {
           children: [
             ContentArea(
               builder: (context, scrollController) {
+                if (issues.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        MacosIcon(
+                          CupertinoIcons.checkmark_seal_fill,
+                          size: 48,
+                          color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No issues found',
+                          style: MacosTheme.of(context).typography.title2.copyWith(
+                                color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.5),
+                              ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return SingleChildScrollView(
                   controller: scrollController,
                   scrollDirection: Axis.horizontal,
