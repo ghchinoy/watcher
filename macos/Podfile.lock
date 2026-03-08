@@ -1,0 +1,47 @@
+PODS:
+  - appkit_ui_element_colors (1.0.0):
+    - FlutterMacOS
+  - file_selector_macos (0.0.1):
+    - FlutterMacOS
+  - FlutterMacOS (1.0.0)
+  - macos_ui (0.1.0):
+    - FlutterMacOS
+  - macos_window_utils (1.0.0):
+    - FlutterMacOS
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - appkit_ui_element_colors (from `Flutter/ephemeral/.symlinks/plugins/appkit_ui_element_colors/macos`)
+  - file_selector_macos (from `Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos`)
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - macos_ui (from `Flutter/ephemeral/.symlinks/plugins/macos_ui/macos`)
+  - macos_window_utils (from `Flutter/ephemeral/.symlinks/plugins/macos_window_utils/macos`)
+  - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
+
+EXTERNAL SOURCES:
+  appkit_ui_element_colors:
+    :path: Flutter/ephemeral/.symlinks/plugins/appkit_ui_element_colors/macos
+  file_selector_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  macos_ui:
+    :path: Flutter/ephemeral/.symlinks/plugins/macos_ui/macos
+  macos_window_utils:
+    :path: Flutter/ephemeral/.symlinks/plugins/macos_window_utils/macos
+  shared_preferences_foundation:
+    :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
+
+SPEC CHECKSUMS:
+  appkit_ui_element_colors: bb247a2d02b8313cc47e1b83be48d996034c4001
+  file_selector_macos: 3e56eaea051180007b900eacb006686fd54da150
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  macos_ui: 50a2048b7ef82bde42570e2775f50907537a0eeb
+  macos_window_utils: 721df4da91cb4bde7b2b7b6ae93cdead4851118f
+  shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
+
+PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+
+COCOAPODS: 1.16.2

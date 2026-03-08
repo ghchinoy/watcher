@@ -1,0 +1,35 @@
+digraph G {
+    node [shape=box, style=rounded, fontname="Helvetica"];
+    edge [dir=none];
+
+    WatcherApp -> ListenableBuilder [label="build"];
+    ListenableBuilder -> "MacosApp.router";
+    "MacosApp.router" -> GoRouter [label="routerConfig"];
+    GoRouter -> ShellRoute [label="routes"];
+    ShellRoute -> HomeScreen [label="builder"];
+    HomeScreen -> MacosWindow;
+    MacosWindow -> Sidebar [label="sidebar"];
+    Sidebar -> SidebarItems [label="builder"];
+    MacosWindow -> ChildWidget [label="child"];
+
+    ChildWidget -> ProjectDashboard [label="/"];
+    ChildWidget -> TreeViewScreen [label="/tree"];
+    ChildWidget -> KanbanScreen [label="/kanban"];
+
+    ProjectDashboard -> "MacosScaffold (Dashboard)";
+    "MacosScaffold (Dashboard)" -> "ToolBar (Dashboard)" [label="toolBar"];
+    "MacosScaffold (Dashboard)" -> "ContentArea (Dashboard)" [label="children"];
+
+    TreeViewScreen -> "MacosScaffold (Tree)";
+    "MacosScaffold (Tree)" -> "ToolBar (Tree)" [label="toolBar"];
+    "MacosScaffold (Tree)" -> "ContentArea (Tree)" [label="children"];
+    "ContentArea (Tree)" -> ListView [label="builder"];
+
+    KanbanScreen -> "MacosScaffold (Kanban)";
+    "MacosScaffold (Kanban)" -> "ToolBar (Kanban)" [label="toolBar"];
+    "MacosScaffold (Kanban)" -> "ContentArea (Kanban)" [label="children"];
+    "ContentArea (Kanban)" -> SingleChildScrollView [label="builder"];
+    SingleChildScrollView -> Row [label="child"];
+    Row -> KanbanColumn [label="children"];
+    KanbanColumn -> KanbanCard [label="ListView"];
+}
