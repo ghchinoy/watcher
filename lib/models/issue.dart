@@ -27,9 +27,12 @@ class Issue {
   final int priority;
   final String issueType;
   final String? owner;
+  final String? assignee;
   final DateTime createdAt;
   final String? createdBy;
   final DateTime updatedAt;
+  final DateTime? closedAt;
+  final String? closeReason;
   final int? dependencyCount;
   final int? dependentCount;
   final int? commentCount;
@@ -43,9 +46,12 @@ class Issue {
     required this.priority,
     required this.issueType,
     this.owner,
+    this.assignee,
     required this.createdAt,
     this.createdBy,
     required this.updatedAt,
+    this.closedAt,
+    this.closeReason,
     this.dependencyCount,
     this.dependentCount,
     this.commentCount,

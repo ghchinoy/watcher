@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
-import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
+import '../widgets/kanban_column.dart';
 
 class KanbanScreen extends StatelessWidget {
   const KanbanScreen({super.key});
@@ -64,7 +64,10 @@ class KanbanScreen extends StatelessWidget {
         final issues = appState.currentIssues;
         final openIssues = issues.where((i) => i.status == 'open').toList();
         final inProgressIssues = issues.where((i) => i.status == 'in_progress').toList();
-        final closedIssues = issues.where((i) => i.status == 'closed').toList();
+        
+        // Sort closed issues by updatedAt descending (most recently closed/updated first)
+        final closedIssues = issues.where((i) => i.status == 'closed').toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
         return MacosScaffold(
           toolBar: ToolBar(
@@ -115,9 +118,9 @@ class KanbanScreen extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _KanbanColumn(title: 'Open', issues: openIssues),
-                      _KanbanColumn(title: 'In Progress', issues: inProgressIssues),
-                      _KanbanColumn(title: 'Closed', issues: closedIssues),
+                      KanbanColumn(title: 'Open', statusKey: 'open', issues: openIssues),
+                      KanbanColumn(title: 'In Progress', statusKey: 'in_progress', issues: inProgressIssues),
+                      KanbanColumn(title: 'Closed', statusKey: 'closed', issues: closedIssues),
                     ],
                   ),
                 );
@@ -126,130 +129,6 @@ class KanbanScreen extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _KanbanColumn extends StatelessWidget {
-  final String title;
-  final List<Issue> issues;
-
-  const _KanbanColumn({required this.title, required this.issues});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 300,
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: MacosTheme.of(context).canvasColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MacosTheme.of(context).dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(
-              '$title (${issues.length})',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Container(height: 1, color: MacosTheme.of(context).dividerColor),
-          Expanded(
-            child: ListView.builder(
-              itemCount: issues.length,
-              itemBuilder: (context, index) {
-                return _KanbanCard(issue: issues[index]);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KanbanCard extends StatelessWidget {
-  final Issue issue;
-
-  const _KanbanCard({required this.issue});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => appState.selectIssue(issue),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: CupertinoColors.systemGrey6,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: MacosTheme.of(context).dividerColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    issue.id,
-                    style: const TextStyle(fontSize: 12, color: CupertinoColors.systemGrey),
-                  ),
-                  _buildTypeBadge(issue.issueType),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                issue.title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              if (issue.owner != null && issue.owner!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Owner: ${issue.owner}',
-                  style: const TextStyle(fontSize: 11),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeBadge(String type) {
-    Color color;
-    switch (type.toLowerCase()) {
-      case 'epic':
-        color = CupertinoColors.systemPurple;
-        break;
-      case 'bug':
-        color = CupertinoColors.systemRed;
-        break;
-      case 'task':
-        color = CupertinoColors.systemBlue;
-        break;
-      case 'feature':
-        color = CupertinoColors.systemGreen;
-        break;
-      default:
-        color = CupertinoColors.systemGrey;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        type.toUpperCase(),
-        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
-      ),
     );
   }
 }

@@ -2,9 +2,30 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../widgets/view_mode_segmented_control.dart';
+import '../widgets/activity_ticker.dart';
+import '../widgets/planner_modal.dart';
+import '../widgets/assessment_modal.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
+
+  void _showPlanner(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (context) => MacosSheet(
+        child: PlannerModal(project: appState.selectedProject!),
+      ),
+    );
+  }
+
+  void _showAssessment(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (context) => MacosSheet(
+        child: AssessmentModal(project: appState.selectedProject!),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +116,20 @@ class ProjectDashboard extends StatelessWidget {
             ),
             title: Text(appState.selectedProject!.name),
             actions: [
+              ToolBarIconButton(
+                label: 'AI Health Assessment',
+                icon: const MacosIcon(CupertinoIcons.heart),
+                showLabel: false,
+                tooltipMessage: 'AI Health Assessment',
+                onPressed: () => _showAssessment(context),
+              ),
+              ToolBarIconButton(
+                label: 'AI Planner',
+                icon: const MacosIcon(CupertinoIcons.sparkles),
+                showLabel: false,
+                tooltipMessage: 'AI Planner',
+                onPressed: () => _showPlanner(context),
+              ),
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8.0),
@@ -119,15 +154,22 @@ class ProjectDashboard extends StatelessWidget {
                       const SizedBox(height: 20),
                       Row(
                         children: [
-                          _buildStatCard('Total Issues', issues.length.toString()),
+                          _buildStatCard(context, 'Total Issues', issues.length.toString()),
                           const SizedBox(width: 16),
-                          _buildStatCard('Open', openCount.toString()),
+                          _buildStatCard(context, 'Open', openCount.toString()),
                           const SizedBox(width: 16),
-                          _buildStatCard('In Progress', inProgressCount.toString()),
+                          _buildStatCard(context, 'In Progress', inProgressCount.toString()),
                           const SizedBox(width: 16),
-                          _buildStatCard('Closed', closedCount.toString()),
+                          _buildStatCard(context, 'Closed', closedCount.toString()),
                         ],
                       ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'Recent Activity',
+                        style: MacosTheme.of(context).typography.title2,
+                      ),
+                      const SizedBox(height: 12),
+                      const ActivityTicker(),
                     ],
                   ),
                 );
@@ -139,11 +181,11 @@ class ProjectDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value) {
+  Widget _buildStatCard(BuildContext context, String title, String value) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey6,
+        color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

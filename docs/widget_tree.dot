@@ -7,10 +7,19 @@ digraph G {
     "MacosApp.router" -> GoRouter [label="routerConfig"];
     GoRouter -> ShellRoute [label="routes"];
     ShellRoute -> HomeScreen [label="builder"];
-    HomeScreen -> MacosWindow;
-    MacosWindow -> Sidebar [label="sidebar"];
-    Sidebar -> SidebarItems [label="builder"];
-    MacosWindow -> ChildWidget [label="child"];
+    
+    HomeScreen -> ListenableBuilder;
+    ListenableBuilder -> MacosWindow;
+    
+    MacosWindow -> "Sidebar (Projects)" [label="sidebar"];
+    "Sidebar (Projects)" -> SidebarItems [label="builder"];
+    
+    MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar"];
+    "Sidebar (Issue Inspector)" -> IssueInspector [label="builder"];
+    IssueInspector -> MacosPopupButton [label="Status/Priority\n(interactive)"];
+    
+    MacosWindow -> _InspectorController [label="child"];
+    _InspectorController -> ChildWidget;
 
     ChildWidget -> ProjectDashboard [label="/"];
     ChildWidget -> TreeViewScreen [label="/tree"];
@@ -19,17 +28,27 @@ digraph G {
     ProjectDashboard -> "MacosScaffold (Dashboard)";
     "MacosScaffold (Dashboard)" -> "ToolBar (Dashboard)" [label="toolBar"];
     "MacosScaffold (Dashboard)" -> "ContentArea (Dashboard)" [label="children"];
+    "ContentArea (Dashboard)" -> SingleChildScrollView;
+    SingleChildScrollView -> ActivityTicker [label="Recent Activity"];
+    
+    "ToolBar (Dashboard)" -> ViewModeSegmentedControl [label="actions"];
+    "ToolBar (Tree)" -> ViewModeSegmentedControl [label="actions"];
+    "ToolBar (Kanban)" -> ViewModeSegmentedControl [label="actions"];
 
     TreeViewScreen -> "MacosScaffold (Tree)";
     "MacosScaffold (Tree)" -> "ToolBar (Tree)" [label="toolBar"];
     "MacosScaffold (Tree)" -> "ContentArea (Tree)" [label="children"];
-    "ContentArea (Tree)" -> ListView [label="builder"];
+    "ContentArea (Tree)" -> "ListView (Tree)" [label="builder"];
+    "ListView (Tree)" -> TreeNode [label="itemBuilder"];
 
     KanbanScreen -> "MacosScaffold (Kanban)";
     "MacosScaffold (Kanban)" -> "ToolBar (Kanban)" [label="toolBar"];
     "MacosScaffold (Kanban)" -> "ContentArea (Kanban)" [label="children"];
-    "ContentArea (Kanban)" -> SingleChildScrollView [label="builder"];
-    SingleChildScrollView -> Row [label="child"];
+    "ContentArea (Kanban)" -> "SingleChildScrollView (Kanban)" [label="builder"];
+    "SingleChildScrollView (Kanban)" -> Row [label="child"];
     Row -> KanbanColumn [label="children"];
-    KanbanColumn -> KanbanCard [label="ListView"];
+    KanbanColumn -> DragTarget [label="build"];
+    DragTarget -> "ListView (Column)" [label="builder"];
+    "ListView (Column)" -> KanbanCard [label="itemBuilder"];
+    KanbanCard -> Draggable [label="build"];
 }
