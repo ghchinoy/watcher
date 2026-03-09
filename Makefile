@@ -19,7 +19,8 @@ build: ## Build the macOS release app
 install: build ## Build and install to /Applications
 	@echo "Installing $(APP_NAME) to $(INSTALL_DIR)..."
 	@rm -rf $(INSTALL_DIR)/$(APP_NAME)
-	@cp -R $(BUILD_DIR)/$(APP_NAME) $(INSTALL_DIR)/
+	@cp -a $(BUILD_DIR)/$(APP_NAME) $(INSTALL_DIR)/
+	@xattr -cr $(INSTALL_DIR)/$(APP_NAME)
 	@echo "Installed successfully! You can now open $(APP_NAME) from your Applications folder."
 
 run: ## Run the app in debug mode
