@@ -26,12 +26,25 @@
 
 ### Installation
 
-Clone this repository and build the macOS application:
+Clone this repository and get the dependencies:
 
 ```bash
 git clone https://github.com/yourusername/watcher.git
 cd watcher
 flutter pub get
+```
+
+**To install the app on your Mac:**
+
+We strongly recommend using the included `Makefile` to install Watcher directly to your `/Applications` folder. This process automatically builds the release version, strips Gatekeeper quarantine flags, and recursively applies an ad-hoc code signature to all embedded frameworks. This prevents macOS from silently crashing the app on launch due to Apple Mobile File Integrity (AMFI) policies.
+
+```bash
+make install
+```
+
+**To run the app in development mode:**
+
+```bash
 flutter run -d macos
 ```
 
