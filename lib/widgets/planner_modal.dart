@@ -36,7 +36,10 @@ class _PlannerModalState extends State<PlannerModal> {
     });
 
     try {
-      final result = await PlannerService.generatePlan(widget.project.path, _goalController.text);
+      final result = await PlannerService.generatePlan(
+        widget.project.path,
+        _goalController.text,
+      );
       setState(() {
         _planMarkdown = result;
       });
@@ -112,7 +115,10 @@ class _PlannerModalState extends State<PlannerModal> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text('Error: $_error', style: const TextStyle(color: CupertinoColors.systemRed)),
+                child: Text(
+                  'Error: $_error',
+                  style: const TextStyle(color: CupertinoColors.systemRed),
+                ),
               ),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -127,8 +133,8 @@ class _PlannerModalState extends State<PlannerModal> {
                 PushButton(
                   controlSize: ControlSize.large,
                   onPressed: _isPlanning ? null : _generatePlan,
-                  child: _isPlanning 
-                      ? const ProgressCircle(radius: 8) 
+                  child: _isPlanning
+                      ? const ProgressCircle(radius: 8)
                       : const Text('Generate Plan'),
                 ),
               ],
@@ -138,9 +144,14 @@ class _PlannerModalState extends State<PlannerModal> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
+                  color: MacosDynamicColor.resolve(
+                    CupertinoColors.systemGrey6,
+                    context,
+                  ),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: MacosTheme.of(context).dividerColor),
+                  border: Border.all(
+                    color: MacosTheme.of(context).dividerColor,
+                  ),
                 ),
                 child: Markdown(
                   data: _planMarkdown!,
@@ -152,7 +163,9 @@ class _PlannerModalState extends State<PlannerModal> {
                     h3: MacosTheme.of(context).typography.title3,
                     code: TextStyle(
                       fontFamily: 'Courier',
-                      backgroundColor: MacosTheme.of(context).dividerColor.withValues(alpha: 0.1),
+                      backgroundColor: MacosTheme.of(
+                        context,
+                      ).dividerColor.withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -162,7 +175,10 @@ class _PlannerModalState extends State<PlannerModal> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text('Error: $_error', style: const TextStyle(color: CupertinoColors.systemRed)),
+                child: Text(
+                  'Error: $_error',
+                  style: const TextStyle(color: CupertinoColors.systemRed),
+                ),
               ),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -181,8 +197,8 @@ class _PlannerModalState extends State<PlannerModal> {
                 PushButton(
                   controlSize: ControlSize.large,
                   onPressed: _isExecuting ? null : _executePlan,
-                  child: _isExecuting 
-                      ? const ProgressCircle(radius: 8) 
+                  child: _isExecuting
+                      ? const ProgressCircle(radius: 8)
                       : const Text('Approve & Execute'),
                 ),
               ],

@@ -55,7 +55,10 @@ class _AssessmentModalState extends State<AssessmentModal> {
     });
 
     try {
-      final script = await PlannerService.generateAutoFixScript(widget.project.path, _assessmentMarkdown!);
+      final script = await PlannerService.generateAutoFixScript(
+        widget.project.path,
+        _assessmentMarkdown!,
+      );
       if (mounted) {
         setState(() {
           _fixScriptMarkdown = script;
@@ -81,7 +84,10 @@ class _AssessmentModalState extends State<AssessmentModal> {
     });
 
     try {
-      await PlannerService.executeScript(widget.project.path, _fixScriptMarkdown!);
+      await PlannerService.executeScript(
+        widget.project.path,
+        _fixScriptMarkdown!,
+      );
       if (mounted) {
         Navigator.of(context).pop(); // Close the modal on success
       }
@@ -136,7 +142,10 @@ class _AssessmentModalState extends State<AssessmentModal> {
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text('Error: $_error', style: const TextStyle(color: CupertinoColors.systemRed)),
+                  child: Text(
+                    'Error: $_error',
+                    style: const TextStyle(color: CupertinoColors.systemRed),
+                  ),
                 ),
               ),
             )
@@ -145,9 +154,14 @@ class _AssessmentModalState extends State<AssessmentModal> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
+                  color: MacosDynamicColor.resolve(
+                    CupertinoColors.systemGrey6,
+                    context,
+                  ),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: MacosTheme.of(context).dividerColor),
+                  border: Border.all(
+                    color: MacosTheme.of(context).dividerColor,
+                  ),
                 ),
                 child: Markdown(
                   data: _fixScriptMarkdown ?? _assessmentMarkdown!,
@@ -159,12 +173,18 @@ class _AssessmentModalState extends State<AssessmentModal> {
                     h3: MacosTheme.of(context).typography.title3,
                     code: TextStyle(
                       fontFamily: 'Courier',
-                      backgroundColor: MacosDynamicColor.resolve(CupertinoColors.systemGrey4, context).withValues(alpha: 0.5),
+                      backgroundColor: MacosDynamicColor.resolve(
+                        CupertinoColors.systemGrey4,
+                        context,
+                      ).withValues(alpha: 0.5),
                       color: MacosTheme.of(context).typography.body.color,
                     ),
                     codeblockPadding: const EdgeInsets.all(8),
                     codeblockDecoration: BoxDecoration(
-                      color: MacosDynamicColor.resolve(CupertinoColors.systemGrey5, context),
+                      color: MacosDynamicColor.resolve(
+                        CupertinoColors.systemGrey5,
+                        context,
+                      ),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -175,7 +195,10 @@ class _AssessmentModalState extends State<AssessmentModal> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text('Error: $_error', style: const TextStyle(color: CupertinoColors.systemRed)),
+                child: Text(
+                  'Error: $_error',
+                  style: const TextStyle(color: CupertinoColors.systemRed),
+                ),
               ),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -195,8 +218,8 @@ class _AssessmentModalState extends State<AssessmentModal> {
                   PushButton(
                     controlSize: ControlSize.large,
                     onPressed: _isExecuting ? null : _executeFixScript,
-                    child: _isExecuting 
-                        ? const ProgressCircle(radius: 8) 
+                    child: _isExecuting
+                        ? const ProgressCircle(radius: 8)
                         : const Text('Approve & Execute Fixes'),
                   ),
                 ] else ...[
@@ -210,8 +233,8 @@ class _AssessmentModalState extends State<AssessmentModal> {
                   PushButton(
                     controlSize: ControlSize.large,
                     onPressed: _isFixing ? null : _generateFixScript,
-                    child: _isFixing 
-                        ? const ProgressCircle(radius: 8) 
+                    child: _isFixing
+                        ? const ProgressCircle(radius: 8)
                         : const Text('Generate Fix Script'),
                   ),
                 ],

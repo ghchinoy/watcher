@@ -18,6 +18,7 @@ class Interaction {
     this.details,
   });
 
-  factory Interaction.fromJson(Map<String, dynamic> json) => _$InteractionFromJson(json);
+  factory Interaction.fromJson(Map<String, dynamic> json) =>
+      _$InteractionFromJson(json);
   Map<String, dynamic> toJson() => _$InteractionToJson(this);
 }

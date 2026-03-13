@@ -27,9 +27,8 @@ class KanbanScreen extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => const Center(
-                  child: Text('No project selected.'),
-                ),
+                builder: (context, scrollController) =>
+                    const Center(child: Text('No project selected.')),
               ),
             ],
           );
@@ -53,7 +52,10 @@ class KanbanScreen extends StatelessWidget {
                 builder: (context, scrollController) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text('Error: ${appState.error}', style: const TextStyle(color: CupertinoColors.systemRed)),
+                    child: Text(
+                      'Error: ${appState.error}',
+                      style: const TextStyle(color: CupertinoColors.systemRed),
+                    ),
                   ),
                 ),
               ),
@@ -63,8 +65,10 @@ class KanbanScreen extends StatelessWidget {
 
         final issues = appState.currentIssues;
         final openIssues = issues.where((i) => i.status == 'open').toList();
-        final inProgressIssues = issues.where((i) => i.status == 'in_progress').toList();
-        
+        final inProgressIssues = issues
+            .where((i) => i.status == 'in_progress')
+            .toList();
+
         // Sort closed issues by updatedAt descending (most recently closed/updated first)
         final closedIssues = issues.where((i) => i.status == 'closed').toList()
           ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -98,13 +102,18 @@ class KanbanScreen extends StatelessWidget {
                         MacosIcon(
                           CupertinoIcons.checkmark_seal_fill,
                           size: 48,
-                          color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.2),
+                          color: MacosTheme.of(
+                            context,
+                          ).typography.body.color?.withValues(alpha: 0.2),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No issues found',
-                          style: MacosTheme.of(context).typography.title2.copyWith(
-                                color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.5),
+                          style: MacosTheme.of(context).typography.title2
+                              .copyWith(
+                                color: MacosTheme.of(
+                                  context,
+                                ).typography.body.color?.withValues(alpha: 0.5),
                               ),
                         ),
                       ],
@@ -118,9 +127,21 @@ class KanbanScreen extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      KanbanColumn(title: 'Open', statusKey: 'open', issues: openIssues),
-                      KanbanColumn(title: 'In Progress', statusKey: 'in_progress', issues: inProgressIssues),
-                      KanbanColumn(title: 'Closed', statusKey: 'closed', issues: closedIssues),
+                      KanbanColumn(
+                        title: 'Open',
+                        statusKey: 'open',
+                        issues: openIssues,
+                      ),
+                      KanbanColumn(
+                        title: 'In Progress',
+                        statusKey: 'in_progress',
+                        issues: inProgressIssues,
+                      ),
+                      KanbanColumn(
+                        title: 'Closed',
+                        statusKey: 'closed',
+                        issues: closedIssues,
+                      ),
                     ],
                   ),
                 );

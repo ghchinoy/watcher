@@ -12,9 +12,8 @@ class ProjectDashboard extends StatelessWidget {
   void _showPlanner(BuildContext context) {
     showMacosSheet(
       context: context,
-      builder: (context) => MacosSheet(
-        child: PlannerModal(project: appState.selectedProject!),
-      ),
+      builder: (context) =>
+          MacosSheet(child: PlannerModal(project: appState.selectedProject!)),
     );
   }
 
@@ -70,9 +69,8 @@ class ProjectDashboard extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => const Center(
-                  child: ProgressCircle(),
-                ),
+                builder: (context, scrollController) =>
+                    const Center(child: ProgressCircle()),
               ),
             ],
           );
@@ -93,9 +91,8 @@ class ProjectDashboard extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => Center(
-                  child: Text('Error: ${appState.error}'),
-                ),
+                builder: (context, scrollController) =>
+                    Center(child: Text('Error: ${appState.error}')),
               ),
             ],
           );
@@ -103,9 +100,11 @@ class ProjectDashboard extends StatelessWidget {
 
         final issues = appState.currentIssues;
         final openCount = issues.where((i) => i.status == 'open').length;
-        final inProgressCount = issues.where((i) => i.status == 'in_progress').length;
+        final inProgressCount = issues
+            .where((i) => i.status == 'in_progress')
+            .length;
         final closedCount = issues.where((i) => i.status == 'closed').length;
-        
+
         return MacosScaffold(
           toolBar: ToolBar(
             leading: MacosIconButton(
@@ -154,13 +153,25 @@ class ProjectDashboard extends StatelessWidget {
                       const SizedBox(height: 20),
                       Row(
                         children: [
-                          _buildStatCard(context, 'Total Issues', issues.length.toString()),
+                          _buildStatCard(
+                            context,
+                            'Total Issues',
+                            issues.length.toString(),
+                          ),
                           const SizedBox(width: 16),
                           _buildStatCard(context, 'Open', openCount.toString()),
                           const SizedBox(width: 16),
-                          _buildStatCard(context, 'In Progress', inProgressCount.toString()),
+                          _buildStatCard(
+                            context,
+                            'In Progress',
+                            inProgressCount.toString(),
+                          ),
                           const SizedBox(width: 16),
-                          _buildStatCard(context, 'Closed', closedCount.toString()),
+                          _buildStatCard(
+                            context,
+                            'Closed',
+                            closedCount.toString(),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 32),

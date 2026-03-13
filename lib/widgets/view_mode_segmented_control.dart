@@ -27,14 +27,12 @@ class ViewModeSegmentedControl extends StatelessWidget {
     final isDark = theme.brightness.isDark;
 
     // Very subtle, translucent background for the entire control
-    final backgroundColor = isDark 
-        ? MacosColors.white.withValues(alpha: 0.1) 
+    final backgroundColor = isDark
+        ? MacosColors.white.withValues(alpha: 0.1)
         : MacosColors.black.withValues(alpha: 0.05);
-        
+
     // Active item background
-    final activeColor = isDark 
-        ? const Color(0xFF646669) 
-        : MacosColors.white;
+    final activeColor = isDark ? const Color(0xFF646669) : MacosColors.white;
 
     return Container(
       height: 22,
@@ -132,7 +130,9 @@ class ViewModeSegmentedControl extends StatelessWidget {
     return Container(
       width: 1,
       height: 12,
-      color: isDark ? MacosColors.white.withValues(alpha: 0.15) : MacosColors.black.withValues(alpha: 0.15),
+      color: isDark
+          ? MacosColors.white.withValues(alpha: 0.15)
+          : MacosColors.black.withValues(alpha: 0.15),
     );
   }
 }

@@ -42,7 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
       listenable: appState,
       builder: (context, _) {
         return MacosWindow(
-          backgroundColor: const Color(0x00000000), // Transparent to allow vibrancy
+          backgroundColor: const Color(
+            0x00000000,
+          ), // Transparent to allow vibrancy
           sidebar: Sidebar(
             minWidth: 200,
             builder: (context, scrollController) {
@@ -51,24 +53,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 onChanged: _onItemTapped,
                 scrollController: scrollController,
                 items: [
-                  const SidebarItem(
-                    section: true,
-                    label: Text('PROJECTS'),
-                  ),
+                  const SidebarItem(section: true, label: Text('PROJECTS')),
                   ...appState.projects.map((p) {
                     final isSelected = appState.selectedProject == p;
                     final isRefreshing = isSelected && appState.isRefreshing;
                     final hasError = appState.projectErrors.containsKey(p.path);
-                    
+
                     Widget leadingIcon;
                     if (isRefreshing) {
                       leadingIcon = const CupertinoActivityIndicator(radius: 8);
                     } else if (hasError) {
-                      leadingIcon = const MacosIcon(CupertinoIcons.exclamationmark_triangle_fill, color: CupertinoColors.systemRed);
+                      leadingIcon = const MacosIcon(
+                        CupertinoIcons.exclamationmark_triangle_fill,
+                        color: CupertinoColors.systemRed,
+                      );
                     } else {
                       leadingIcon = MacosIcon(
                         CupertinoIcons.folder,
-                        color: isSelected ? null : MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.5),
+                        color: isSelected
+                            ? null
+                            : MacosTheme.of(
+                                context,
+                              ).typography.body.color?.withValues(alpha: 0.5),
                       );
                     }
 
@@ -76,13 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       leading: leadingIcon,
                       label: Text(p.name),
                       unselectedColor: isSelected
-                          ? MacosTheme.of(context).primaryColor.withValues(alpha: 0.2)
+                          ? MacosTheme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.2)
                           : null,
                       trailing: isSelected
                           ? MacosIconButton(
-                              icon: const MacosIcon(CupertinoIcons.clear_circled, size: 14),
+                              icon: const MacosIcon(
+                                CupertinoIcons.clear_circled,
+                                size: 14,
+                              ),
                               onPressed: () => appState.removeProject(p),
-                              boxConstraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              boxConstraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
                               padding: EdgeInsets.zero,
                             )
                           : null,
@@ -103,7 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
             isResizable: true,
             shownByDefault: false,
             builder: (context, scrollController) {
-              if (appState.selectedIssue == null) return const SizedBox.shrink();
+              if (appState.selectedIssue == null)
+                return const SizedBox.shrink();
               return IssueInspector(
                 issue: appState.selectedIssue!,
                 onClose: () => appState.selectIssue(null),

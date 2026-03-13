@@ -11,7 +11,9 @@ class KanbanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // If an agent has claimed it or it's in progress, lock it to prevent drag-and-drop state changes
-    final bool isLocked = issue.status == 'in_progress' || (issue.owner != null && issue.owner!.isNotEmpty);
+    final bool isLocked =
+        issue.status == 'in_progress' ||
+        (issue.owner != null && issue.owner!.isNotEmpty);
 
     final cardContent = GestureDetector(
       onTap: () => appState.selectIssue(issue),
@@ -21,7 +23,10 @@ class KanbanCard extends StatelessWidget {
           margin: const EdgeInsets.all(8),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
+            color: MacosDynamicColor.resolve(
+              CupertinoColors.systemGrey6,
+              context,
+            ),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: MacosTheme.of(context).dividerColor),
           ),
@@ -35,13 +40,20 @@ class KanbanCard extends StatelessWidget {
                     children: [
                       Text(
                         issue.id,
-                        style: const TextStyle(fontSize: 12, color: CupertinoColors.systemGrey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: CupertinoColors.systemGrey,
+                        ),
                       ),
                       if (isLocked) ...[
                         const SizedBox(width: 6),
                         const MacosTooltip(
                           message: 'Locked (Agent in process)',
-                          child: MacosIcon(CupertinoIcons.lock_fill, size: 10, color: CupertinoColors.systemGrey),
+                          child: MacosIcon(
+                            CupertinoIcons.lock_fill,
+                            size: 10,
+                            color: CupertinoColors.systemGrey,
+                          ),
                         ),
                       ],
                     ],
@@ -75,15 +87,9 @@ class KanbanCard extends StatelessWidget {
       data: issue,
       feedback: SizedBox(
         width: 284, // Approximate width of the card minus margins
-        child: Opacity(
-          opacity: 0.8,
-          child: cardContent,
-        ),
+        child: Opacity(opacity: 0.8, child: cardContent),
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: cardContent,
-      ),
+      childWhenDragging: Opacity(opacity: 0.3, child: cardContent),
       child: cardContent,
     );
   }
@@ -114,7 +120,11 @@ class KanbanCard extends StatelessWidget {
       ),
       child: Text(
         type.toUpperCase(),
-        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

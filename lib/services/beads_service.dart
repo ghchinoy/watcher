@@ -30,11 +30,9 @@ class BeadsService {
   }
 
   Future<List<Issue>> getIssues() async {
-    final result = await Process.run(
-      'bd',
-      ['export'],
-      workingDirectory: workingDirectory,
-    );
+    final result = await Process.run('bd', [
+      'export',
+    ], workingDirectory: workingDirectory);
 
     if (result.exitCode != 0) {
       throw Exception('Failed to run bd export: ${result.stderr}');
@@ -55,11 +53,11 @@ class BeadsService {
   }
 
   Future<List<GraphNode>> getGraph() async {
-    final result = await Process.run(
-      'bd',
-      ['graph', '--all', '--json'],
-      workingDirectory: workingDirectory,
-    );
+    final result = await Process.run('bd', [
+      'graph',
+      '--all',
+      '--json',
+    ], workingDirectory: workingDirectory);
 
     if (result.exitCode != 0) {
       throw Exception('Failed to run bd graph: ${result.stderr}');
@@ -90,7 +88,7 @@ class BeadsService {
     if (priority != null) {
       args.addAll(['--priority', priority.toString()]);
     }
-    
+
     if (args.length <= 2) return; // Nothing to update
 
     final result = await Process.run(

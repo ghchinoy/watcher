@@ -14,7 +14,8 @@ class Dependency {
     required this.type,
   });
 
-  factory Dependency.fromJson(Map<String, dynamic> json) => _$DependencyFromJson(json);
+  factory Dependency.fromJson(Map<String, dynamic> json) =>
+      _$DependencyFromJson(json);
   Map<String, dynamic> toJson() => _$DependencyToJson(this);
 }
 
@@ -76,6 +77,7 @@ class GraphNode {
     this.issueMap,
   });
 
-  factory GraphNode.fromJson(Map<String, dynamic> json) => _$GraphNodeFromJson(json);
+  factory GraphNode.fromJson(Map<String, dynamic> json) =>
+      _$GraphNodeFromJson(json);
   Map<String, dynamic> toJson() => _$GraphNodeToJson(this);
 }

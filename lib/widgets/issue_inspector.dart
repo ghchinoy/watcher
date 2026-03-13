@@ -8,20 +8,21 @@ class IssueInspector extends StatelessWidget {
   final VoidCallback onClose;
   final ScrollController scrollController;
 
-  const IssueInspector({super.key, required this.issue, required this.onClose, required this.scrollController});
+  const IssueInspector({
+    super.key,
+    required this.issue,
+    required this.onClose,
+    required this.scrollController,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = MacosTheme.of(context);
-    
+
     return Container(
       width: 300,
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: theme.dividerColor,
-          ),
-        ),
+        border: Border(left: BorderSide(color: theme.dividerColor)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,18 +48,26 @@ class IssueInspector extends StatelessWidget {
                   _buildSection('Updated', _formatDate(issue.updatedAt)),
                   if (issue.closedAt != null)
                     _buildSection('Closed', _formatDate(issue.closedAt!)),
-                  if (issue.closeReason != null && issue.closeReason!.isNotEmpty)
+                  if (issue.closeReason != null &&
+                      issue.closeReason!.isNotEmpty)
                     _buildSection('Close Reason', issue.closeReason!),
-                  
+
                   _buildDependenciesSection(context),
 
                   const SizedBox(height: 16),
-                  const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Description',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    issue.description?.isNotEmpty == true ? issue.description! : 'No description provided.',
+                    issue.description?.isNotEmpty == true
+                        ? issue.description!
+                        : 'No description provided.',
                     style: TextStyle(
-                      color: issue.description?.isNotEmpty == true ? null : CupertinoColors.systemGrey,
+                      color: issue.description?.isNotEmpty == true
+                          ? null
+                          : CupertinoColors.systemGrey,
                     ),
                   ),
                 ],
@@ -72,7 +81,8 @@ class IssueInspector extends StatelessWidget {
 
   Widget _buildDependenciesSection(BuildContext context) {
     // Find what this issue blocks
-    final blocksIds = issue.dependencies
+    final blocksIds =
+        issue.dependencies
             ?.where((d) => d.type == 'blocks')
             .map((d) => d.dependsOnId)
             .toList() ??
@@ -80,9 +90,13 @@ class IssueInspector extends StatelessWidget {
 
     // Find what this issue is blocked by
     final blockedByIds = appState.currentIssues
-        .where((i) =>
-            i.dependencies?.any((d) => d.type == 'blocks' && d.dependsOnId == issue.id) ??
-            false)
+        .where(
+          (i) =>
+              i.dependencies?.any(
+                (d) => d.type == 'blocks' && d.dependsOnId == issue.id,
+              ) ??
+              false,
+        )
         .map((i) => i.id)
         .toList();
 
@@ -96,13 +110,27 @@ class IssueInspector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (blockedByIds.isNotEmpty) ...[
-            const Text('Blocked By', style: TextStyle(fontSize: 11, color: CupertinoColors.systemGrey, fontWeight: FontWeight.bold)),
+            const Text(
+              'Blocked By',
+              style: TextStyle(
+                fontSize: 11,
+                color: CupertinoColors.systemGrey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
             ...blockedByIds.map((id) => _buildDependencyLink(id, context)),
             const SizedBox(height: 8),
           ],
           if (blocksIds.isNotEmpty) ...[
-            const Text('Blocks', style: TextStyle(fontSize: 11, color: CupertinoColors.systemGrey, fontWeight: FontWeight.bold)),
+            const Text(
+              'Blocks',
+              style: TextStyle(
+                fontSize: 11,
+                color: CupertinoColors.systemGrey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
             ...blocksIds.map((id) => _buildDependencyLink(id, context)),
             const SizedBox(height: 8),
@@ -115,7 +143,9 @@ class IssueInspector extends StatelessWidget {
   Widget _buildDependencyLink(String issueId, BuildContext context) {
     return GestureDetector(
       onTap: () {
-        final targetIssue = appState.currentIssues.where((i) => i.id == issueId).firstOrNull;
+        final targetIssue = appState.currentIssues
+            .where((i) => i.id == issueId)
+            .firstOrNull;
         if (targetIssue != null) {
           appState.selectIssue(targetIssue);
         }
@@ -143,7 +173,14 @@ class IssueInspector extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Status', style: TextStyle(fontSize: 11, color: CupertinoColors.systemGrey, fontWeight: FontWeight.bold)),
+          const Text(
+            'Status',
+            style: TextStyle(
+              fontSize: 11,
+              color: CupertinoColors.systemGrey,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
           MacosPopupButton<String>(
             value: issue.status.toLowerCase(),
@@ -154,7 +191,10 @@ class IssueInspector extends StatelessWidget {
             },
             items: const [
               MacosPopupMenuItem(value: 'open', child: Text('OPEN')),
-              MacosPopupMenuItem(value: 'in_progress', child: Text('IN PROGRESS')),
+              MacosPopupMenuItem(
+                value: 'in_progress',
+                child: Text('IN PROGRESS'),
+              ),
               MacosPopupMenuItem(value: 'blocked', child: Text('BLOCKED')),
               MacosPopupMenuItem(value: 'closed', child: Text('CLOSED')),
               MacosPopupMenuItem(value: 'deferred', child: Text('DEFERRED')),
@@ -171,7 +211,14 @@ class IssueInspector extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Priority', style: TextStyle(fontSize: 11, color: CupertinoColors.systemGrey, fontWeight: FontWeight.bold)),
+          const Text(
+            'Priority',
+            style: TextStyle(
+              fontSize: 11,
+              color: CupertinoColors.systemGrey,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
           MacosPopupButton<int>(
             value: issue.priority,
@@ -210,12 +257,18 @@ class IssueInspector extends StatelessWidget {
               children: [
                 Text(
                   issue.id,
-                  style: const TextStyle(fontSize: 12, color: CupertinoColors.systemGrey),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.systemGrey,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   issue.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -236,7 +289,14 @@ class IssueInspector extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 11, color: CupertinoColors.systemGrey, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11,
+              color: CupertinoColors.systemGrey,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(value),
         ],

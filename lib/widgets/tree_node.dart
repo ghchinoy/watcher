@@ -47,15 +47,18 @@ class _TreeNodeState extends State<TreeNode> {
     // Find children of this issue and filter out closed issues
     final children = widget.allIssues.where((potentialChild) {
       if (potentialChild.status == 'closed') return false;
-      return potentialChild.dependencies?.any((d) => d.type == 'parent-child' && d.dependsOnId == widget.issue.id) ?? false;
+      return potentialChild.dependencies?.any(
+            (d) => d.type == 'parent-child' && d.dependsOnId == widget.issue.id,
+          ) ??
+          false;
     }).toList();
 
     return Padding(
       padding: EdgeInsets.only(
-        left: widget.depth == 0 ? 16 : 24, 
-        top: widget.depth == 0 ? 8 : 4, 
-        right: 16, 
-        bottom: widget.depth == 0 ? 8 : 0
+        left: widget.depth == 0 ? 16 : 24,
+        top: widget.depth == 0 ? 8 : 4,
+        right: 16,
+        bottom: widget.depth == 0 ? 8 : 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,7 +73,9 @@ class _TreeNodeState extends State<TreeNode> {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 4.0),
                       child: MacosIcon(
-                        _isExpanded ? CupertinoIcons.chevron_down : CupertinoIcons.chevron_right,
+                        _isExpanded
+                            ? CupertinoIcons.chevron_down
+                            : CupertinoIcons.chevron_right,
                         size: 12,
                         color: CupertinoColors.systemGrey,
                       ),
@@ -84,7 +89,11 @@ class _TreeNodeState extends State<TreeNode> {
                   onTap: () => appState.selectIssue(widget.issue),
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
-                    child: _buildIssueRow(widget.issue, context, isRoot: widget.depth == 0),
+                    child: _buildIssueRow(
+                      widget.issue,
+                      context,
+                      isRoot: widget.depth == 0,
+                    ),
                   ),
                 ),
               ),
@@ -93,19 +102,27 @@ class _TreeNodeState extends State<TreeNode> {
           if (children.isNotEmpty && _isExpanded)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: children.map((child) => TreeNode(
-                issue: child, 
-                allIssues: widget.allIssues, 
-                depth: widget.depth + 1,
-                defaultExpanded: widget.defaultExpanded,
-              )).toList(),
+              children: children
+                  .map(
+                    (child) => TreeNode(
+                      issue: child,
+                      allIssues: widget.allIssues,
+                      depth: widget.depth + 1,
+                      defaultExpanded: widget.defaultExpanded,
+                    ),
+                  )
+                  .toList(),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildIssueRow(Issue issue, BuildContext context, {required bool isRoot}) {
+  Widget _buildIssueRow(
+    Issue issue,
+    BuildContext context, {
+    required bool isRoot,
+  }) {
     return Row(
       children: [
         if (isRoot)
@@ -123,8 +140,12 @@ class _TreeNodeState extends State<TreeNode> {
             style: TextStyle(
               fontWeight: isRoot ? FontWeight.bold : FontWeight.normal,
               fontSize: isRoot ? 14 : 13,
-              decoration: issue.status == 'closed' ? TextDecoration.lineThrough : null,
-              color: issue.status == 'closed' ? CupertinoColors.systemGrey : null,
+              decoration: issue.status == 'closed'
+                  ? TextDecoration.lineThrough
+                  : null,
+              color: issue.status == 'closed'
+                  ? CupertinoColors.systemGrey
+                  : null,
             ),
           ),
         ),
@@ -201,7 +222,12 @@ class _TreeNodeState extends State<TreeNode> {
         ),
         child: Text(
           'P$priority',
-          style: TextStyle(fontSize: 10, color: resolvedColor, fontWeight: FontWeight.w600, height: 1.0),
+          style: TextStyle(
+            fontSize: 10,
+            color: resolvedColor,
+            fontWeight: FontWeight.w600,
+            height: 1.0,
+          ),
         ),
       ),
     );
@@ -233,11 +259,7 @@ class _TreeNodeState extends State<TreeNode> {
       message: 'Status: $status',
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
-        child: MacosIcon(
-          iconData,
-          color: resolvedColor,
-          size: 16,
-        ),
+        child: MacosIcon(iconData, color: resolvedColor, size: 16),
       ),
     );
   }

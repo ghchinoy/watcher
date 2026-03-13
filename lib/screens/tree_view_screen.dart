@@ -22,7 +22,15 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
     });
     // Find all node IDs that can be expanded (those with children)
     final allParentIds = appState.currentIssues
-        .where((i) => appState.currentIssues.any((child) => child.dependencies?.any((d) => d.type == 'parent-child' && d.dependsOnId == i.id) ?? false))
+        .where(
+          (i) => appState.currentIssues.any(
+            (child) =>
+                child.dependencies?.any(
+                  (d) => d.type == 'parent-child' && d.dependsOnId == i.id,
+                ) ??
+                false,
+          ),
+        )
         .map((i) => i.id)
         .toList();
     appState.setAllNodesExpanded(true, allParentIds);
@@ -56,9 +64,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => const Center(
-                  child: Text('No project selected.'),
-                ),
+                builder: (context, scrollController) =>
+                    const Center(child: Text('No project selected.')),
               ),
             ],
           );
@@ -82,7 +89,10 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                 builder: (context, scrollController) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text('Error: ${appState.error}', style: const TextStyle(color: CupertinoColors.systemRed)),
+                    child: Text(
+                      'Error: ${appState.error}',
+                      style: const TextStyle(color: CupertinoColors.systemRed),
+                    ),
                   ),
                 ),
               ),
@@ -91,12 +101,13 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
         }
 
         final issues = appState.currentIssues;
-        
+
         // Find all top-level issues (those without a parent-child dependency)
         // and filter out closed issues by default.
         final topLevelIssues = issues.where((issue) {
           if (issue.status == 'closed') return false;
-          final hasParent = issue.dependencies?.any((d) => d.type == 'parent-child') ?? false;
+          final hasParent =
+              issue.dependencies?.any((d) => d.type == 'parent-child') ?? false;
           return !hasParent;
         }).toList();
 
@@ -143,13 +154,18 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                         MacosIcon(
                           CupertinoIcons.checkmark_seal_fill,
                           size: 48,
-                          color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.2),
+                          color: MacosTheme.of(
+                            context,
+                          ).typography.body.color?.withValues(alpha: 0.2),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No open issues found',
-                          style: MacosTheme.of(context).typography.title2.copyWith(
-                                color: MacosTheme.of(context).typography.body.color?.withValues(alpha: 0.5),
+                          style: MacosTheme.of(context).typography.title2
+                              .copyWith(
+                                color: MacosTheme.of(
+                                  context,
+                                ).typography.body.color?.withValues(alpha: 0.5),
                               ),
                         ),
                       ],
@@ -163,8 +179,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                   itemCount: topLevelIssues.length,
                   itemBuilder: (context, index) {
                     return TreeNode(
-                      issue: topLevelIssues[index], 
-                      allIssues: issues, 
+                      issue: topLevelIssues[index],
+                      allIssues: issues,
                       depth: 0,
                       defaultExpanded: _defaultExpanded,
                     );

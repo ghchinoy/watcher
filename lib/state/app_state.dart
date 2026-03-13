@@ -16,22 +16,23 @@ class Project {
 class AppState extends ChangeNotifier {
   List<Project> projects = [];
   Project? selectedProject;
-  
+
   List<Issue> currentIssues = [];
   List<GraphNode> currentGraph = [];
   List<Interaction> currentInteractions = [];
   Issue? selectedIssue;
-  
+
   bool isLoading = false;
   bool isRefreshing = false;
-  
+
   // Track errors per project path so the sidebar icon persists
   Map<String, String> projectErrors = {};
-  
+
   // Track expanded nodes in the tree view per project
   Set<String> expandedNodes = {};
 
-  String? get error => selectedProject != null ? projectErrors[selectedProject!.path] : null;
+  String? get error =>
+      selectedProject != null ? projectErrors[selectedProject!.path] : null;
 
   StreamSubscription<FileSystemEvent>? _watchSubscription;
   Timer? _debounceTimer;
@@ -54,7 +55,10 @@ class AppState extends ChangeNotifier {
     _saveExpandedNodes();
   }
 
-  Future<void> setAllNodesExpanded(bool expanded, List<String> allIssueIds) async {
+  Future<void> setAllNodesExpanded(
+    bool expanded,
+    List<String> allIssueIds,
+  ) async {
     if (expanded) {
       expandedNodes.addAll(allIssueIds);
     } else {
@@ -67,7 +71,8 @@ class AppState extends ChangeNotifier {
   Future<void> _loadExpandedNodes() async {
     if (selectedProject == null) return;
     final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList('expanded_nodes_${selectedProject!.path}') ?? [];
+    final list =
+        prefs.getStringList('expanded_nodes_${selectedProject!.path}') ?? [];
     expandedNodes = list.toSet();
     notifyListeners();
   }
@@ -75,7 +80,10 @@ class AppState extends ChangeNotifier {
   Future<void> _saveExpandedNodes() async {
     if (selectedProject == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('expanded_nodes_${selectedProject!.path}', expandedNodes.toList());
+    await prefs.setStringList(
+      'expanded_nodes_${selectedProject!.path}',
+      expandedNodes.toList(),
+    );
   }
 
   void selectIssue(Issue? issue) {
@@ -96,12 +104,15 @@ class AppState extends ChangeNotifier {
 
   Future<void> addProject(String path) async {
     if (projects.any((p) => p.path == path)) return;
-    
+
     projects.add(Project(path));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('project_paths', projects.map((p) => p.path).toList());
+    await prefs.setStringList(
+      'project_paths',
+      projects.map((p) => p.path).toList(),
+    );
     notifyListeners();
-    
+
     if (selectedProject == null) {
       selectProject(projects.last);
     }
@@ -111,8 +122,11 @@ class AppState extends ChangeNotifier {
     projects.remove(project);
     projectErrors.remove(project.path);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('project_paths', projects.map((p) => p.path).toList());
-    
+    await prefs.setStringList(
+      'project_paths',
+      projects.map((p) => p.path).toList(),
+    );
+
     if (selectedProject == project) {
       if (projects.isNotEmpty) {
         selectProject(projects.first);
@@ -143,11 +157,10 @@ class AppState extends ChangeNotifier {
       currentIssues = await service.getIssues();
       currentGraph = await service.getGraph();
       currentInteractions = await service.getInteractions();
-      
+
       // By default, if nodes haven't been saved before, maybe we want to expand them all?
       // Actually, if expandedNodes is empty, we can populate it with all nodes that have children if we want them expanded by default.
       // But let's keep it simple: if it's completely empty, maybe it's the first run, but we don't know for sure.
-      
     } catch (e) {
       projectErrors[project.path] = e.toString();
     } finally {
@@ -171,12 +184,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> updateIssue(String id, {String? status, int? priority}) async {
     if (selectedProject == null) return;
-    
+
     // Optimistically update the selected issue if it matches
     if (selectedIssue?.id == id) {
       // Create a copy with the new values
-      // Note: we can't easily construct a new Issue without all properties, 
-      // but since we only need UI to be snappy, we'll let the watcher handle it, 
+      // Note: we can't easily construct a new Issue without all properties,
+      // but since we only need UI to be snappy, we'll let the watcher handle it,
       // or we can set a flag. Actually, letting the watcher handle it is fine since it's 500ms.
       // But for maximum responsiveness, let's just wait for the file watcher.
     }
@@ -193,16 +206,16 @@ class AppState extends ChangeNotifier {
   Future<void> _refreshData() async {
     if (selectedProject == null) return;
     final projectPath = selectedProject!.path;
-    
+
     isRefreshing = true;
     notifyListeners();
-    
+
     try {
       final service = BeadsService(projectPath);
       final newIssues = await service.getIssues();
       final newGraph = await service.getGraph();
       final newInteractions = await service.getInteractions();
-      
+
       currentIssues = newIssues;
       currentGraph = newGraph;
       currentInteractions = newInteractions;

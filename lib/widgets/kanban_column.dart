@@ -9,7 +9,12 @@ class KanbanColumn extends StatelessWidget {
   final String statusKey;
   final List<Issue> issues;
 
-  const KanbanColumn({super.key, required this.title, required this.statusKey, required this.issues});
+  const KanbanColumn({
+    super.key,
+    required this.title,
+    required this.statusKey,
+    required this.issues,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +31,12 @@ class KanbanColumn extends StatelessWidget {
           width: 300,
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: candidateData.isNotEmpty 
+            color: candidateData.isNotEmpty
                 ? MacosTheme.of(context).primaryColor.withValues(alpha: 0.1)
                 : MacosTheme.of(context).canvasColor,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: candidateData.isNotEmpty 
+              color: candidateData.isNotEmpty
                   ? MacosTheme.of(context).primaryColor
                   : MacosTheme.of(context).dividerColor,
             ),

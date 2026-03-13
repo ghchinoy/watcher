@@ -12,11 +12,17 @@ class ActivityTicker extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
+          color: MacosDynamicColor.resolve(
+            CupertinoColors.systemGrey6,
+            context,
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: const Center(
-          child: Text('No recent activity found.', style: TextStyle(color: CupertinoColors.systemGrey)),
+          child: Text(
+            'No recent activity found.',
+            style: TextStyle(color: CupertinoColors.systemGrey),
+          ),
         ),
       );
     }
@@ -30,15 +36,16 @@ class ActivityTicker extends StatelessWidget {
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: interactions.length > 20 ? 20 : interactions.length, // Show up to 20
-        separatorBuilder: (context, index) => Container(
-          height: 1,
-          color: MacosTheme.of(context).dividerColor,
-        ),
+        itemCount: interactions.length > 20
+            ? 20
+            : interactions.length, // Show up to 20
+        separatorBuilder: (context, index) =>
+            Container(height: 1, color: MacosTheme.of(context).dividerColor),
         itemBuilder: (context, index) {
           final interaction = interactions[index];
-          final timeStr = '${interaction.timestamp.hour.toString().padLeft(2, '0')}:${interaction.timestamp.minute.toString().padLeft(2, '0')}';
-          
+          final timeStr =
+              '${interaction.timestamp.hour.toString().padLeft(2, '0')}:${interaction.timestamp.minute.toString().padLeft(2, '0')}';
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -48,7 +55,10 @@ class ActivityTicker extends StatelessWidget {
                   width: 60,
                   child: Text(
                     timeStr,
-                    style: const TextStyle(color: CupertinoColors.systemGrey, fontSize: 12),
+                    style: const TextStyle(
+                      color: CupertinoColors.systemGrey,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -57,14 +67,19 @@ class ActivityTicker extends StatelessWidget {
                     children: [
                       Text(
                         '${interaction.actor} performed ${interaction.action}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                       if (interaction.issueId != null) ...[
                         const SizedBox(height: 4),
                         GestureDetector(
                           onTap: () {
                             // Find the issue and open it in the inspector
-                            final issue = appState.currentIssues.where((i) => i.id == interaction.issueId).firstOrNull;
+                            final issue = appState.currentIssues
+                                .where((i) => i.id == interaction.issueId)
+                                .firstOrNull;
                             if (issue != null) {
                               appState.selectIssue(issue);
                             }
