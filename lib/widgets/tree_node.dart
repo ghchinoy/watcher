@@ -125,14 +125,11 @@ class _TreeNodeState extends State<TreeNode> {
   }) {
     return Row(
       children: [
-        if (isRoot)
-          MacosIcon(
-            _getIconForType(issue.issueType),
-            color: MacosTheme.of(context).primaryColor,
-            size: 16,
-          )
-        else
-          const Text('↳', style: TextStyle(color: CupertinoColors.systemGrey)),
+        MacosIcon(
+          _getIconForType(issue.issueType),
+          color: MacosTheme.of(context).primaryColor,
+          size: 16,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -244,6 +241,14 @@ class _TreeNodeState extends State<TreeNode> {
       case 'in_progress':
         baseColor = CupertinoColors.systemIndigo;
         iconData = CupertinoIcons.circle_lefthalf_fill;
+        break;
+      case 'blocked':
+        baseColor = CupertinoColors.systemRed;
+        iconData = CupertinoIcons.minus_circle_fill;
+        break;
+      case 'deferred':
+        baseColor = CupertinoColors.systemGrey2;
+        iconData = CupertinoIcons.snow;
         break;
       case 'closed':
         baseColor = CupertinoColors.systemGreen;

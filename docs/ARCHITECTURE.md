@@ -61,3 +61,15 @@ Watcher aims to be an "AI-Augmented Controller." It needs the ability to generat
 2. **Context Gathering:** Because we run the `gemini` command within the selected project's `workingDirectory`, the CLI automatically handles reading the `.beads/config.yaml`, the git repository state, and relevant source files, completely abstracting this complexity away from the Flutter app.
 3. **Structured Outputs:** We prompt the LLM to output its plan *exclusively* as a bash script of `bd create` or `bd update` commands wrapped in a markdown code block.
 4. **Human in the Loop:** Watcher intercepts this response, parses the markdown, and presents the generated bash script to the user in a native `MacosSheet` modal (`PlannerModal` / `AssessmentModal`). The user must explicitly click "Approve & Execute" before the script is saved to a temporary file and executed against the repository.
+
+## macOS HIG Compliance: Outline Views
+
+**Decision:** The hierarchical "Tree View" must strictly map to Apple's Human Interface Guidelines (HIG) for Outline Views.
+
+**Context:**
+Originally, Watcher's tree view attempted to mimic the command-line styling of `bd list --tree` by rendering continuous graphical lines (`├──`) and non-standard text prefixes (`↳`) for child nodes.
+
+**Implementation Strategy:**
+1. **Hierarchy via Indentation:** Do not draw branch lines or text prefixes to connect children to parents. Hierarchy is communicated entirely through negative space (indentation) and the presence of a disclosure triangle (chevron) on parent nodes.
+2. **Consistent Leading Icons:** Outline views expect visual context for each item. We render the `issue.issueType` icon (e.g., epic, bug, feature) as the leading element immediately following the disclosure triangle for *all* nodes, regardless of their depth in the tree.
+3. **Trailing Badges for Status:** The right side of the Outline View is reserved for secondary metadata. We map semantic statuses like `blocked` (Red/Minus Symbol) and `deferred` (Grey/Snow Symbol) to specific colors to allow quick scanning without interrupting the primary hierarchical layout on the left.
