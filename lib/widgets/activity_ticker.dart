@@ -13,7 +13,7 @@ class ActivityTicker extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: MacosDynamicColor.resolve(
-            CupertinoColors.systemGrey6,
+            MacosColors.controlBackgroundColor,
             context,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -21,7 +21,7 @@ class ActivityTicker extends StatelessWidget {
         child: const Center(
           child: Text(
             'No recent activity found.',
-            style: TextStyle(color: CupertinoColors.systemGrey),
+            style: TextStyle(color: MacosColors.systemGrayColor),
           ),
         ),
       );
@@ -29,7 +29,7 @@ class ActivityTicker extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
+        color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: MacosTheme.of(context).dividerColor),
       ),
@@ -56,7 +56,7 @@ class ActivityTicker extends StatelessWidget {
                   child: Text(
                     timeStr,
                     style: const TextStyle(
-                      color: CupertinoColors.systemGrey,
+                      color: MacosColors.systemGrayColor,
                       fontSize: 12,
                     ),
                   ),

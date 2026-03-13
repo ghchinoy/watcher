@@ -24,7 +24,7 @@ class KanbanCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: MacosDynamicColor.resolve(
-              CupertinoColors.systemGrey6,
+              MacosColors.controlBackgroundColor,
               context,
             ),
             borderRadius: BorderRadius.circular(6),
@@ -42,7 +42,7 @@ class KanbanCard extends StatelessWidget {
                         issue.id,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: CupertinoColors.systemGrey,
+                          color: MacosColors.systemGrayColor,
                         ),
                       ),
                       if (isLocked) ...[
@@ -52,7 +52,7 @@ class KanbanCard extends StatelessWidget {
                           child: MacosIcon(
                             CupertinoIcons.lock_fill,
                             size: 10,
-                            color: CupertinoColors.systemGrey,
+                            color: MacosColors.systemGrayColor,
                           ),
                         ),
                       ],
@@ -98,19 +98,19 @@ class KanbanCard extends StatelessWidget {
     Color color;
     switch (type.toLowerCase()) {
       case 'epic':
-        color = CupertinoColors.systemPurple;
+        color = MacosColors.systemPurpleColor;
         break;
       case 'bug':
-        color = CupertinoColors.systemRed;
+        color = MacosColors.systemRedColor;
         break;
       case 'task':
-        color = CupertinoColors.systemBlue;
+        color = MacosColors.systemBlueColor;
         break;
       case 'feature':
-        color = CupertinoColors.systemGreen;
+        color = MacosColors.systemGreenColor;
         break;
       default:
-        color = CupertinoColors.systemGrey;
+        color = MacosColors.systemGrayColor;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

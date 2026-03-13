@@ -17,7 +17,14 @@ class KanbanScreen extends StatelessWidget {
             toolBar: ToolBar(
               title: const Text('Kanban View'),
               actions: [
-                CustomToolbarItem(
+                ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+              ),
+              CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/kanban'),
@@ -39,7 +46,14 @@ class KanbanScreen extends StatelessWidget {
             toolBar: ToolBar(
               title: const Text('Kanban View'),
               actions: [
-                CustomToolbarItem(
+                ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+              ),
+              CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/kanban'),
@@ -54,7 +68,7 @@ class KanbanScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
                       'Error: ${appState.error}',
-                      style: const TextStyle(color: CupertinoColors.systemRed),
+                      style: const TextStyle(color: MacosColors.systemRedColor),
                     ),
                   ),
                 ),
@@ -83,6 +97,13 @@ class KanbanScreen extends StatelessWidget {
             ),
             title: Text(appState.selectedProject!.name),
             actions: [
+              ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+              ),
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8.0),

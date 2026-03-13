@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     } else if (hasError) {
                       leadingIcon = const MacosIcon(
                         CupertinoIcons.exclamationmark_triangle_fill,
-                        color: CupertinoColors.systemRed,
+                        color: MacosColors.systemRedColor,
                       );
                     } else {
                       leadingIcon = MacosIcon(
@@ -121,7 +121,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 return const SizedBox.shrink();
               return IssueInspector(
                 issue: appState.selectedIssue!,
-                onClose: () => appState.selectIssue(null),
                 scrollController: scrollController,
               );
             },
@@ -143,9 +142,12 @@ class _InspectorController extends StatefulWidget {
 }
 
 class _InspectorControllerState extends State<_InspectorController> {
+  String? _previousSelectedIssueId;
+
   @override
   void initState() {
     super.initState();
+    _previousSelectedIssueId = appState.selectedIssue?.id;
     appState.addListener(_onAppStateChanged);
   }
 
@@ -160,26 +162,17 @@ class _InspectorControllerState extends State<_InspectorController> {
     final scope = MacosWindowScope.maybeOf(context);
     if (scope == null) return;
 
-    final shouldShow = appState.selectedIssue != null;
-    if (scope.isEndSidebarShown != shouldShow) {
-      scope.toggleEndSidebar();
+    final currentSelectedIssueId = appState.selectedIssue?.id;
+    if (currentSelectedIssueId != null && currentSelectedIssueId != _previousSelectedIssueId) {
+      if (!scope.isEndSidebarShown) {
+        scope.toggleEndSidebar();
+      }
     }
+    _previousSelectedIssueId = currentSelectedIssueId;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Also sync state on build if it got out of sync, safely using addPostFrameCallback
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final scope = MacosWindowScope.maybeOf(context);
-      if (scope != null) {
-        final shouldShow = appState.selectedIssue != null;
-        if (scope.isEndSidebarShown != shouldShow) {
-          scope.toggleEndSidebar();
-        }
-      }
-    });
-
     return widget.child;
   }
 }

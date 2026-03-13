@@ -36,7 +36,14 @@ class ProjectDashboard extends StatelessWidget {
             toolBar: ToolBar(
               title: const Text('Dashboard'),
               actions: [
-                CustomToolbarItem(
+                ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+              ),
+              CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/'),
@@ -59,7 +66,14 @@ class ProjectDashboard extends StatelessWidget {
             toolBar: ToolBar(
               title: const Text('Dashboard'),
               actions: [
-                CustomToolbarItem(
+                ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+              ),
+              CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/'),
@@ -81,7 +95,14 @@ class ProjectDashboard extends StatelessWidget {
             toolBar: ToolBar(
               title: const Text('Dashboard'),
               actions: [
-                CustomToolbarItem(
+                ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+              ),
+              CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/'),
@@ -128,6 +149,13 @@ class ProjectDashboard extends StatelessWidget {
                 showLabel: false,
                 tooltipMessage: 'AI Planner',
                 onPressed: () => _showPlanner(context),
+              ),
+              ToolBarIconButton(
+                label: 'Toggle Inspector',
+                icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                showLabel: false,
+                tooltipMessage: 'Toggle Inspector',
+                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
               ),
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const Padding(
@@ -196,7 +224,7 @@ class ProjectDashboard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(CupertinoColors.systemGrey6, context),
+        color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

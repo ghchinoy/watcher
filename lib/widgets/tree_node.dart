@@ -77,7 +77,7 @@ class _TreeNodeState extends State<TreeNode> {
                             ? CupertinoIcons.chevron_down
                             : CupertinoIcons.chevron_right,
                         size: 12,
-                        color: CupertinoColors.systemGrey,
+                        color: MacosColors.systemGrayColor,
                       ),
                     ),
                   ),
@@ -141,7 +141,7 @@ class _TreeNodeState extends State<TreeNode> {
                   ? TextDecoration.lineThrough
                   : null,
               color: issue.status == 'closed'
-                  ? CupertinoColors.systemGrey
+                  ? MacosColors.systemGrayColor
                   : null,
             ),
           ),
@@ -191,19 +191,19 @@ class _TreeNodeState extends State<TreeNode> {
     Color baseColor;
     switch (priority) {
       case 0:
-        baseColor = CupertinoColors.systemRed;
+        baseColor = MacosColors.systemRedColor;
         break;
       case 1:
-        baseColor = CupertinoColors.systemOrange;
+        baseColor = MacosColors.systemOrangeColor;
         break;
       case 2:
-        baseColor = CupertinoColors.systemYellow;
+        baseColor = MacosColors.systemYellowColor;
         break;
       case 3:
-        baseColor = CupertinoColors.systemBlue;
+        baseColor = MacosColors.systemBlueColor;
         break;
       default:
-        baseColor = CupertinoColors.systemGrey;
+        baseColor = MacosColors.systemGrayColor;
     }
     final resolvedColor = MacosDynamicColor.resolve(baseColor, context);
 
@@ -235,27 +235,27 @@ class _TreeNodeState extends State<TreeNode> {
     IconData iconData;
     switch (status.toLowerCase()) {
       case 'open':
-        baseColor = CupertinoColors.systemBlue;
+        baseColor = MacosColors.systemBlueColor;
         iconData = CupertinoIcons.circle;
         break;
       case 'in_progress':
-        baseColor = CupertinoColors.systemIndigo;
+        baseColor = MacosColors.systemPurpleColor;
         iconData = CupertinoIcons.circle_lefthalf_fill;
         break;
       case 'blocked':
-        baseColor = CupertinoColors.systemRed;
+        baseColor = MacosColors.systemRedColor;
         iconData = CupertinoIcons.minus_circle_fill;
         break;
       case 'deferred':
-        baseColor = CupertinoColors.systemGrey2;
+        baseColor = MacosColors.systemGrayColor;
         iconData = CupertinoIcons.snow;
         break;
       case 'closed':
-        baseColor = CupertinoColors.systemGreen;
+        baseColor = MacosColors.systemGreenColor;
         iconData = CupertinoIcons.check_mark_circled_solid;
         break;
       default:
-        baseColor = CupertinoColors.systemGrey;
+        baseColor = MacosColors.systemGrayColor;
         iconData = CupertinoIcons.circle;
     }
     final resolvedColor = MacosDynamicColor.resolve(baseColor, context);

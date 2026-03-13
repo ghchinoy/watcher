@@ -83,8 +83,7 @@ class _PlannerModalState extends State<PlannerModal> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 600,
-      height: 500,
+      constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +116,7 @@ class _PlannerModalState extends State<PlannerModal> {
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Text(
                   'Error: $_error',
-                  style: const TextStyle(color: CupertinoColors.systemRed),
+                  style: const TextStyle(color: MacosColors.systemRedColor),
                 ),
               ),
             Row(
@@ -145,7 +144,7 @@ class _PlannerModalState extends State<PlannerModal> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: MacosDynamicColor.resolve(
-                    CupertinoColors.systemGrey6,
+                    MacosColors.controlBackgroundColor,
                     context,
                   ),
                   borderRadius: BorderRadius.circular(8),
@@ -177,7 +176,7 @@ class _PlannerModalState extends State<PlannerModal> {
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Text(
                   'Error: $_error',
-                  style: const TextStyle(color: CupertinoColors.systemRed),
+                  style: const TextStyle(color: MacosColors.systemRedColor),
                 ),
               ),
             Row(

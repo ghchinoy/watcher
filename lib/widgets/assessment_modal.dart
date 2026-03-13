@@ -104,8 +104,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 600,
-      height: 500,
+      constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +143,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
                     'Error: $_error',
-                    style: const TextStyle(color: CupertinoColors.systemRed),
+                    style: const TextStyle(color: MacosColors.systemRedColor),
                   ),
                 ),
               ),
@@ -155,7 +154,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: MacosDynamicColor.resolve(
-                    CupertinoColors.systemGrey6,
+                    MacosColors.controlBackgroundColor,
                     context,
                   ),
                   borderRadius: BorderRadius.circular(8),
@@ -174,7 +173,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
                     code: TextStyle(
                       fontFamily: 'Courier',
                       backgroundColor: MacosDynamicColor.resolve(
-                        CupertinoColors.systemGrey4,
+                        MacosColors.systemGrayColor,
                         context,
                       ).withValues(alpha: 0.5),
                       color: MacosTheme.of(context).typography.body.color,
@@ -182,7 +181,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
                     codeblockPadding: const EdgeInsets.all(8),
                     codeblockDecoration: BoxDecoration(
                       color: MacosDynamicColor.resolve(
-                        CupertinoColors.systemGrey5,
+                        MacosColors.systemGrayColor,
                         context,
                       ),
                       borderRadius: BorderRadius.circular(4),
@@ -197,7 +196,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Text(
                   'Error: $_error',
-                  style: const TextStyle(color: CupertinoColors.systemRed),
+                  style: const TextStyle(color: MacosColors.systemRedColor),
                 ),
               ),
             Row(

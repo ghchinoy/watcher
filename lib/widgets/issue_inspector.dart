@@ -5,13 +5,11 @@ import '../models/issue.dart';
 
 class IssueInspector extends StatelessWidget {
   final Issue issue;
-  final VoidCallback onClose;
   final ScrollController scrollController;
 
   const IssueInspector({
     super.key,
     required this.issue,
-    required this.onClose,
     required this.scrollController,
   });
 
@@ -55,9 +53,9 @@ class IssueInspector extends StatelessWidget {
                   _buildDependenciesSection(context),
 
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Description',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: MacosTheme.of(context).typography.headline,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -67,7 +65,7 @@ class IssueInspector extends StatelessWidget {
                     style: TextStyle(
                       color: issue.description?.isNotEmpty == true
                           ? null
-                          : CupertinoColors.systemGrey,
+                          : MacosColors.systemGrayColor,
                     ),
                   ),
                 ],
@@ -110,11 +108,10 @@ class IssueInspector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (blockedByIds.isNotEmpty) ...[
-            const Text(
+            Text(
               'Blocked By',
-              style: TextStyle(
-                fontSize: 11,
-                color: CupertinoColors.systemGrey,
+              style: MacosTheme.of(context).typography.footnote.copyWith(
+                color: MacosColors.systemGrayColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -123,11 +120,10 @@ class IssueInspector extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           if (blocksIds.isNotEmpty) ...[
-            const Text(
+            Text(
               'Blocks',
-              style: TextStyle(
-                fontSize: 11,
-                color: CupertinoColors.systemGrey,
+              style: MacosTheme.of(context).typography.footnote.copyWith(
+                color: MacosColors.systemGrayColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -156,8 +152,7 @@ class IssueInspector extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(
             issueId,
-            style: TextStyle(
-              fontSize: 12,
+            style: MacosTheme.of(context).typography.footnote.copyWith(
               color: MacosTheme.of(context).primaryColor,
               decoration: TextDecoration.underline,
             ),
@@ -173,11 +168,10 @@ class IssueInspector extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Status',
-            style: TextStyle(
-              fontSize: 11,
-              color: CupertinoColors.systemGrey,
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+              color: MacosColors.systemGrayColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -211,11 +205,10 @@ class IssueInspector extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Priority',
-            style: TextStyle(
-              fontSize: 11,
-              color: CupertinoColors.systemGrey,
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+              color: MacosColors.systemGrayColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -257,26 +250,17 @@ class IssueInspector extends StatelessWidget {
               children: [
                 Text(
                   issue.id,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: CupertinoColors.systemGrey,
+                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                    color: MacosColors.systemGrayColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   issue.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: MacosTheme.of(context).typography.headline,
                 ),
               ],
             ),
-          ),
-          MacosIconButton(
-            icon: const MacosIcon(CupertinoIcons.clear),
-            onPressed: onClose,
-            boxConstraints: const BoxConstraints(minWidth: 20, minHeight: 20),
           ),
         ],
       ),
@@ -291,9 +275,8 @@ class IssueInspector extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 11,
-              color: CupertinoColors.systemGrey,
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+              color: MacosColors.systemGrayColor,
               fontWeight: FontWeight.bold,
             ),
           ),
