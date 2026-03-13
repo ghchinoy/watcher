@@ -33,22 +33,22 @@ class IssueInspector extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatusDropdown(),
-                  _buildPriorityDropdown(),
-                  _buildSection('Type', issue.issueType.toUpperCase()),
+                  _buildStatusDropdown(context),
+                  _buildPriorityDropdown(context),
+                  _buildSection('Type', issue.issueType.toUpperCase(), context),
                   if (issue.owner != null && issue.owner!.isNotEmpty)
-                    _buildSection('Owner', issue.owner!),
+                    _buildSection('Owner', issue.owner!, context),
                   if (issue.assignee != null && issue.assignee!.isNotEmpty)
-                    _buildSection('Assignee', issue.assignee!),
+                    _buildSection('Assignee', issue.assignee!, context),
                   if (issue.createdBy != null && issue.createdBy!.isNotEmpty)
-                    _buildSection('Created By', issue.createdBy!),
-                  _buildSection('Created', _formatDate(issue.createdAt)),
-                  _buildSection('Updated', _formatDate(issue.updatedAt)),
+                    _buildSection('Created By', issue.createdBy!, context),
+                  _buildSection('Created', _formatDate(issue.createdAt), context),
+                  _buildSection('Updated', _formatDate(issue.updatedAt), context),
                   if (issue.closedAt != null)
-                    _buildSection('Closed', _formatDate(issue.closedAt!)),
+                    _buildSection('Closed', _formatDate(issue.closedAt!), context),
                   if (issue.closeReason != null &&
                       issue.closeReason!.isNotEmpty)
-                    _buildSection('Close Reason', issue.closeReason!),
+                    _buildSection('Close Reason', issue.closeReason!, context),
 
                   _buildDependenciesSection(context),
 
@@ -162,7 +162,7 @@ class IssueInspector extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusDropdown() {
+  Widget _buildStatusDropdown(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -199,7 +199,7 @@ class IssueInspector extends StatelessWidget {
     );
   }
 
-  Widget _buildPriorityDropdown() {
+  Widget _buildPriorityDropdown(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -267,7 +267,7 @@ class IssueInspector extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(String title, String value) {
+  Widget _buildSection(String title, String value, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(

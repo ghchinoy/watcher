@@ -117,8 +117,9 @@ class _HomeScreenState extends State<HomeScreen> {
             isResizable: true,
             shownByDefault: false,
             builder: (context, scrollController) {
-              if (appState.selectedIssue == null)
+              if (appState.selectedIssue == null) {
                 return const SizedBox.shrink();
+              }
               return IssueInspector(
                 issue: appState.selectedIssue!,
                 scrollController: scrollController,
