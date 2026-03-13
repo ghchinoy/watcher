@@ -48,7 +48,7 @@ class _TreeNodeState extends State<TreeNode> {
     final children = widget.allIssues.where((potentialChild) {
       if (potentialChild.status == 'closed') return false;
       return potentialChild.dependencies?.any(
-            (d) => d.type == 'parent-child' && d.dependsOnId == widget.issue.id,
+            (d) => (d.type == 'parent-child' || d.type == 'discovered-from') && d.dependsOnId == widget.issue.id,
           ) ??
           false;
     }).toList();

@@ -26,7 +26,7 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
           (i) => appState.currentIssues.any(
             (child) =>
                 child.dependencies?.any(
-                  (d) => d.type == 'parent-child' && d.dependsOnId == i.id,
+                  (d) => (d.type == 'parent-child' || d.type == 'discovered-from') && d.dependsOnId == i.id,
                 ) ??
                 false,
           ),
@@ -121,7 +121,7 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
         final topLevelIssues = issues.where((issue) {
           if (issue.status == 'closed') return false;
           final hasParent =
-              issue.dependencies?.any((d) => d.type == 'parent-child') ?? false;
+              issue.dependencies?.any((d) => d.type == 'parent-child' || d.type == 'discovered-from') ?? false;
           return !hasParent;
         }).toList();
 
