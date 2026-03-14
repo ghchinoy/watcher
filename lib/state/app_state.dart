@@ -37,6 +37,7 @@ class AppState extends ChangeNotifier {
 
   StreamSubscription<FileSystemEvent>? _watchSubscription;
   Timer? _debounceTimer;
+  Timer? _syncTimer;
   BeadsService? _currentService;
 
   AppState() {
@@ -148,6 +149,7 @@ class AppState extends ChangeNotifier {
   Future<void> selectProject(Project project) async {
     _currentService?.dispose();
     _currentService = null;
+    _syncTimer?.cancel();
     
     selectedProject = project;
     isLoading = true;
@@ -164,6 +166,10 @@ class AppState extends ChangeNotifier {
       currentInteractions = await _currentService!.getInteractions();
       currentPeers = await _currentService!.getPeers();
 
+      if (currentPeers.isNotEmpty) {
+        _startSyncTimer();
+      }
+
       // By default, if nodes haven't been saved before, maybe we want to expand them all?
       // Actually, if expandedNodes is empty, we can populate it with all nodes that have children if we want them expanded by default.
       // But let's keep it simple: if it's completely empty, maybe it's the first run, but we don't know for sure.
@@ -173,6 +179,14 @@ class AppState extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  void _startSyncTimer() {
+    _syncTimer?.cancel();
+    // Auto-sync every 5 minutes
+    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      syncPeer();
+    });
   }
 
   void _setupWatcher(String projectPath) {
@@ -276,6 +290,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _watchSubscription?.cancel();
     _debounceTimer?.cancel();
+    _syncTimer?.cancel();
     _currentService?.dispose();
     super.dispose();
   }
