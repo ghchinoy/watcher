@@ -2,6 +2,8 @@ module github.com/ghchinoy/watcher-daemon
 
 go 1.25.8
 
+require github.com/steveyegge/beads v0.60.0
+
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -18,7 +20,6 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
-	github.com/steveyegge/beads v0.60.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.42.0 // indirect

@@ -48,12 +48,84 @@ func sendResponse(resp Response) {
 	fmt.Printf("%s\n", string(bytes))
 }
 
+func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		Issue beads.Issue `json:"issue"`
+		Actor string      `json:"actor"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+
+	err := storage.CreateIssue(ctx, &params.Issue, params.Actor)
+	if err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to create issue: %v", err))
+		return
+	}
+
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  "ok",
+		ID:      req.ID,
+	})
+}
+
+func handleCloseIssue(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		ID      string `json:"id"`
+		Reason  string `json:"reason"`
+		Actor   string `json:"actor"`
+		Session string `json:"session"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+
+	err := storage.CloseIssue(ctx, params.ID, params.Reason, params.Actor, params.Session)
+	if err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to close issue: %v", err))
+		return
+	}
+
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  "ok",
+		ID:      req.ID,
+	})
+}
+
+func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		ID      string                 `json:"id"`
+		Updates map[string]interface{} `json:"updates"`
+		Actor   string                 `json:"actor"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+
+	err := storage.UpdateIssue(ctx, params.ID, params.Updates, params.Actor)
+	if err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to update issue: %v", err))
+		return
+	}
+
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  "ok",
+		ID:      req.ID,
+	})
+}
+
 func handleGraph(ctx context.Context, storage beads.Storage, id int) {
-	// Query all open issues, or modify filter as needed
+	// Use SearchIssues to fetch everything (empty query, empty filter)
 	filter := beads.IssueFilter{}
 	nodes, err := storage.SearchIssues(ctx, "", filter)
 	if err != nil {
-		sendError(id, -32000, fmt.Sprintf("failed to get issues: %v", err))
+		sendError(id, -32000, fmt.Sprintf("failed to search issues: %v", err))
 		return
 	}
 	
@@ -112,6 +184,12 @@ func main() {
 		switch req.Method {
 		case "graph":
 			handleGraph(ctx, storage, req.ID)
+		case "create_issue":
+			handleCreateIssue(ctx, storage, req)
+		case "update_issue":
+			handleUpdateIssue(ctx, storage, req)
+		case "close_issue":
+			handleCloseIssue(ctx, storage, req)
 		case "ping":
 			sendResponse(Response{JSONRPC: "2.0", Result: "pong", ID: req.ID})
 		default:
