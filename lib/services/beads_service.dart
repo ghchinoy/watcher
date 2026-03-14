@@ -118,7 +118,13 @@ class BeadsService {
       rethrow;
     }
     
-    return completer.future;
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        _pendingRequests.remove(id);
+        throw Exception('Daemon timed out waiting for Dolt server to boot. Try selecting the project again.');
+      },
+    );
   }
 
   Future<List<Interaction>> getInteractions() async {

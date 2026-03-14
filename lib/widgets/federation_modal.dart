@@ -59,6 +59,9 @@ class _FederationModalState extends State<FederationModal> {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 400),
+      decoration: BoxDecoration(
+        color: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
+      ),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,

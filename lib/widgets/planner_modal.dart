@@ -84,6 +84,9 @@ class _PlannerModalState extends State<PlannerModal> {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
+      decoration: BoxDecoration(
+        color: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
+      ),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
