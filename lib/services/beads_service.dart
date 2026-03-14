@@ -178,6 +178,35 @@ class BeadsService {
     });
   }
   
+  Future<List<Map<String, String>>> getPeers() async {
+    final result = await _sendRpcRequest('get_peers');
+    if (result == null) return [];
+    
+    final List<Map<String, String>> peers = [];
+    final list = result as List<dynamic>;
+    for (var item in list) {
+      final map = item as Map<String, dynamic>;
+      peers.add({
+        'name': map['name'] as String? ?? '',
+        'url': map['url'] as String? ?? '',
+      });
+    }
+    return peers;
+  }
+
+  Future<void> addPeer(String name, String url) async {
+    await _sendRpcRequest('add_peer', {
+      'name': name,
+      'url': url,
+    });
+  }
+
+  Future<void> syncPeer([String? peer]) async {
+    await _sendRpcRequest('sync_peer', {
+      ...?peer != null ? {'peer': peer} : null,
+    });
+  }
+
   void dispose() {
     _isDisposed = true;
     _daemonProcess?.kill();

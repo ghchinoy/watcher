@@ -20,6 +20,7 @@ class AppState extends ChangeNotifier {
   List<Issue> currentIssues = [];
   List<GraphNode> currentGraph = [];
   List<Interaction> currentInteractions = [];
+  List<Map<String, String>> currentPeers = [];
   Issue? selectedIssue;
 
   bool isLoading = false;
@@ -161,6 +162,7 @@ class AppState extends ChangeNotifier {
       currentIssues = await _currentService!.getIssues();
       currentGraph = await _currentService!.getGraph();
       currentInteractions = await _currentService!.getInteractions();
+      currentPeers = await _currentService!.getPeers();
 
       // By default, if nodes haven't been saved before, maybe we want to expand them all?
       // Actually, if expandedNodes is empty, we can populate it with all nodes that have children if we want them expanded by default.
@@ -178,6 +180,16 @@ class AppState extends ChangeNotifier {
     final beadsDir = Directory('$projectPath/.beads');
     if (beadsDir.existsSync()) {
       _watchSubscription = beadsDir.watch(recursive: true).listen((event) {
+        // Ignore changes to dolt-server.log, locks, and internal noms storage
+        // to prevent infinite refresh loops when the DB server is active.
+        if (event.path.endsWith('.log') ||
+            event.path.endsWith('.lock') ||
+            event.path.endsWith('.pid') ||
+            event.path.endsWith('.port') ||
+            event.path.contains('/.dolt/')) {
+          return;
+        }
+
         if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
         _debounceTimer = Timer(const Duration(milliseconds: 500), () {
           _refreshData();
@@ -220,15 +232,42 @@ class AppState extends ChangeNotifier {
       final newIssues = await _currentService!.getIssues();
       final newGraph = await _currentService!.getGraph();
       final newInteractions = await _currentService!.getInteractions();
+      final newPeers = await _currentService!.getPeers();
 
       currentIssues = newIssues;
       currentGraph = newGraph;
       currentInteractions = newInteractions;
+      currentPeers = newPeers;
       projectErrors.remove(projectPath);
     } catch (e) {
       projectErrors[projectPath] = e.toString();
     } finally {
       isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> syncPeer([String? peer]) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      isRefreshing = true;
+      notifyListeners();
+      await _currentService!.syncPeer(peer);
+      await _refreshData(); // triggers notifyListeners and resets isRefreshing
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to sync: $e';
+      isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addPeer(String name, String url) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      await _currentService!.addPeer(name, url);
+      await _refreshData();
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to add peer: $e';
       notifyListeners();
     }
   }

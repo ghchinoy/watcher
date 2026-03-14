@@ -204,6 +204,90 @@ class ProjectDashboard extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                       Text(
+                        'Federation',
+                        style: MacosTheme.of(context).typography.title2,
+                      ),
+                      const SizedBox(height: 12),
+                      if (appState.currentPeers.isEmpty)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: MacosColors.systemGrayColor.withValues(alpha: 0.2)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('No peers configured', style: MacosTheme.of(context).typography.headline),
+                                const SizedBox(height: 4),
+                                const Text('This project only exists locally.'),
+                                const SizedBox(height: 12),
+                                PushButton(
+                                  controlSize: ControlSize.regular,
+                                  child: const Text('Configure Federation...'),
+                                  onPressed: () {
+                                    // TODO: Open Settings
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          decoration: BoxDecoration(
+                            color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: MacosColors.systemGrayColor.withValues(alpha: 0.2)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('${appState.currentPeers.length} Peers Configured', style: MacosTheme.of(context).typography.headline),
+                                    PushButton(
+                                  controlSize: ControlSize.regular,
+                                  secondary: true,
+                                  onPressed: () {
+                                        appState.syncPeer();
+                                      },
+                                      child: const Text('Sync All'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                ...appState.currentPeers.map((peer) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: Row(
+                                        children: [
+                                          const MacosIcon(CupertinoIcons.cloud, size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(peer['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                          const SizedBox(width: 8),
+                                          Text(peer['url'] ?? '', style: MacosTheme.of(context).typography.footnote.copyWith(color: MacosColors.systemGrayColor)),
+                                        ],
+                                      ),
+                                    )),
+                                const SizedBox(height: 4),
+                                PushButton(
+                                  controlSize: ControlSize.regular,
+                                  child: const Text('Configure Federation...'),
+                                  onPressed: () {
+                                    // TODO: Open Settings
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 32),
+                      Text(
                         'Recent Activity',
                         style: MacosTheme.of(context).typography.title2,
                       ),

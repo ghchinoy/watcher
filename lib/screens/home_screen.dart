@@ -68,8 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: MacosColors.systemRedColor,
                       );
                     } else {
+                      final hasPeers = isSelected && appState.currentPeers.isNotEmpty;
                       leadingIcon = MacosIcon(
-                        CupertinoIcons.folder,
+                        hasPeers ? CupertinoIcons.cloud : CupertinoIcons.folder,
                         color: isSelected
                             ? null
                             : MacosTheme.of(
