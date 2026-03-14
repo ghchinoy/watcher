@@ -48,6 +48,133 @@ func sendResponse(resp Response) {
 	fmt.Printf("%s\n", string(bytes))
 }
 
+type remoteReader interface {
+	ListRemotes(ctx context.Context) ([]struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}, error)
+}
+
+func handleAddPeer(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+
+	type remoteStore interface {
+		AddRemote(ctx context.Context, name, url string) error
+	}
+
+	if rs, ok := storage.(remoteStore); ok {
+		if err := rs.AddRemote(ctx, params.Name, params.URL); err != nil {
+			sendError(req.ID, -32000, fmt.Sprintf("failed to add peer: %v", err))
+			return
+		}
+		sendResponse(Response{
+			JSONRPC: "2.0",
+			Result:  "ok",
+			ID:      req.ID,
+		})
+		return
+	}
+
+	sendError(req.ID, -32601, "Storage backend does not support remotes")
+}
+
+func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		Peer string `json:"peer"` // optional, if empty syncs all
+	}
+	// We ignore unmarshal errors here since params might be empty/null
+	json.Unmarshal(req.Params, &params)
+
+	type remoteStore interface {
+		PullFrom(ctx context.Context, peer string) ([]interface{}, error)
+		PushTo(ctx context.Context, peer string) error
+		Pull(ctx context.Context) error
+		Push(ctx context.Context) error
+	}
+
+	if rs, ok := storage.(remoteStore); ok {
+		var err error
+		if params.Peer != "" {
+			_, err = rs.PullFrom(ctx, params.Peer)
+			if err == nil {
+				err = rs.PushTo(ctx, params.Peer)
+			}
+		} else {
+			err = rs.Pull(ctx)
+			if err == nil {
+				err = rs.Push(ctx)
+			}
+		}
+
+		if err != nil {
+			sendError(req.ID, -32000, fmt.Sprintf("failed to sync peer: %v", err))
+			return
+		}
+
+		sendResponse(Response{
+			JSONRPC: "2.0",
+			Result:  "ok",
+			ID:      req.ID,
+		})
+		return
+	}
+
+	sendError(req.ID, -32601, "Storage backend does not support remotes")
+}
+
+func handleGetPeers(ctx context.Context, storage beads.Storage, req Request) {
+	// Not all storages implement remoteReader/ListRemotes. 
+	// We need to type assert against the dolt implementation or just use reflection.
+	// Since beads.Storage doesn't directly expose ListRemotes, we check if the underlying store implements it.
+	
+	// Create a structural type that matches storage.RemoteInfo
+	type RemoteInfo struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}
+
+	type remoteStore interface {
+		ListRemotes(ctx context.Context) ([]RemoteInfo, error)
+	}
+
+	if rs, ok := storage.(remoteStore); ok {
+		remotes, err := rs.ListRemotes(ctx)
+		if err != nil {
+			sendError(req.ID, -32000, fmt.Sprintf("failed to list peers: %v", err))
+			return
+		}
+		
+		// Filter out 'origin' as that's the main repo, not a federation peer
+		var peers []RemoteInfo
+		for _, r := range remotes {
+			if r.Name != "origin" {
+				peers = append(peers, r)
+			}
+		}
+
+		sendResponse(Response{
+			JSONRPC: "2.0",
+			Result:  peers,
+			ID:      req.ID,
+		})
+		return
+	}
+
+	// If not a remoteStore, just return empty list
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  []RemoteInfo{},
+		ID:      req.ID,
+	})
+}
+
 func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) {
 	var params struct {
 		Issue beads.Issue `json:"issue"`
@@ -215,6 +342,12 @@ func main() {
 			handleUpdateIssue(ctx, storage, req)
 		case "close_issue":
 			handleCloseIssue(ctx, storage, req)
+		case "get_peers":
+			handleGetPeers(ctx, storage, req)
+		case "add_peer":
+			handleAddPeer(ctx, storage, req)
+		case "sync_peer":
+			handleSyncPeer(ctx, storage, req)
 		case "ping":
 			sendResponse(Response{JSONRPC: "2.0", Result: "pong", ID: req.ID})
 		default:
