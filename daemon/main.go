@@ -120,6 +120,10 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	})
 }
 
+type depReader interface {
+	GetDependencyRecordsForIssues(ctx context.Context, issueIDs []string) (map[string][]*beads.Dependency, error)
+}
+
 func handleGraph(ctx context.Context, storage beads.Storage, id int) {
 	// Use SearchIssues to fetch everything (empty query, empty filter)
 	filter := beads.IssueFilter{}
@@ -128,17 +132,34 @@ func handleGraph(ctx context.Context, storage beads.Storage, id int) {
 		sendError(id, -32000, fmt.Sprintf("failed to search issues: %v", err))
 		return
 	}
-	
-	// Create JSON representation of the graph
-	// We might need to wrap nodes or adapt to the exact JSON struct Dart expects
-	// For now, return the nodes directly
-	
-	resp := Response{
-		JSONRPC: "2.0",
-		Result:  nodes,
-		ID:      id,
+
+	var allDeps map[string][]*beads.Dependency
+	if dr, ok := storage.(depReader); ok {
+		issueIDs := make([]string, len(nodes))
+		for i, n := range nodes {
+			issueIDs[i] = n.ID
+		}
+		allDeps, _ = dr.GetDependencyRecordsForIssues(ctx, issueIDs)
 	}
-	sendResponse(resp)
+
+	type issueWithDeps struct {
+		*beads.Issue
+		Dependencies []*beads.Dependency `json:"dependencies,omitempty"`
+	}
+
+	result := make([]issueWithDeps, len(nodes))
+	for i, n := range nodes {
+		result[i] = issueWithDeps{
+			Issue:        n,
+			Dependencies: allDeps[n.ID],
+		}
+	}
+
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  result,
+		ID:      id,
+	})
 }
 
 
