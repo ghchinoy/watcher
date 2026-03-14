@@ -29,3 +29,8 @@ For detailed architectural decisions, always refer to and update `docs/ARCHITECT
 - **App Sandbox:** Watcher acts as a wrapper around local developer tools (`bd` and `gemini`). Because sandboxed macOS apps are strictly forbidden from executing arbitrary binaries outside of their own bundle, the **macOS App Sandbox MUST remain disabled** (`<key>com.apple.security.app-sandbox</key> <false/>` in `Release.entitlements`).
 - **Deployment / Gatekeeper:** Because the sandbox is disabled and the app uses a local ad-hoc signature, copying the built `.app` bundle into `/Applications/` will cause macOS AMFI (Apple Mobile File Integrity) to instantly kill the app on launch due to the `com.apple.provenance` extended attribute.
 - **The Symlink Workaround:** To bypass this, we strictly deploy the app by symlinking it. Never copy the `.app` bundle. Always use `make install` which creates an alias: `ln -s $(BUILD_DIR)/Watcher.app /Applications/Watcher.app`. This keeps the app outside Gatekeeper's quarantine rules while still being accessible via Spotlight and the Applications folder.
+
+## Go Daemon Architecture
+- **Compilation:** The Watcher application relies on a bundled Go binary (`watcher-daemon`) for database access. This binary must be compiled and copied into the `Watcher.app/Contents/Resources` directory during the build process.
+- **RPC Communication:** The Dart UI communicates with the Go daemon via JSON-RPC 2.0 over standard input and output (`stdin`/`stdout`). We do not use gRPC or local TCP ports to avoid firewall issues and orphaned processes.
+- **Go Standards:** The `daemon` directory must adhere to standard Go practices. It must pass `golangci-lint run` and should eventually include a `_test.go` suite to mock and verify JSON-RPC serialization.

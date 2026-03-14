@@ -166,7 +166,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to open beads database: %v", err)
 	}
-	defer storage.Close()
+	defer func() {
+		if err := storage.Close(); err != nil {
+			log.Printf("Error closing storage: %v", err)
+		}
+	}()
 
 	// Simple stdin/stdout JSON-RPC loop
 	decoder := json.NewDecoder(os.Stdin)

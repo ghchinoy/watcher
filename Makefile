@@ -13,10 +13,16 @@ help: ## Show this help message
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
 
-build: ## Build the macOS release app
+build: build-daemon ## Build the macOS release app and embed the daemon
 	@echo "Building $(APP_NAME) for macOS..."
 	flutter build macos --release
+	@echo "Embedding watcher-daemon into app bundle..."
+	@mkdir -p $(BUILD_DIR)/$(APP_NAME)/Contents/Resources
+	@cp daemon/watcher-daemon $(BUILD_DIR)/$(APP_NAME)/Contents/Resources/watcher-daemon
 
+build-daemon: ## Build the Go daemon
+	@echo "Building watcher-daemon..."
+	cd daemon && go build -o watcher-daemon
 install: build ## Build and install a symlink to /Applications
 	@echo "Installing $(APP_NAME) alias to $(INSTALL_DIR)..."
 	@rm -rf $(INSTALL_DIR)/$(APP_NAME)
