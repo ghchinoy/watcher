@@ -53,23 +53,23 @@ class BeadsService {
       // Prevent unhandled async exceptions if the process crashes and the pipe breaks
       _daemonProcess!.stdin.done.catchError((_) {});
 
-      // Use Dart's built-in streaming JSON decoder for massive payloads
+      // Use LineSplitter to frame the JSON-RPC messages (one per line)
       _daemonProcess!.stdout
           .transform(utf8.decoder)
-          .transform(json.decoder)
-          .listen((parsedObject) {
+          .transform(const LineSplitter())
+          .listen((line) {
+        if (line.trim().isEmpty) return;
         try {
-          if (parsedObject is Map<String, dynamic>) {
-            final id = parsedObject['id'] as int?;
-            if (id != null && _pendingRequests.containsKey(id)) {
-              if (parsedObject['error'] != null) {
-                _pendingRequests[id]!.completeError(
-                    Exception(parsedObject['error']['message']));
-              } else {
-                _pendingRequests[id]!.complete(parsedObject['result']);
-              }
-              _pendingRequests.remove(id);
+          final response = jsonDecode(line);
+          final id = response['id'] as int?;
+          if (id != null && _pendingRequests.containsKey(id)) {
+            if (response['error'] != null) {
+              _pendingRequests[id]!.completeError(
+                  Exception(response['error']['message']));
+            } else {
+              _pendingRequests[id]!.complete(response['result']);
             }
+            _pendingRequests.remove(id);
           }
         } catch (e) {
           debugPrint('Failed to process daemon output object: $e');
