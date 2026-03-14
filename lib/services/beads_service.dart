@@ -96,6 +96,10 @@ class BeadsService {
   Future<dynamic> _sendRpcRequest(String method, [dynamic params]) async {
     await _ensureDaemonRunning();
     
+    if (_daemonProcess == null) {
+      throw Exception('Daemon process failed to start or died');
+    }
+
     final id = _requestId++;
     final completer = Completer<dynamic>();
     _pendingRequests[id] = completer;
@@ -107,7 +111,12 @@ class BeadsService {
       'id': id,
     };
 
-    _daemonProcess!.stdin.writeln(jsonEncode(request));
+    try {
+      _daemonProcess!.stdin.writeln(jsonEncode(request));
+    } catch (e) {
+      _pendingRequests.remove(id);
+      rethrow;
+    }
     
     return completer.future;
   }
