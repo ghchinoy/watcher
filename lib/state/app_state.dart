@@ -36,6 +36,7 @@ class AppState extends ChangeNotifier {
 
   StreamSubscription<FileSystemEvent>? _watchSubscription;
   Timer? _debounceTimer;
+  BeadsService? _currentService;
 
   AppState() {
     _loadProjects();
@@ -144,6 +145,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> selectProject(Project project) async {
+    _currentService?.dispose();
+    _currentService = null;
+    
     selectedProject = project;
     isLoading = true;
     projectErrors.remove(project.path);
@@ -153,10 +157,10 @@ class AppState extends ChangeNotifier {
     _setupWatcher(project.path);
 
     try {
-      final service = BeadsService(project.path);
-      currentIssues = await service.getIssues();
-      currentGraph = await service.getGraph();
-      currentInteractions = await service.getInteractions();
+      _currentService = BeadsService(project.path);
+      currentIssues = await _currentService!.getIssues();
+      currentGraph = await _currentService!.getGraph();
+      currentInteractions = await _currentService!.getInteractions();
 
       // By default, if nodes haven't been saved before, maybe we want to expand them all?
       // Actually, if expandedNodes is empty, we can populate it with all nodes that have children if we want them expanded by default.
@@ -195,8 +199,9 @@ class AppState extends ChangeNotifier {
     }
 
     try {
-      final service = BeadsService(selectedProject!.path);
-      await service.updateIssue(id, status: status, priority: priority);
+      if (_currentService != null) {
+        await _currentService!.updateIssue(id, status: status, priority: priority);
+      }
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to update issue: $e';
       notifyListeners();
@@ -211,10 +216,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final service = BeadsService(projectPath);
-      final newIssues = await service.getIssues();
-      final newGraph = await service.getGraph();
-      final newInteractions = await service.getInteractions();
+      if (_currentService == null) return;
+      final newIssues = await _currentService!.getIssues();
+      final newGraph = await _currentService!.getGraph();
+      final newInteractions = await _currentService!.getInteractions();
 
       currentIssues = newIssues;
       currentGraph = newGraph;
@@ -232,6 +237,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _watchSubscription?.cancel();
     _debounceTimer?.cancel();
+    _currentService?.dispose();
     super.dispose();
   }
 }
