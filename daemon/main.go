@@ -271,19 +271,23 @@ func main() {
 	
 	// Initialize database connection
 	// We just change into the repoPath so FindBeadsDir works contextually,
-	// or we pass it directly. Since beads.FindBeadsDir uses current directory, we chdir.
 	if err := os.Chdir(repoPath); err != nil {
-		log.Fatalf("Failed to chdir to %s: %v", repoPath, err)
+		log.Printf("Failed to chdir to %s: %v", repoPath, err)
+		os.Exit(1)
 	}
 
 	beadsDir := beads.FindBeadsDir()
 	if beadsDir == "" {
-		log.Fatalf("Failed to find beads database in %s", repoPath)
+		// Output a clean JSON-RPC error instead of panic so Dart doesn't crash
+		// We do this by printing a raw JSON response to stdout before exiting.
+		fmt.Printf(`{"jsonrpc":"2.0","error":{"code":-32000,"message":"Directory is not a valid beads project: missing .beads folder"},"id":1}` + "\n")
+		os.Exit(0)
 	}
 
 	storage, err := beads.OpenFromConfig(ctx, beadsDir)
 	if err != nil {
-		log.Fatalf("Failed to open beads database: %v", err)
+		fmt.Printf(`{"jsonrpc":"2.0","error":{"code":-32000,"message":"Failed to open beads database: %v"},"id":1}`+"\n", err)
+		os.Exit(0)
 	}
 	defer func() {
 		if err := storage.Close(); err != nil {
