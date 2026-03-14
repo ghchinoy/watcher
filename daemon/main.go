@@ -284,9 +284,23 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Emit a special bootstrapping notification so the UI knows we are
+	// establishing the database connection and might be waiting for the Dolt server.
+	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database"}}` + "\n")
+
 	storage, err := beads.OpenFromConfig(ctx, beadsDir)
 	if err != nil {
-		fmt.Printf(`{"jsonrpc":"2.0","error":{"code":-32000,"message":"Failed to open beads database: %v"},"id":1}`+"\n", err)
+		// Serialize the error properly so newlines in err.Error() don't break JSON structure
+		errResp := Response{
+			JSONRPC: "2.0",
+			Error: &Error{
+				Code:    -32000,
+				Message: fmt.Sprintf("Failed to open beads database: %v", err),
+			},
+			ID: 1,
+		}
+		bytes, _ := json.Marshal(errResp)
+		fmt.Printf("%s\n", string(bytes))
 		os.Exit(0)
 	}
 	defer func() {
