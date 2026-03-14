@@ -53,21 +53,40 @@ class BeadsService {
       // Prevent unhandled async exceptions if the process crashes and the pipe breaks
       _daemonProcess!.stdin.done.catchError((_) {});
 
-      _daemonProcess!.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((line) {
-        if (line.trim().isEmpty) return;
-        try {
-          final response = jsonDecode(line);
-          final id = response['id'] as int?;
-          if (id != null && _pendingRequests.containsKey(id)) {
-            if (response['error'] != null) {
-              _pendingRequests[id]!.completeError(Exception(response['error']['message']));
-            } else {
-              _pendingRequests[id]!.complete(response['result']);
+      // Use a custom accumulator to handle massive JSON payloads
+      // since the default LineSplitter might choke or fragment them
+      String _outputBuffer = '';
+      
+      _daemonProcess!.stdout.transform(utf8.decoder).listen((chunk) {
+        _outputBuffer += chunk;
+        
+        // Process complete lines
+        int newlineIndex;
+        while ((newlineIndex = _outputBuffer.indexOf('\n')) != -1) {
+          final line = _outputBuffer.substring(0, newlineIndex);
+          _outputBuffer = _outputBuffer.substring(newlineIndex + 1);
+          
+          if (line.trim().isEmpty) continue;
+          
+          try {
+            final response = jsonDecode(line);
+            final id = response['id'] as int?;
+            if (id != null && _pendingRequests.containsKey(id)) {
+              if (response['error'] != null) {
+                _pendingRequests[id]!.completeError(Exception(response['error']['message']));
+              } else {
+                _pendingRequests[id]!.complete(response['result']);
+              }
+              _pendingRequests.remove(id);
             }
-            _pendingRequests.remove(id);
+          } catch (e) {
+            debugPrint('Failed to parse daemon output (len: ${line.length}): $e');
           }
-        } catch (e) {
-          debugPrint('Failed to parse daemon output: $line');
+        }
+      }, onDone: () {
+        // If the stream closes while we still have buffer, it might be an error payload
+        if (_outputBuffer.trim().isNotEmpty) {
+           debugPrint('Daemon stream closed with remaining buffer: ${_outputBuffer.substring(0, _outputBuffer.length > 100 ? 100 : _outputBuffer.length)}...');
         }
       });
 
