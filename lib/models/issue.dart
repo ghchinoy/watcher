@@ -81,3 +81,29 @@ class GraphNode {
       _$GraphNodeFromJson(json);
   Map<String, dynamic> toJson() => _$GraphNodeToJson(this);
 }
+
+extension IssueHierarchy on Issue {
+  bool isDirectChildOf(Issue parent) {
+    final explicit = dependencies?.any(
+          (d) => d.type == 'parent-child' && d.dependsOnId == parent.id,
+        ) ??
+        false;
+    final lastDotIndex = id.lastIndexOf('.');
+    final implicit =
+        lastDotIndex != -1 && id.substring(0, lastDotIndex) == parent.id;
+    return explicit || implicit;
+  }
+
+  bool hasParentIn(List<Issue> issues) {
+    final hasExplicit =
+        dependencies?.any((d) => d.type == 'parent-child') ?? false;
+    if (hasExplicit) return true;
+
+    final lastDotIndex = id.lastIndexOf('.');
+    if (lastDotIndex != -1) {
+      final implicitParentId = id.substring(0, lastDotIndex);
+      return issues.any((i) => i.id == implicitParentId);
+    }
+    return false;
+  }
+}

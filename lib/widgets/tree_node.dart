@@ -47,10 +47,7 @@ class _TreeNodeState extends State<TreeNode> {
     // Find children of this issue and filter out closed issues
     final children = widget.allIssues.where((potentialChild) {
       if (potentialChild.status == 'closed') return false;
-      return potentialChild.dependencies?.any(
-            (d) => (d.type == 'parent-child' || d.type == 'discovered-from') && d.dependsOnId == widget.issue.id,
-          ) ??
-          false;
+      return potentialChild.isDirectChildOf(widget.issue);
     }).toList();
 
     return Padding(

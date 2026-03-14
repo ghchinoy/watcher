@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
+import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/tree_node.dart';
 
@@ -24,11 +25,7 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
     final allParentIds = appState.currentIssues
         .where(
           (i) => appState.currentIssues.any(
-            (child) =>
-                child.dependencies?.any(
-                  (d) => (d.type == 'parent-child' || d.type == 'discovered-from') && d.dependsOnId == i.id,
-                ) ??
-                false,
+            (child) => child.isDirectChildOf(i),
           ),
         )
         .map((i) => i.id)
@@ -120,9 +117,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
         // and filter out closed issues by default.
         final topLevelIssues = issues.where((issue) {
           if (issue.status == 'closed') return false;
-          final hasParent =
-              issue.dependencies?.any((d) => d.type == 'parent-child' || d.type == 'discovered-from') ?? false;
-          return !hasParent;
+          final hasDiscoveredFrom = issue.dependencies?.any((d) => d.type == 'discovered-from') ?? false;
+          return !issue.hasParentIn(issues) && !hasDiscoveredFrom;
         }).toList();
 
         return MacosScaffold(
