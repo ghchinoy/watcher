@@ -19,6 +19,8 @@ build: build-daemon ## Build the macOS release app and embed the daemon
 	@echo "Embedding watcher-daemon into app bundle..."
 	@mkdir -p $(BUILD_DIR)/$(APP_NAME)/Contents/Resources
 	@cp daemon/watcher-daemon $(BUILD_DIR)/$(APP_NAME)/Contents/Resources/watcher-daemon
+	@echo "Re-signing the app bundle..."
+	codesign --force --deep --sign - $(BUILD_DIR)/$(APP_NAME)
 
 build-daemon: ## Build the Go daemon
 	@echo "Building watcher-daemon..."
