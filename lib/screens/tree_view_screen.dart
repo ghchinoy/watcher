@@ -117,8 +117,10 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
         // and filter out closed issues by default.
         final topLevelIssues = issues.where((issue) {
           if (issue.status == 'closed') return false;
-          final hasDiscoveredFrom = issue.dependencies?.any((d) => d.type == 'discovered-from') ?? false;
-          return !issue.hasParentIn(issues) && !hasDiscoveredFrom;
+          // If an issue has a parent, it is not a top-level root.
+          // Discovered-from edges do NOT prevent an issue from being a root, 
+          // because discovered-from is not a parent-child structural relationship.
+          return !issue.hasParentIn(issues);
         }).toList();
 
         return MacosScaffold(
