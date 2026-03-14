@@ -94,6 +94,36 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 	// We ignore unmarshal errors here since params might be empty/null
 	json.Unmarshal(req.Params, &params)
 
+	// In beads v0.60.0, true sync is exposed via SyncStore
+	type syncStore interface {
+		Sync(ctx context.Context, peer string, strategy string) (interface{}, error)
+	}
+
+	if ss, ok := storage.(syncStore); ok {
+		var err error
+		if params.Peer != "" {
+			_, err = ss.Sync(ctx, params.Peer, "theirs")
+		} else {
+			// If no peer specified, we'll try 'cloud' which is our synthetic peer
+			// or we could loop through all peers from handleGetPeers
+			// For now, let's just attempt to sync "cloud"
+			_, err = ss.Sync(ctx, "cloud", "theirs")
+		}
+
+		if err != nil {
+			sendError(req.ID, -32000, fmt.Sprintf("failed to sync peer: %v", err))
+			return
+		}
+
+		sendResponse(Response{
+			JSONRPC: "2.0",
+			Result:  "ok",
+			ID:      req.ID,
+		})
+		return
+	}
+
+	// Fallback to dolt push/pull if Sync() isn't available
 	type remoteStore interface {
 		PullFrom(ctx context.Context, peer string) ([]interface{}, error)
 		PushTo(ctx context.Context, peer string) error
@@ -103,7 +133,7 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 
 	if rs, ok := storage.(remoteStore); ok {
 		var err error
-		if params.Peer != "" {
+		if params.Peer != "" && params.Peer != "cloud" {
 			_, err = rs.PullFrom(ctx, params.Peer)
 			if err == nil {
 				err = rs.PushTo(ctx, params.Peer)
@@ -128,7 +158,7 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 		return
 	}
 
-	sendError(req.ID, -32601, "Storage backend does not support remotes")
+	sendError(req.ID, -32601, "Storage backend does not support remotes or sync")
 }
 
 func handleGetPeers(ctx context.Context, storage beads.Storage, req Request) {
