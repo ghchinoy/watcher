@@ -12,9 +12,12 @@ class BeadsService {
   final Map<int, Completer<dynamic>> _pendingRequests = {};
   bool _isInitializing = false;
 
+  bool _isDisposed = false;
+
   BeadsService(this.workingDirectory);
 
   Future<void> _ensureDaemonRunning() async {
+    if (_isDisposed) throw Exception('Service disposed');
     if (_daemonProcess != null) return;
     if (_isInitializing) {
       // Simple backoff wait if currently initializing
@@ -24,21 +27,20 @@ class BeadsService {
     
     _isInitializing = true;
     try {
-      // Find the bundled daemon binary. During dev it's in daemon/watcher-daemon.
-      // In production, we'll need to locate it relative to the App bundle.
-      // For now, we assume it's built in the project root/daemon directory.
+      // Find the bundled daemon binary.
       String daemonPath = 'daemon/watcher-daemon';
       
-      // If we are running from a built app bundle on macOS, the executable is in Contents/MacOS
-      // We can look for it in the same directory as our executable or Resources.
-      if (!File(daemonPath).existsSync()) {
+      if (File(daemonPath).existsSync()) {
+        // We are in dev mode, running from the project root. Make it absolute
+        // so it works when Process.start changes the working directory.
+        daemonPath = File(daemonPath).absolute.path;
+      } else {
+        // If we are running from a built app bundle on macOS, the executable is in Contents/MacOS
         final execPath = Platform.resolvedExecutable;
         final bundleDir = File(execPath).parent.parent;
         final bundledDaemon = File('${bundleDir.path}/Resources/watcher-daemon');
         if (bundledDaemon.existsSync()) {
           daemonPath = bundledDaemon.path;
-        } else {
-           // Fallback to expecting it in PATH or just fail later
         }
       }
 
@@ -47,6 +49,9 @@ class BeadsService {
         [workingDirectory],
         workingDirectory: workingDirectory,
       );
+
+      // Prevent unhandled async exceptions if the process crashes and the pipe breaks
+      _daemonProcess!.stdin.done.catchError((_) {});
 
       _daemonProcess!.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((line) {
         if (line.trim().isEmpty) return;
@@ -73,8 +78,12 @@ class BeadsService {
       _daemonProcess!.exitCode.then((code) {
         debugPrint('Daemon exited with code $code');
         _daemonProcess = null;
-        for (var completer in _pendingRequests.values) {
-          completer.completeError(Exception('Daemon crashed'));
+        if (!_isDisposed) {
+          for (var completer in _pendingRequests.values) {
+            if (!completer.isCompleted) {
+              completer.completeError(Exception('Daemon crashed (exit code $code)'));
+            }
+          }
         }
         _pendingRequests.clear();
       });
@@ -161,7 +170,14 @@ class BeadsService {
   }
   
   void dispose() {
+    _isDisposed = true;
     _daemonProcess?.kill();
     _daemonProcess = null;
+    for (var completer in _pendingRequests.values) {
+      if (!completer.isCompleted) {
+        completer.completeError(Exception('Service disposed'));
+      }
+    }
+    _pendingRequests.clear();
   }
 }
