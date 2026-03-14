@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/steveyegge/beads"
+	"gopkg.in/yaml.v3"
 )
 
 type Request struct {
@@ -130,47 +132,35 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 }
 
 func handleGetPeers(ctx context.Context, storage beads.Storage, req Request) {
-	// Not all storages implement remoteReader/ListRemotes. 
-	// We need to type assert against the dolt implementation or just use reflection.
-	// Since beads.Storage doesn't directly expose ListRemotes, we check if the underlying store implements it.
-	
-	// Create a structural type that matches storage.RemoteInfo
 	type RemoteInfo struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	}
+	var peers []RemoteInfo
 
-	type remoteStore interface {
-		ListRemotes(ctx context.Context) ([]RemoteInfo, error)
-	}
-
-	if rs, ok := storage.(remoteStore); ok {
-		remotes, err := rs.ListRemotes(ctx)
-		if err != nil {
-			sendError(req.ID, -32000, fmt.Sprintf("failed to list peers: %v", err))
-			return
-		}
-		
-		// Filter out 'origin' as that's the main repo, not a federation peer
-		var peers []RemoteInfo
-		for _, r := range remotes {
-			if r.Name != "origin" {
-				peers = append(peers, r)
+	// Read config.yaml directly to find federation.remote
+	beadsDir := beads.FindBeadsDir()
+	if beadsDir != "" {
+		configPath := filepath.Join(beadsDir, "config.yaml")
+		data, err := os.ReadFile(configPath)
+		if err == nil {
+			var config struct {
+				Federation struct {
+					Remote string `yaml:"remote"`
+				} `yaml:"federation"`
+			}
+			if yaml.Unmarshal(data, &config) == nil && config.Federation.Remote != "" {
+				peers = append(peers, RemoteInfo{
+					Name: "cloud",
+					URL:  config.Federation.Remote,
+				})
 			}
 		}
-
-		sendResponse(Response{
-			JSONRPC: "2.0",
-			Result:  peers,
-			ID:      req.ID,
-		})
-		return
 	}
 
-	// If not a remoteStore, just return empty list
 	sendResponse(Response{
 		JSONRPC: "2.0",
-		Result:  []RemoteInfo{},
+		Result:  peers,
 		ID:      req.ID,
 	})
 }
