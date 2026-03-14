@@ -73,3 +73,16 @@ Originally, Watcher's tree view attempted to mimic the command-line styling of `
 1. **Hierarchy via Indentation:** Do not draw branch lines or text prefixes to connect children to parents. Hierarchy is communicated entirely through negative space (indentation) and the presence of a disclosure triangle (chevron) on parent nodes.
 2. **Consistent Leading Icons:** Outline views expect visual context for each item. We render the `issue.issueType` icon (e.g., epic, bug, feature) as the leading element immediately following the disclosure triangle for *all* nodes, regardless of their depth in the tree.
 3. **Trailing Badges for Status:** The right side of the Outline View is reserved for secondary metadata. We map semantic statuses like `blocked` (Red/Minus Symbol) and `deferred` (Grey/Snow Symbol) to specific colors to allow quick scanning without interrupting the primary hierarchical layout on the left.
+
+## Standalone Architecture: The Go RPC Daemon
+
+**Decision:** Embed a Go daemon (`watcher-daemon`) within the macOS application bundle to interact with the Dolt database via the `steveyegge/beads` library, rather than compiling via CGO/FFI or using local TCP network sockets (like gRPC).
+
+**Context:**
+Originally, Watcher shelled out to the `bd` CLI for every query and mutation. This introduced roughly ~100ms of latency per action (spawning the process, loading config, connecting to MySQL/Dolt) which made drag-and-drop operations on the Kanban board feel slightly sluggish. To achieve true standalone performance, we needed to hold the database connection open in memory.
+
+**Implementation Strategy:**
+1. **The Sidecar Pattern:** We compile a small Go binary that imports the `beads` core library. When Watcher launches, it starts this daemon as a child process.
+2. **JSON-RPC over Stdin/Stdout:** Watcher and the daemon communicate by piping JSON-RPC 2.0 messages over standard input and output streams. 
+3. **Why not gRPC?** While Dolt uses gRPC internally for syncing (`remotesapi`), running a local gRPC server for the UI-to-daemon bridge would require binding to a local TCP port (e.g., `localhost:9090`). Local ports are prone to conflicts, aggressive firewalls, and orphaned zombie processes if the UI crashes. Stdin/stdout anonymous pipes are inherently tied to the parent UI process's lifecycle—if Watcher dies, the pipe breaks, and the Go daemon gracefully self-terminates immediately.
+4. **Why not CGO / Dart FFI?** Building C-bindings to pass complex nested structs (like a graph of issues and dependencies) across the memory boundary between Go and Dart is notoriously brittle and requires manual memory management. Using standard JSON over IPC provides a clean, type-safe contract that Dart's `json_serializable` handles perfectly with zero CGO boilerplate.
