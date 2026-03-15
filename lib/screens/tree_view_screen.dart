@@ -129,13 +129,20 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
         final issues = appState.currentIssues;
 
         // Find all top-level issues (those without a parent-child dependency)
-        // and filter out closed issues by default.
+        // and filter out closed issues by default, UNLESS they have open children.
         final topLevelIssues = issues.where((issue) {
-          if (issue.status == 'closed') return false;
-          // If an issue has a parent, it is not a top-level root.
-          // Discovered-from edges do NOT prevent an issue from being a root, 
-          // because discovered-from is not a parent-child structural relationship.
-          return !issue.hasParentIn(issues);
+          final isTopLevel = !issue.hasParentIn(issues);
+          if (!isTopLevel) return false;
+          
+          if (issue.status != 'closed') return true;
+
+          // If it IS top-level but closed, we only show it if it has an open child.
+          // This prevents open subtasks from disappearing when the parent Epic is closed.
+          final hasOpenChild = issues.any((potentialChild) => 
+            potentialChild.isDirectChildOf(issue) && potentialChild.status != 'closed'
+          );
+          
+          return hasOpenChild;
         }).toList();
 
         return MacosScaffold(

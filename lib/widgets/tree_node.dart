@@ -44,10 +44,18 @@ class _TreeNodeState extends State<TreeNode> {
 
   @override
   Widget build(BuildContext context) {
-    // Find children of this issue and filter out closed issues
+    // Find children of this issue and filter out closed issues,
+    // UNLESS the closed child has its own open children.
     final children = widget.allIssues.where((potentialChild) {
-      if (potentialChild.status == 'closed') return false;
-      return potentialChild.isDirectChildOf(widget.issue);
+      if (!potentialChild.isDirectChildOf(widget.issue)) return false;
+      
+      if (potentialChild.status != 'closed') return true;
+
+      final hasOpenGrandchild = widget.allIssues.any((grandchild) => 
+        grandchild.isDirectChildOf(potentialChild) && grandchild.status != 'closed'
+      );
+
+      return hasOpenGrandchild;
     }).toList();
 
     return Padding(
