@@ -3,7 +3,7 @@ import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
 
-class IssueInspector extends StatelessWidget {
+class IssueInspector extends StatefulWidget {
   final Issue issue;
   final ScrollController scrollController;
 
@@ -14,8 +14,22 @@ class IssueInspector extends StatelessWidget {
   });
 
   @override
+  State<IssueInspector> createState() => _IssueInspectorState();
+}
+
+class _IssueInspectorState extends State<IssueInspector> {
+  final _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = MacosTheme.of(context);
+    final issue = widget.issue;
 
     return Container(
       width: 300,
@@ -28,7 +42,7 @@ class IssueInspector extends StatelessWidget {
           _buildHeader(context),
           Expanded(
             child: SingleChildScrollView(
-              controller: scrollController,
+              controller: widget.scrollController,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,6 +67,9 @@ class IssueInspector extends StatelessWidget {
                     _buildSection('Close Reason', issue.closeReason!, context),
 
                   _buildDependenciesSection(context),
+
+                  const SizedBox(height: 16),
+                  _buildCommentsSection(context),
 
                   const SizedBox(height: 16),
                   Text(
@@ -80,6 +97,7 @@ class IssueInspector extends StatelessWidget {
   }
 
   Widget _buildDependenciesSection(BuildContext context) {
+    final issue = widget.issue;
     // Find what this issue blocks
     final blocksIds =
         issue.dependencies
@@ -165,6 +183,7 @@ class IssueInspector extends StatelessWidget {
   }
 
   Widget _buildStatusDropdown(BuildContext context) {
+    final issue = widget.issue;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -202,6 +221,7 @@ class IssueInspector extends StatelessWidget {
   }
 
   Widget _buildPriorityDropdown(BuildContext context) {
+    final issue = widget.issue;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -236,6 +256,7 @@ class IssueInspector extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final issue = widget.issue;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -269,6 +290,99 @@ class IssueInspector extends StatelessWidget {
     );
   }
 
+  Widget _buildCommentsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Comments',
+          style: MacosTheme.of(context).typography.headline,
+        ),
+        const SizedBox(height: 8),
+        if (appState.selectedIssueComments.isEmpty)
+          Text(
+            'No comments yet.',
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+                  color: MacosColors.systemGrayColor,
+                  fontStyle: FontStyle.italic,
+                ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: appState.selectedIssueComments.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final comment = appState.selectedIssueComments[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: MacosDynamicColor.resolve(
+                    MacosColors.controlBackgroundColor,
+                    context,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          comment['actor']?.toString() ?? 'Unknown',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        Text(
+                          comment['created_at'] != null 
+                            ? _formatDate(DateTime.parse(comment['created_at'].toString()).toLocal()) 
+                            : '',
+                          style: const TextStyle(
+                            color: MacosColors.systemGrayColor,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      comment['body']?.toString() ?? '',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: MacosTextField(
+                controller: _commentController,
+                placeholder: 'Add a comment...',
+                maxLines: 3,
+              ),
+            ),
+            const SizedBox(width: 8),
+            PushButton(
+              controlSize: ControlSize.regular,
+              onPressed: () {
+                if (_commentController.text.trim().isNotEmpty) {
+                  appState.addComment(widget.issue.id, _commentController.text.trim());
+                  _commentController.clear();
+                }
+              },
+              child: const Text('Post'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildSection(String title, String value, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -290,8 +404,6 @@ class IssueInspector extends StatelessWidget {
   }
 
   Widget _buildEditableField(String title, String initialValue, BuildContext context, Function(String) onSubmitted) {
-    // Note: using a controller here is tricky in a stateless build method if the user
-    // wants to tab out, but for a simple quick-edit it works.
     final controller = TextEditingController(text: initialValue);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
