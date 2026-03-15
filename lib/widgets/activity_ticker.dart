@@ -1,6 +1,8 @@
+import 'dart:convert' as dart_json;
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
+import '../models/interaction.dart';
 
 class ActivityTicker extends StatelessWidget {
   const ActivityTicker({super.key});
@@ -73,33 +75,11 @@ class ActivityTicker extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
-                      Text(
-                        interaction.action,
-                        style: const TextStyle(fontSize: 13),
-                      ),
+                      _buildActionSemanticText(interaction, context),
                       if (interaction.issueId != null)
-                        GestureDetector(
-                          onTap: () {
-                            // Find the issue and open it in the inspector
-                            final issue = appState.currentIssues
-                                .where((i) => i.id == interaction.issueId)
-                                .firstOrNull;
-                            if (issue != null) {
-                              appState.selectIssue(issue);
-                            }
-                          },
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: Text(
-                              interaction.issueId!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: MacosTheme.of(context).primaryColor,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ),
+                        _buildIssueLink(interaction.issueId!, context),
+                      if (interaction.action == 'closed')
+                        _buildUnblockedBadge(interaction.issueId!, context),
                     ],
                   ),
                 ),
@@ -107,6 +87,90 @@ class ActivityTicker extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildActionSemanticText(Interaction interaction, BuildContext context) {
+    String text = interaction.action;
+    
+    if (interaction.action == 'updated' && interaction.newValue != null) {
+      try {
+        final Map<String, dynamic> changes = dart_json.jsonDecode(interaction.newValue!);
+        if (changes.containsKey('priority')) {
+          text = 'escalated priority to P${changes['priority']} on';
+        } else if (changes.containsKey('owner') || changes.containsKey('assignee')) {
+          text = 'reassigned';
+        } else if (changes.containsKey('title')) {
+          text = 'renamed';
+        } else {
+          text = 'updated';
+        }
+      } catch (_) {
+        text = 'updated';
+      }
+    } else if (interaction.action == 'claimed') {
+      text = 'claimed';
+    } else if (interaction.action == 'status_changed') {
+      text = 'changed status of';
+    } else if (interaction.action == 'closed') {
+      text = 'completed';
+    } else if (interaction.action == 'created') {
+      text = 'created';
+    }
+
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 13),
+    );
+  }
+
+  Widget _buildIssueLink(String issueId, BuildContext context) {
+    final issue = appState.currentIssues.where((i) => i.id == issueId).firstOrNull;
+    final displayText = issue != null ? issue.title : issueId;
+
+    return GestureDetector(
+      onTap: () {
+        if (issue != null) {
+          appState.selectIssue(issue);
+        }
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Text(
+          displayText,
+          style: TextStyle(
+            fontSize: 13,
+            color: MacosTheme.of(context).primaryColor,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnblockedBadge(String issueId, BuildContext context) {
+    final issue = appState.currentIssues.where((i) => i.id == issueId).firstOrNull;
+    if (issue == null) return const SizedBox.shrink();
+
+    final blocksCount = issue.dependencies?.where((d) => d.type == 'blocks').length ?? 0;
+    if (blocksCount == 0) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: MacosColors.systemGreenColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: MacosColors.systemGreenColor.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        'Unblocked $blocksCount task${blocksCount == 1 ? '' : 's'}!',
+        style: const TextStyle(
+          fontSize: 11,
+          color: MacosColors.systemGreenColor,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

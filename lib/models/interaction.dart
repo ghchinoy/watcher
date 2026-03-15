@@ -11,12 +11,20 @@ class Interaction {
   final String action;
   @JsonKey(name: 'issue_id')
   final String? issueId;
+  @JsonKey(name: 'new_value')
+  final String? newValue;
+  @JsonKey(name: 'old_value')
+  final String? oldValue;
+  final String? comment;
 
   Interaction({
     required this.timestamp,
     required this.actor,
     required this.action,
     this.issueId,
+    this.newValue,
+    this.oldValue,
+    this.comment,
   });
 
   factory Interaction.fromJson(Map<String, dynamic> json) =>

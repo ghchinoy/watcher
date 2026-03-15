@@ -11,6 +11,9 @@ Interaction _$InteractionFromJson(Map<String, dynamic> json) => Interaction(
   actor: json['actor'] as String,
   action: json['event_type'] as String,
   issueId: json['issue_id'] as String?,
+  newValue: json['new_value'] as String?,
+  oldValue: json['old_value'] as String?,
+  comment: json['comment'] as String?,
 );
 
 Map<String, dynamic> _$InteractionToJson(Interaction instance) =>
@@ -19,4 +22,7 @@ Map<String, dynamic> _$InteractionToJson(Interaction instance) =>
       'actor': instance.actor,
       'event_type': instance.action,
       'issue_id': instance.issueId,
+      'new_value': instance.newValue,
+      'old_value': instance.oldValue,
+      'comment': instance.comment,
     };
