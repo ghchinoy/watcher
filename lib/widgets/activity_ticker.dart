@@ -44,7 +44,7 @@ class ActivityTicker extends StatelessWidget {
         itemBuilder: (context, index) {
           final interaction = interactions[index];
           final timeStr =
-              '${interaction.timestamp.hour.toString().padLeft(2, '0')}:${interaction.timestamp.minute.toString().padLeft(2, '0')}';
+              '${interaction.timestamp.month.toString().padLeft(2, '0')}/${interaction.timestamp.day.toString().padLeft(2, '0')} ${interaction.timestamp.hour.toString().padLeft(2, '0')}:${interaction.timestamp.minute.toString().padLeft(2, '0')}';
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -52,7 +52,7 @@ class ActivityTicker extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  width: 60,
+                  width: 90,
                   child: Text(
                     timeStr,
                     style: const TextStyle(
