@@ -1,12 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:go_router/go_router.dart';
 import '../main.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/activity_ticker.dart';
 import '../widgets/planner_modal.dart';
 import '../widgets/assessment_modal.dart';
-
-import '../widgets/federation_modal.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
@@ -283,16 +282,11 @@ class ProjectDashboard extends StatelessWidget {
                                 const Text('This project only exists locally.'),
                                 const SizedBox(height: 12),
                                 PushButton(
-                                  controlSize: ControlSize.regular,
-                                  child: const Text('Configure Federation...'),
-                                  onPressed: () {
-                                    showMacosSheet(
-                                      context: context,
-                                      barrierDismissible: true,
-                                      builder: (context) =>
-                                          FederationModal(appState: appState),
-                                    );
-                                  },
+                                controlSize: ControlSize.regular,
+                                child: const Text('Configure Federation...'),
+                                onPressed: () {
+                                  context.go('/project/settings');
+                                },
                                 ),
                               ],
                             ),
@@ -371,16 +365,11 @@ class ProjectDashboard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 PushButton(
-                                  controlSize: ControlSize.regular,
-                                  child: const Text('Configure Federation...'),
-                                  onPressed: () {
-                                    showMacosSheet(
-                                      context: context,
-                                      barrierDismissible: true,
-                                      builder: (context) =>
-                                          FederationModal(appState: appState),
-                                    );
-                                  },
+                                controlSize: ControlSize.regular,
+                                child: const Text('Configure Federation...'),
+                                onPressed: () {
+                                  context.go('/project/settings');
+                                },
                                 ),
                               ],
                             ),
