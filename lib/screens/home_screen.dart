@@ -85,15 +85,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: MacosColors.systemRedColor,
                       );
                     } else {
-                      final hasPeers = isSelected && appState.currentPeers.isNotEmpty;
-                      leadingIcon = MacosIcon(
-                        hasPeers ? CupertinoIcons.cloud : CupertinoIcons.folder,
-                        color: isSelected
-                            ? null
-                            : MacosTheme.of(
-                                context,
-                              ).typography.body.color?.withValues(alpha: 0.5),
-                      );
+                      final timeStr = appState.getProjectLastActivity(p);
+                      if (timeStr != null) {
+                        leadingIcon = SizedBox(
+                          width: 24,
+                          child: Text(
+                            timeStr,
+                            textAlign: TextAlign.center,
+                            style: MacosTheme.of(context).typography.footnote.copyWith(
+                                  color: isSelected
+                                      ? MacosTheme.of(context).primaryColor
+                                      : MacosColors.systemGrayColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                          ),
+                        );
+                      } else {
+                        final hasPeers = isSelected && appState.currentPeers.isNotEmpty;
+                        leadingIcon = MacosIcon(
+                          hasPeers ? CupertinoIcons.cloud : CupertinoIcons.folder,
+                          size: 16,
+                          color: isSelected
+                              ? null
+                              : MacosTheme.of(
+                                  context,
+                                ).typography.body.color?.withValues(alpha: 0.5),
+                        );
+                      }
                     }
 
                       Widget? trailingWidget;

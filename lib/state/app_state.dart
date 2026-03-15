@@ -252,7 +252,25 @@ bool hasUnreadActivity(Project project) {
   }
   return false;
 }
-  Future<void> selectProject(Project project) async {
+
+String? getProjectLastActivity(Project project) {
+  final file = File('${project.path}/.beads/backup/events.jsonl');
+  if (!file.existsSync()) return null;
+
+  final lastModified = file.lastModifiedSync();
+  final difference = DateTime.now().difference(lastModified);
+
+  if (difference.inMinutes < 1) {
+    return 'now';
+  } else if (difference.inHours < 1) {
+    return '${difference.inMinutes}m';
+  } else if (difference.inDays < 1) {
+    return '${difference.inHours}h';
+  } else if (difference.inDays < 30) {
+    return '${difference.inDays}d';
+  }
+  return null; // Don't show anything for very old projects
+}  Future<void> selectProject(Project project) async {
     _currentService?.dispose();
     _currentService = null;
     _syncTimer?.cancel();
