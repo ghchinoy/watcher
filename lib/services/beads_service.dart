@@ -182,7 +182,7 @@ class BeadsService {
     return issues.map((i) => GraphNode(root: i)).toList();
   }
 
-  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee}) async {
+  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee, required String actor}) async {
     final Map<String, dynamic> updates = {};
     if (status != null) updates['status'] = status;
     if (priority != null) updates['priority'] = priority;
@@ -194,7 +194,7 @@ class BeadsService {
     await _sendRpcRequest('update_issue', {
       'id': id,
       'updates': updates,
-      'actor': 'Watcher UI',
+      'actor': actor,
     });
   }
   

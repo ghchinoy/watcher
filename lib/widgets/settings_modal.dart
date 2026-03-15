@@ -2,10 +2,29 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../state/app_state.dart';
 
-class SettingsModal extends StatelessWidget {
+class SettingsModal extends StatefulWidget {
   final AppState appState;
 
   const SettingsModal({super.key, required this.appState});
+
+  @override
+  State<SettingsModal> createState() => _SettingsModalState();
+}
+
+class _SettingsModalState extends State<SettingsModal> {
+  late TextEditingController _actorController;
+
+  @override
+  void initState() {
+    super.initState();
+    _actorController = TextEditingController(text: widget.appState.actorName);
+  }
+
+  @override
+  void dispose() {
+    _actorController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +52,26 @@ class SettingsModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   const Text(
+                    'User Identity',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'How your actions appear in the Activity Ticker and the database.',
+                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                          color: MacosColors.systemGrayColor,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  MacosTextField(
+                    controller: _actorController,
+                    placeholder: 'e.g., Jane Doe',
+                    onChanged: (value) {
+                      widget.appState.setActorName(value);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
                     'Federation Sync Interval',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
@@ -45,10 +84,10 @@ class SettingsModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   MacosPopupButton<int>(
-                    value: appState.syncIntervalMinutes,
+                    value: widget.appState.syncIntervalMinutes,
                     onChanged: (int? newValue) {
                       if (newValue != null) {
-                        appState.setSyncInterval(newValue);
+                        widget.appState.setSyncInterval(newValue);
                       }
                     },
                     items: const [
