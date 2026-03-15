@@ -51,13 +51,6 @@ func sendResponse(resp Response) {
 	fmt.Printf("%s\n", string(bytes))
 }
 
-type remoteReader interface {
-	ListRemotes(ctx context.Context) ([]struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	}, error)
-}
-
 func handleAddPeer(ctx context.Context, storage beads.Storage, req Request) {
 	var params struct {
 		Name string `json:"name"`
