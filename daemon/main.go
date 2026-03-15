@@ -155,9 +155,13 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		return
 	}
 
+	// Trigger a background export so .beads/backup/events.jsonl updates, 
+	// which notifies the UI file watcher that changes occurred.
+	_ = exec.Command("bd", "export").Run()
+
 	sendResponse(Response{
 		JSONRPC: "2.0",
-		Result:  "ok",
+		Result:  params.Issue.ID,
 		ID:      req.ID,
 	})
 }
@@ -179,6 +183,10 @@ func handleCloseIssue(ctx context.Context, storage beads.Storage, req Request) {
 		sendError(req.ID, -32000, fmt.Sprintf("failed to close issue: %v", err))
 		return
 	}
+
+	// Trigger a background export so .beads/backup/events.jsonl updates, 
+	// which notifies the UI file watcher that changes occurred.
+	_ = exec.Command("bd", "export").Run()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",
@@ -262,6 +270,10 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		sendError(req.ID, -32000, fmt.Sprintf("failed to update issue: %v", err))
 		return
 	}
+
+	// Trigger a background export so .beads/backup/events.jsonl updates, 
+	// which notifies the UI file watcher that changes occurred.
+	_ = exec.Command("bd", "export").Run()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",
