@@ -100,15 +100,30 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                 builder: (context, scrollController) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Error: ${appState.error}',
-                      style: const TextStyle(color: MacosColors.systemRedColor),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Error: ${appState.error}',
+                          style: const TextStyle(color: MacosColors.systemRedColor),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        PushButton(
+                          controlSize: ControlSize.regular,
+                          onPressed: () {
+                            if (appState.selectedProject != null) {
+                              appState.selectProject(appState.selectedProject!);
+                            }
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
-          );
+            ],          );
         }
 
         final issues = appState.currentIssues;
