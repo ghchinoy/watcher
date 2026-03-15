@@ -288,6 +288,16 @@ func main() {
 	// establishing the database connection and might be waiting for the Dolt server.
 	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database"}}` + "\n")
 
+	// Proactively kill any orphaned dolt sql-server processes on the system
+	// that might be holding a dead port or a dead file lock before we attempt to connect.
+	// We shell out to 'bd dolt killall' since doltserver is an internal package.
+	killCmd := exec.Command("bd", "dolt", "killall")
+	killCmd.Dir = repoPath
+	if out, err := killCmd.CombinedOutput(); err == nil {
+		// Just log it internally; it's a helpful sanity check
+		log.Printf("Cleaned up orphaned servers: %s", string(out))
+	}
+
 	storage, err := beads.OpenFromConfig(ctx, beadsDir)
 	if err != nil {
 		// Serialize the error properly so newlines in err.Error() don't break JSON structure
