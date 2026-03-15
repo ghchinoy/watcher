@@ -57,81 +57,87 @@ class _FederationModalState extends State<FederationModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 400),
-      decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
-      ),
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const MacosIcon(CupertinoIcons.cloud, size: 24),
-              const SizedBox(width: 12),
-              Text(
-                'Add Federation Peer',
-                style: MacosTheme.of(context).typography.title2,
+    return MacosScaffold(
+      backgroundColor: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
+      children: [
+        ContentArea(
+          builder: (context, scrollController) {
+            return Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const MacosIcon(CupertinoIcons.cloud, size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Add Federation Peer',
+                        style: MacosTheme.of(context).typography.title2,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Connect this project to a remote Beads database.',
+                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                          color: MacosColors.systemGrayColor,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('Peer Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  MacosTextField(
+                    controller: _nameController,
+                    placeholder: 'e.g., origin, bazaar, central',
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Endpoint URL', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  MacosTextField(
+                    controller: _urlController,
+                    placeholder: 'e.g., gs://generative-bazaar-001-beads/project',
+                  ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: MacosColors.systemRedColor),
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      PushButton(
+                        controlSize: ControlSize.regular,
+                        secondary: true,
+                        onPressed: _isSubmitting
+                            ? null
+                            : () {
+                                Navigator.of(context).pop();
+                              },
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      PushButton(
+                        controlSize: ControlSize.regular,
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: _isSubmitting
+                            ? const ProgressCircle(radius: 8)
+                            : const Text('Add Peer'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Connect this project to a remote Beads database.',
-            style: MacosTheme.of(context).typography.footnote.copyWith(
-                  color: MacosColors.systemGrayColor,
-                ),
-          ),
-          const SizedBox(height: 24),
-          const Text('Peer Name', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          MacosTextField(
-            controller: _nameController,
-            placeholder: 'e.g., origin, bazaar, central',
-          ),
-          const SizedBox(height: 16),
-          const Text('Endpoint URL', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          MacosTextField(
-            controller: _urlController,
-            placeholder: 'e.g., gs://generative-bazaar-001-beads/project',
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: Text(
-                _error!,
-                style: const TextStyle(color: MacosColors.systemRedColor),
-              ),
-            ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              PushButton(
-                controlSize: ControlSize.regular,
-                secondary: true,
-                onPressed: _isSubmitting
-                    ? null
-                    : () {
-                        Navigator.of(context).pop();
-                      },
-                child: const Text('Cancel'),
-              ),
-              const SizedBox(width: 12),
-              PushButton(
-                controlSize: ControlSize.regular,
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const ProgressCircle(radius: 8)
-                    : const Text('Add Peer'),
-              ),
-            ],
-          ),
-        ],
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
