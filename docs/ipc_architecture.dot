@@ -1,0 +1,60 @@
+digraph G {
+    node [shape=box, style=rounded, fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+    
+    subgraph cluster_mac_app {
+        label = "macOS Application Bundle (Watcher.app)";
+        style = dashed;
+        color = gray;
+        
+        "Flutter/Dart UI" [shape=note, style="filled", fillcolor="#42A5F5", fontcolor=white];
+        "BeadsService" [shape=component];
+        "PlannerService" [shape=component];
+        
+        "Flutter/Dart UI" -> "BeadsService" [label=" User Actions\n(Drag, Click)"];
+        "Flutter/Dart UI" -> "PlannerService" [label=" Trigger AI"];
+    }
+
+    subgraph cluster_daemon {
+        label = "Sidecar Daemons (Child Processes)";
+        style = dashed;
+        color = gray;
+        
+        "watcher-daemon (Go)" [shape=Mrecord, style="filled", fillcolor="#00ADD8", fontcolor=white];
+        "gemini-cli (Node)" [shape=Mrecord, style="filled", fillcolor="#0F9D58", fontcolor=white];
+    }
+    
+    subgraph cluster_db {
+        label = "Project Workspace (~/projects/...)";
+        style = dashed;
+        color = gray;
+        
+        "dolt sql-server" [shape=cylinder, style="filled", fillcolor="#DB4437", fontcolor=white];
+        ".beads/dolt/ (Disk)" [shape=folder];
+        "File Watcher (fsevents)" [shape=oval, style=dotted];
+    }
+    
+    subgraph cluster_cloud {
+        label = "Cloud";
+        style = dashed;
+        color = gray;
+        
+        "GCS Bucket (gs://)" [shape=cylinder];
+        "Gemini LLM" [shape=cloud];
+    }
+
+    // IPC & Network Connections
+    "BeadsService" -> "watcher-daemon (Go)" [label=" JSON-RPC\n(stdin/stdout)"];
+    "PlannerService" -> "gemini-cli (Node)" [label=" Spawn\n--approval-mode plan"];
+    
+    "watcher-daemon (Go)" -> "dolt sql-server" [label=" MySQL Wire Protocol\n(TCP localhost)"];
+    "dolt sql-server" -> ".beads/dolt/ (Disk)" [label=" Read/Write"];
+    
+    // Cloud Connections
+    "watcher-daemon (Go)" -> "GCS Bucket (gs://)" [label=" Sync (Pull/Push)\nvia bd CLI shell-out"];
+    "gemini-cli (Node)" -> "Gemini LLM" [label=" gRPC/REST"];
+    
+    // Reactive UI Loop
+    ".beads/dolt/ (Disk)" -> "File Watcher (fsevents)" [label=" Changes"];
+    "File Watcher (fsevents)" -> "BeadsService" [label=" Trigger get_graph"];
+}
