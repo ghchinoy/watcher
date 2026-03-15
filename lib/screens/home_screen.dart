@@ -1,10 +1,9 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:go_router/go_router.dart';
 import '../main.dart';
 import '../widgets/issue_inspector.dart';
-
-import '../widgets/settings_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   final Widget child;
@@ -17,6 +16,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int get _currentIndex {
+    // Determine if we are currently on the settings route
+    final location = GoRouterState.of(context).uri.toString();
+    if (location == '/settings') {
+      // Return a value outside the typical projects index to deselect the project list
+      return -1;
+    }
+
     if (appState.projects.isEmpty) return 0;
     if (appState.selectedProject == null) return appState.projects.length;
     final index = appState.projects.indexOf(appState.selectedProject!);
@@ -24,9 +30,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
-    if (index < appState.projects.length) {
+    if (index >= 0 && index < appState.projects.length) {
       appState.selectProject(appState.projects[index]);
-    } else {
+      // If we are on the settings page, pop back to the dashboard
+      final location = GoRouterState.of(context).uri.toString();
+      if (location == '/settings') {
+        context.go('/');
+      }
+    } else if (index == appState.projects.length) {
       _addProject();
     }
   }
@@ -35,6 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final String? directoryPath = await getDirectoryPath();
     if (directoryPath != null) {
       appState.addProject(directoryPath);
+      // Navigate away from settings back to the main view if needed
+      if (mounted) {
+        context.go('/');
+      }
     }
   }
 
@@ -57,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 items: [
                   const SidebarItem(section: true, label: Text('PROJECTS')),
                   ...appState.projects.map((p) {
-                    final isSelected = appState.selectedProject == p;
+                    final isSelected = appState.selectedProject == p && _currentIndex != -1;
                     final isRefreshing = isSelected && appState.isRefreshing;
                     final hasError = appState.projectErrors.containsKey(p.path);
 
@@ -95,7 +110,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 CupertinoIcons.clear_circled,
                                 size: 14,
                               ),
-                              onPressed: () => appState.removeProject(p),
+                              onPressed: () {
+                                appState.removeProject(p);
+                                if (appState.projects.isEmpty) {
+                                  context.go('/settings');
+                                }
+                              },
                               boxConstraints: const BoxConstraints(
                                 minWidth: 16,
                                 minHeight: 16,
@@ -113,14 +133,19 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             bottom: MacosListTile(
-              leading: const MacosIcon(CupertinoIcons.settings),
-              title: const Text('Settings'),
+              leading: MacosIcon(
+                CupertinoIcons.settings,
+                color: _currentIndex == -1 ? MacosTheme.of(context).primaryColor : null,
+              ),
+              title: Text(
+                'Settings',
+                style: TextStyle(
+                  color: _currentIndex == -1 ? MacosTheme.of(context).primaryColor : null,
+                  fontWeight: _currentIndex == -1 ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
               onClick: () {
-                showMacosSheet(
-                  context: context,
-                  barrierDismissible: true,
-                  builder: (context) => SettingsModal(appState: appState),
-                );
+                context.go('/settings');
               },
             ),
           ),
@@ -131,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isResizable: true,
             shownByDefault: false,
             builder: (context, scrollController) {
-              if (appState.selectedIssue == null) {
+              if (appState.selectedIssue == null || _currentIndex == -1) {
                 return const SizedBox.shrink();
               }
               return IssueInspector(
@@ -176,6 +201,15 @@ class _InspectorControllerState extends State<_InspectorController> {
     if (!mounted) return;
     final scope = MacosWindowScope.maybeOf(context);
     if (scope == null) return;
+
+    // Check if we are on settings screen, if so, hide end sidebar
+    final location = GoRouterState.of(context).uri.toString();
+    if (location == '/settings') {
+      if (scope.isEndSidebarShown) {
+        scope.toggleEndSidebar();
+      }
+      return;
+    }
 
     final currentSelectedIssueId = appState.selectedIssue?.id;
     if (currentSelectedIssueId != null && currentSelectedIssueId != _previousSelectedIssueId) {

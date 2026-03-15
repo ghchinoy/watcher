@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'screens/project_dashboard.dart';
 import 'screens/tree_view_screen.dart';
 import 'screens/kanban_screen.dart';
+import 'screens/settings_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -33,6 +34,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/kanban',
           builder: (context, state) => const KanbanScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
       ],
     ),
