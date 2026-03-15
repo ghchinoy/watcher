@@ -96,6 +96,36 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
 
+                      Widget? trailingWidget;
+                      if (isSelected) {
+                        trailingWidget = MacosIconButton(
+                          icon: const MacosIcon(
+                            CupertinoIcons.clear_circled,
+                            size: 14,
+                          ),
+                          onPressed: () {
+                            appState.removeProject(p);
+                            if (appState.projects.isEmpty) {
+                              context.go('/settings');
+                            }
+                          },
+                          boxConstraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          padding: EdgeInsets.zero,
+                        );
+                      } else if (appState.hasUnreadActivity(p)) {
+                        trailingWidget = Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: MacosColors.systemBlueColor,
+                            shape: BoxShape.circle,
+                          ),
+                        );
+                      }
+
                     return SidebarItem(
                       leading: leadingIcon,
                       label: Text(p.name),
@@ -104,25 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               context,
                             ).primaryColor.withValues(alpha: 0.2)
                           : null,
-                      trailing: isSelected
-                          ? MacosIconButton(
-                              icon: const MacosIcon(
-                                CupertinoIcons.clear_circled,
-                                size: 14,
-                              ),
-                              onPressed: () {
-                                appState.removeProject(p);
-                                if (appState.projects.isEmpty) {
-                                  context.go('/settings');
-                                }
-                              },
-                              boxConstraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              padding: EdgeInsets.zero,
-                            )
-                          : null,
+                      trailing: trailingWidget,
                     );
                   }),
                   const SidebarItem(

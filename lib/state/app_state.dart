@@ -33,10 +33,14 @@ class AppState extends ChangeNotifier {
   // Track expanded nodes in the tree view per project
   Set<String> expandedNodes = {};
 
+  // Track the last time a project was selected to calculate "unread" badges
+  Map<String, DateTime> projectLastViewed = {};
+
   String? get error =>
       selectedProject != null ? projectErrors[selectedProject!.path] : null;
 
   StreamSubscription<FileSystemEvent>? _watchSubscription;
+  final Map<String, StreamSubscription<FileSystemEvent>> _globalWatchers = {};
   Timer? _debounceTimer;
   Timer? _syncTimer;
   BeadsService? _currentService;
@@ -53,6 +57,15 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     syncIntervalMinutes = prefs.getInt('sync_interval_minutes') ?? 5;
     
+    // Load last viewed timestamps
+    final lastViewedStrings = prefs.getStringList('project_last_viewed') ?? [];
+    for (final str in lastViewedStrings) {
+      final parts = str.split('|||');
+      if (parts.length == 2) {
+        projectLastViewed[parts[0]] = DateTime.parse(parts[1]);
+      }
+    }
+
     // Load saved actor name, or try to get git username as a fallback
     String? savedActor = prefs.getString('actor_name');
     if (savedActor != null && savedActor.isNotEmpty) {
@@ -158,6 +171,27 @@ class AppState extends ChangeNotifier {
     } else {
       notifyListeners();
     }
+    _setupGlobalWatchers();
+  }
+
+  void _setupGlobalWatchers() {
+    for (var sub in _globalWatchers.values) {
+      sub.cancel();
+    }
+    _globalWatchers.clear();
+
+    for (final project in projects) {
+      final backupDir = Directory('${project.path}/.beads/backup');
+      if (backupDir.existsSync()) {
+        _globalWatchers[project.path] = backupDir.watch(recursive: true).listen((event) {
+          // If this is NOT the currently selected project, notify listeners
+          // so the sidebar can re-render and check the lastModified timestamps for the blue dot.
+          if (selectedProject?.path != project.path) {
+            notifyListeners();
+          }
+        });
+      }
+    }
   }
 
   Future<void> addProject(String path) async {
@@ -175,32 +209,49 @@ class AppState extends ChangeNotifier {
       selectProject(projects.last);
     }
   }
+Future<void> removeProject(Project project) async {
+  projects.remove(project);
+  projectErrors.remove(project.path);
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setStringList(
+    'project_paths',
+    projects.map((p) => p.path).toList(),
+  );
 
-  Future<void> removeProject(Project project) async {
-    projects.remove(project);
-    projectErrors.remove(project.path);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      'project_paths',
-      projects.map((p) => p.path).toList(),
-    );
+  _globalWatchers[project.path]?.cancel();
+  _globalWatchers.remove(project.path);
 
-    if (selectedProject == project) {
-      if (projects.isNotEmpty) {
-        selectProject(projects.first);
-      } else {
-        selectedProject = null;
-        currentIssues = [];
-        currentGraph = [];
-        currentInteractions = [];
-        _watchSubscription?.cancel();
-        notifyListeners();
-      }
+  if (selectedProject == project) {
+    if (projects.isNotEmpty) {
+      selectProject(projects.first);
     } else {
+      selectedProject = null;
+      currentIssues = [];
+      currentGraph = [];
+      currentInteractions = [];
+      currentPeers = [];
+      _currentService?.dispose();
+      _currentService = null;
       notifyListeners();
     }
+  } else {
+    notifyListeners();
   }
+}
 
+bool hasUnreadActivity(Project project) {
+  if (selectedProject?.path == project.path) return false;
+
+  final lastViewed = projectLastViewed[project.path];
+  if (lastViewed == null) return false;
+
+  final file = File('${project.path}/.beads/backup/events.jsonl');
+  if (file.existsSync()) {
+    final lastModified = file.lastModifiedSync();
+    return lastModified.isAfter(lastViewed);
+  }
+  return false;
+}
   Future<void> selectProject(Project project) async {
     _currentService?.dispose();
     _currentService = null;
@@ -209,6 +260,10 @@ class AppState extends ChangeNotifier {
     selectedProject = project;
     isLoading = true;
     projectErrors.remove(project.path);
+
+    projectLastViewed[project.path] = DateTime.now();
+    _saveLastViewed();
+
     notifyListeners();
 
     await _loadExpandedNodes();
@@ -234,6 +289,12 @@ class AppState extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _saveLastViewed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = projectLastViewed.entries.map((e) => '${e.key}|||${e.value.toIso8601String()}').toList();
+    await prefs.setStringList('project_last_viewed', list);
   }
 
   void _startSyncTimer() {
@@ -309,7 +370,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (_currentService == null) return;
       final newIssues = await _currentService!.getIssues();
       final newGraph = await _currentService!.getGraph();
       final newInteractions = await _currentService!.getInteractions();
@@ -320,6 +380,10 @@ class AppState extends ChangeNotifier {
       currentInteractions = newInteractions;
       currentPeers = newPeers;
       projectErrors.remove(projectPath);
+
+      projectLastViewed[projectPath] = DateTime.now();
+      _saveLastViewed();
+
     } catch (e) {
       projectErrors[projectPath] = e.toString();
     } finally {
@@ -356,6 +420,10 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _watchSubscription?.cancel();
+    for (var sub in _globalWatchers.values) {
+      sub.cancel();
+    }
+    _globalWatchers.clear();
     _debounceTimer?.cancel();
     _syncTimer?.cancel();
     _currentService?.dispose();
