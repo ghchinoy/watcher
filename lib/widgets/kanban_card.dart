@@ -12,8 +12,8 @@ class KanbanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // If an agent has claimed it or it's in progress, lock it to prevent drag-and-drop state changes
     final bool isLocked =
-        issue.status == 'in_progress' ||
-        (issue.owner != null && issue.owner!.isNotEmpty);
+        issue.status == 'in_progress' &&
+        (issue.assignee != null && issue.assignee!.isNotEmpty);
 
     final cardContent = GestureDetector(
       onTap: () => appState.selectIssue(issue),
@@ -66,7 +66,13 @@ class KanbanCard extends StatelessWidget {
                 issue.title,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              if (issue.owner != null && issue.owner!.isNotEmpty) ...[
+              if (issue.assignee != null && issue.assignee!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Assignee: ${issue.assignee}',
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ] else if (issue.owner != null && issue.owner!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   'Owner: ${issue.owner}',

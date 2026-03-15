@@ -36,10 +36,12 @@ class IssueInspector extends StatelessWidget {
                   _buildStatusDropdown(context),
                   _buildPriorityDropdown(context),
                   _buildSection('Type', issue.issueType.toUpperCase(), context),
-                  if (issue.owner != null && issue.owner!.isNotEmpty)
-                    _buildSection('Owner', issue.owner!, context),
-                  if (issue.assignee != null && issue.assignee!.isNotEmpty)
-                    _buildSection('Assignee', issue.assignee!, context),
+                  _buildEditableField('Owner', issue.owner ?? '', context, (value) {
+                    appState.updateIssue(issue.id, owner: value);
+                  }),
+                  _buildEditableField('Assignee', issue.assignee ?? '', context, (value) {
+                    appState.updateIssue(issue.id, assignee: value);
+                  }),
                   if (issue.createdBy != null && issue.createdBy!.isNotEmpty)
                     _buildSection('Created By', issue.createdBy!, context),
                   _buildSection('Created', _formatDate(issue.createdAt), context),
@@ -282,6 +284,34 @@ class IssueInspector extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(value),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditableField(String title, String initialValue, BuildContext context, Function(String) onSubmitted) {
+    // Note: using a controller here is tricky in a stateless build method if the user
+    // wants to tab out, but for a simple quick-edit it works.
+    final controller = TextEditingController(text: initialValue);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+                  color: MacosColors.systemGrayColor,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 4),
+          MacosTextField(
+            controller: controller,
+            maxLines: 1,
+            onSubmitted: onSubmitted,
+            placeholder: 'Unassigned',
+          ),
         ],
       ),
     );

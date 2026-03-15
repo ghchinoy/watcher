@@ -234,7 +234,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateIssue(String id, {String? status, int? priority}) async {
+  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee}) async {
     if (selectedProject == null) return;
 
     // Optimistically update the selected issue if it matches
@@ -248,7 +248,13 @@ class AppState extends ChangeNotifier {
 
     try {
       if (_currentService != null) {
-        await _currentService!.updateIssue(id, status: status, priority: priority);
+        await _currentService!.updateIssue(
+          id, 
+          status: status, 
+          priority: priority,
+          owner: owner,
+          assignee: assignee,
+        );
       }
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to update issue: $e';
