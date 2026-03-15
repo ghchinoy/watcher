@@ -2,7 +2,10 @@ module github.com/ghchinoy/watcher-daemon
 
 go 1.25.8
 
-require github.com/steveyegge/beads v0.60.0
+require (
+	github.com/steveyegge/beads v0.60.0
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
@@ -28,5 +31,4 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
