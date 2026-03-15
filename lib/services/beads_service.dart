@@ -140,7 +140,7 @@ class BeadsService {
   }
 
   Future<List<Interaction>> getInteractions() async {
-    final file = File('$workingDirectory/.beads/interactions.jsonl');
+    final file = File('$workingDirectory/.beads/backup/events.jsonl');
     if (!await file.exists()) {
       return [];
     }
@@ -151,10 +151,10 @@ class BeadsService {
     for (var line in lines.reversed.take(50)) {
       if (line.trim().isEmpty) continue;
       try {
-        final json = jsonDecode(line);
-        interactions.add(Interaction.fromJson(json));
+        final Map<String, dynamic> data = jsonDecode(line);
+        interactions.add(Interaction.fromJson(data));
       } catch (e) {
-        // ignore invalid lines
+        debugPrint('Error parsing interaction JSON: $e');
       }
     }
     return interactions;

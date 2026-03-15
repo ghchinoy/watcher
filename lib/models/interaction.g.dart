@@ -7,18 +7,16 @@ part of 'interaction.dart';
 // **************************************************************************
 
 Interaction _$InteractionFromJson(Map<String, dynamic> json) => Interaction(
-  timestamp: DateTime.parse(json['timestamp'] as String),
+  timestamp: DateTime.parse(json['created_at'] as String),
   actor: json['actor'] as String,
-  action: json['action'] as String,
+  action: json['event_type'] as String,
   issueId: json['issue_id'] as String?,
-  details: json['details'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$InteractionToJson(Interaction instance) =>
     <String, dynamic>{
-      'timestamp': instance.timestamp.toIso8601String(),
+      'created_at': instance.timestamp.toIso8601String(),
       'actor': instance.actor,
-      'action': instance.action,
+      'event_type': instance.action,
       'issue_id': instance.issueId,
-      'details': instance.details,
     };
