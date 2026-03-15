@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:go_router/go_router.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -30,9 +31,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
       listenable: appState,
       builder: (context, _) {
         return MacosScaffold(
-          toolBar: const ToolBar(
-            title: Text('Settings'),
+          toolBar: ToolBar(
+            title: const Text('Settings'),
             titleWidth: 150.0,
+            leading: MacosTooltip(
+              message: 'Back to Dashboard',
+              useMousePosition: false,
+              child: MacosIconButton(
+                icon: const MacosIcon(
+                  CupertinoIcons.back,
+                  size: 20,
+                ),
+                boxConstraints: const BoxConstraints(
+                  minHeight: 20,
+                  minWidth: 20,
+                  maxWidth: 48,
+                  maxHeight: 38,
+                ),
+                onPressed: () {
+                  context.go('/');
+                },
+              ),
+            ),
           ),
           children: [
             ContentArea(

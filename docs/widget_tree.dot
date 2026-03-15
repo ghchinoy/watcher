@@ -14,11 +14,12 @@ digraph G {
     MacosWindow -> "Sidebar (Projects)" [label="sidebar"];
     "Sidebar (Projects)" -> SidebarItems [label="builder"];
     "Sidebar (Projects)" -> MacosListTile [label="bottom"];
-    MacosListTile -> SettingsModal [label="onClick (MacosSheet)"];
+    MacosListTile -> SettingsScreen [label="router.go('/settings')"];
     
     MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar"];
     "Sidebar (Issue Inspector)" -> IssueInspector [label="builder"];
-    IssueInspector -> MacosPopupButton [label="Status/Priority\n(interactive)"];
+    IssueInspector -> MacosPopupButton [label="Status/Priority"];
+    IssueInspector -> "Comments Section" [label="Timeline & Input"];
     
     MacosWindow -> _InspectorController [label="child"];
     _InspectorController -> ChildWidget;
@@ -26,6 +27,7 @@ digraph G {
     ChildWidget -> ProjectDashboard [label="/"];
     ChildWidget -> TreeViewScreen [label="/tree"];
     ChildWidget -> KanbanScreen [label="/kanban"];
+    ChildWidget -> SettingsScreen [label="/settings"];
 
     ProjectDashboard -> "MacosScaffold (Dashboard)";
     "MacosScaffold (Dashboard)" -> "ToolBar (Dashboard)" [label="toolBar"];
@@ -38,6 +40,10 @@ digraph G {
     "ToolBar (Dashboard)" -> ViewModeSegmentedControl [label="actions"];
     "ToolBar (Tree)" -> ViewModeSegmentedControl [label="actions"];
     "ToolBar (Kanban)" -> ViewModeSegmentedControl [label="actions"];
+
+    SettingsScreen -> "MacosScaffold (Settings)";
+    "MacosScaffold (Settings)" -> "ToolBar (Settings)" [label="toolBar"];
+    "ToolBar (Settings)" -> MacosBackButton [label="leading"];
 
     TreeViewScreen -> "MacosScaffold (Tree)";
     "MacosScaffold (Tree)" -> "ToolBar (Tree)" [label="toolBar"];
