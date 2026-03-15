@@ -62,18 +62,22 @@ class ActivityTicker extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4.0,
                     children: [
                       Text(
-                        '${interaction.actor} performed ${interaction.action}',
+                        interaction.actor,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
                       ),
-                      if (interaction.issueId != null) ...[
-                        const SizedBox(height: 4),
+                      Text(
+                        interaction.action,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      if (interaction.issueId != null)
                         GestureDetector(
                           onTap: () {
                             // Find the issue and open it in the inspector
@@ -87,16 +91,15 @@ class ActivityTicker extends StatelessWidget {
                           child: MouseRegion(
                             cursor: SystemMouseCursors.click,
                             child: Text(
-                              'Issue: ${interaction.issueId}',
+                              interaction.issueId!,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: MacosTheme.of(context).primaryColor,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ),
