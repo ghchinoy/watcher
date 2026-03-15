@@ -220,30 +220,35 @@ class ProjectDashboard extends StatelessWidget {
                       const SizedBox(height: 20),
                       Row(
                         children: [
-                          _buildStatCard(context, 'Open', openCount.toString()),
-                          const SizedBox(width: 16),
-                          _buildStatCard(
-                            context,
-                            'Priority Open',
-                            'P1: $openP1Count   P2: $openP2Count   P3: $openP3Count',
+                          SimpleStatCard(
+                            title: 'Open',
+                            value: openCount.toString(),
                           ),
                           const SizedBox(width: 16),
-                          _buildStatCard(
-                            context,
-                            'In Progress',
-                            inProgressCount.toString(),
+                          PriorityStatCard(
+                            p0Count: issues
+                                .where(
+                                  (i) => i.status == 'open' && i.priority == 0,
+                                )
+                                .length,
+                            p1Count: openP1Count,
+                            p2Count: openP2Count,
+                            p3Count: openP3Count,
                           ),
                           const SizedBox(width: 16),
-                          _buildStatCard(
-                            context,
-                            'Closed',
-                            closedCount.toString(),
+                          SimpleStatCard(
+                            title: 'In Progress',
+                            value: inProgressCount.toString(),
                           ),
                           const SizedBox(width: 16),
-                          _buildStatCard(
-                            context,
-                            'Total',
-                            issues.length.toString(),
+                          SimpleStatCard(
+                            title: 'Closed',
+                            value: closedCount.toString(),
+                          ),
+                          const SizedBox(width: 16),
+                          SimpleStatCard(
+                            title: 'Total',
+                            value: issues.length.toString(),
                           ),
                         ],
                       ),
@@ -282,11 +287,11 @@ class ProjectDashboard extends StatelessWidget {
                                 const Text('This project only exists locally.'),
                                 const SizedBox(height: 12),
                                 PushButton(
-                                controlSize: ControlSize.regular,
-                                child: const Text('Configure Federation...'),
-                                onPressed: () {
-                                  context.go('/project/settings');
-                                },
+                                  controlSize: ControlSize.regular,
+                                  child: const Text('Configure Federation...'),
+                                  onPressed: () {
+                                    context.go('/project/settings');
+                                  },
                                 ),
                               ],
                             ),
@@ -365,11 +370,11 @@ class ProjectDashboard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 PushButton(
-                                controlSize: ControlSize.regular,
-                                child: const Text('Configure Federation...'),
-                                onPressed: () {
-                                  context.go('/project/settings');
-                                },
+                                  controlSize: ControlSize.regular,
+                                  child: const Text('Configure Federation...'),
+                                  onPressed: () {
+                                    context.go('/project/settings');
+                                  },
                                 ),
                               ],
                             ),
@@ -392,8 +397,16 @@ class ProjectDashboard extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildStatCard(BuildContext context, String title, String value) {
+class StatCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const StatCard({super.key, required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -402,16 +415,104 @@ class ProjectDashboard extends StatelessWidget {
           context,
         ),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: MacosColors.systemGrayColor.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title),
-          const SizedBox(height: 8),
           Text(
-            value,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            title,
+            style: MacosTheme.of(context).typography.subheadline.copyWith(
+              color: MacosColors.systemGrayColor,
+            ),
           ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class SimpleStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const SimpleStatCard({super.key, required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return StatCard(
+      title: title,
+      child: Text(
+        value,
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class PriorityStatCard extends StatelessWidget {
+  final int p0Count;
+  final int p1Count;
+  final int p2Count;
+  final int p3Count;
+
+  const PriorityStatCard({
+    super.key,
+    required this.p0Count,
+    required this.p1Count,
+    required this.p2Count,
+    required this.p3Count,
+  });
+
+  Widget _buildBadge(String label, int count, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: MacosColors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          count.toString(),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StatCard(
+      title: 'Priority Open',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (p0Count > 0) ...[
+            _buildBadge('P0', p0Count, MacosColors.systemRedColor),
+            const SizedBox(width: 12),
+          ],
+          _buildBadge('P1', p1Count, MacosColors.systemOrangeColor),
+          const SizedBox(width: 12),
+          _buildBadge('P2', p2Count, MacosColors.systemYellowColor),
+          const SizedBox(width: 12),
+          _buildBadge('P3', p3Count, MacosColors.systemBlueColor),
         ],
       ),
     );
