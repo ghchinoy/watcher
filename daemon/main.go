@@ -194,6 +194,65 @@ func handleCloseIssue(ctx context.Context, storage beads.Storage, req Request) {
 	})
 }
 
+func handleGetComments(ctx context.Context, storage beads.Storage, req Request) {
+        var params struct {
+                ID string `json:"id"`
+        }
+        if err := json.Unmarshal(req.Params, &params); err != nil {
+                sendError(req.ID, -32602, "Invalid params")
+                return
+        }
+
+        // Because beads/internal/types is internal, we shell out to bd comments --json
+        cmd := exec.Command("bd", "comments", params.ID, "--json")
+        out, err := cmd.Output()
+        if err != nil {
+                sendError(req.ID, -32000, fmt.Sprintf("failed to get comments: %v", string(out)))
+                return
+        }
+
+        var comments []interface{}
+        if len(out) > 0 {
+                if err := json.Unmarshal(out, &comments); err != nil {
+                        sendError(req.ID, -32000, "failed to parse comments JSON")
+                        return
+                }
+        }
+
+        sendResponse(Response{
+                JSONRPC: "2.0",
+                Result:  comments,
+                ID:      req.ID,
+        })
+}
+
+func handleAddComment(ctx context.Context, storage beads.Storage, req Request) {
+        var params struct {
+                ID      string `json:"id"`
+                Actor   string `json:"actor"`
+                Comment string `json:"comment"`
+        }
+        if err := json.Unmarshal(req.Params, &params); err != nil {
+                sendError(req.ID, -32602, "Invalid params")
+                return
+        }
+
+        cmd := exec.Command("bd", "comments", "add", params.ID, params.Comment)
+        // Pass actor down to the command
+        cmd.Env = append(os.Environ(), fmt.Sprintf("BD_ACTOR=%s", params.Actor))
+        
+        if out, err := cmd.CombinedOutput(); err != nil {
+                sendError(req.ID, -32000, fmt.Sprintf("failed to add comment: %v - %s", err, string(out)))
+                return
+        }
+
+        sendResponse(Response{
+                JSONRPC: "2.0",
+                Result:  "ok",
+                ID:      req.ID,
+        })
+}
+
 func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) {
 	var params struct {
 		ID      string                 `json:"id"`
@@ -339,6 +398,10 @@ func main() {
 			handleCreateIssue(ctx, storage, req)
 		case "update_issue":
 			handleUpdateIssue(ctx, storage, req)
+		case "get_comments":
+			handleGetComments(ctx, storage, req)
+		case "add_comment":
+			handleAddComment(ctx, storage, req)
 		case "close_issue":
 			handleCloseIssue(ctx, storage, req)
 		case "get_peers":

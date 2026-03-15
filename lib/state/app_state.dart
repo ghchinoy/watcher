@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   List<Interaction> currentInteractions = [];
   List<Map<String, String>> currentPeers = [];
   Issue? selectedIssue;
+  List<Map<String, dynamic>> selectedIssueComments = [];
 
   bool isLoading = false;
   bool isRefreshing = false;
@@ -133,9 +134,19 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  void selectIssue(Issue? issue) {
+  Future<void> selectIssue(Issue? issue) async {
     selectedIssue = issue;
+    selectedIssueComments = [];
     notifyListeners();
+
+    if (issue != null && _currentService != null) {
+      try {
+        selectedIssueComments = await _currentService!.getComments(issue.id);
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Failed to fetch comments: $e');
+      }
+    }
   }
 
   Future<void> _loadProjects() async {
@@ -247,6 +258,18 @@ class AppState extends ChangeNotifier {
           _refreshData();
         });
       });
+    }
+  }
+
+  Future<void> addComment(String issueId, String text) async {
+    if (_currentService == null) return;
+    try {
+      await _currentService!.addComment(issueId, text, actor: actorName);
+      // Immediately refresh comments to show the new one
+      selectedIssueComments = await _currentService!.getComments(issueId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to add comment: $e');
     }
   }
 

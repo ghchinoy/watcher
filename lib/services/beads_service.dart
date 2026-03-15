@@ -198,6 +198,22 @@ class BeadsService {
     });
   }
   
+  Future<List<Map<String, dynamic>>> getComments(String issueId) async {
+    final result = await _sendRpcRequest('get_comments', {'id': issueId});
+    if (result is List) {
+      return result.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    return [];
+  }
+
+  Future<void> addComment(String issueId, String comment, {required String actor}) async {
+    await _sendRpcRequest('add_comment', {
+      'id': issueId,
+      'comment': comment,
+      'actor': actor,
+    });
+  }
+
   Future<List<Map<String, String>>> getPeers() async {
     final result = await _sendRpcRequest('get_peers');
     if (result == null) return [];
