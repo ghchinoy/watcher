@@ -39,9 +39,30 @@ class AppState extends ChangeNotifier {
   Timer? _debounceTimer;
   Timer? _syncTimer;
   BeadsService? _currentService;
+  
+  int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
 
   AppState() {
+    _loadSettings();
     _loadProjects();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    syncIntervalMinutes = prefs.getInt('sync_interval_minutes') ?? 5;
+    notifyListeners();
+  }
+
+  Future<void> setSyncInterval(int minutes) async {
+    syncIntervalMinutes = minutes;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('sync_interval_minutes', minutes);
+    notifyListeners();
+    
+    // Restart the timer immediately with the new interval if we are on a federated project
+    if (selectedProject != null && currentPeers.isNotEmpty) {
+      _startSyncTimer();
+    }
   }
 
   bool isNodeExpanded(String issueId) {
@@ -183,8 +204,9 @@ class AppState extends ChangeNotifier {
 
   void _startSyncTimer() {
     _syncTimer?.cancel();
-    // Auto-sync every 5 minutes
-    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+    if (syncIntervalMinutes <= 0) return; // Disabled
+
+    _syncTimer = Timer.periodic(Duration(minutes: syncIntervalMinutes), (_) {
       syncPeer();
     });
   }

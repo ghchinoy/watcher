@@ -61,6 +61,13 @@ class BeadsService {
         if (line.trim().isEmpty) return;
         try {
           final response = jsonDecode(line);
+          
+          // Handle server-initiated notifications
+          if (response['method'] == 'boot_status') {
+             debugPrint('Daemon Notification: ${response['params']}');
+             return;
+          }
+          
           final id = response['id'] as int?;
           if (id != null && _pendingRequests.containsKey(id)) {
             if (response['error'] != null) {
@@ -124,10 +131,10 @@ class BeadsService {
     }
     
     return completer.future.timeout(
-      const Duration(seconds: 5),
+      const Duration(seconds: 15),
       onTimeout: () {
         _pendingRequests.remove(id);
-        throw Exception('Daemon timed out waiting for Dolt server to boot. Try selecting the project again.');
+        throw Exception('Daemon timed out after 15s waiting for Dolt server to boot. Try selecting the project again.');
       },
     );
   }

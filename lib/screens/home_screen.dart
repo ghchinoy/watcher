@@ -4,6 +4,8 @@ import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../widgets/issue_inspector.dart';
 
+import '../widgets/settings_modal.dart';
+
 class HomeScreen extends StatefulWidget {
   final Widget child;
 
@@ -110,6 +112,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               );
             },
+            bottom: MacosListTile(
+              leading: const MacosIcon(CupertinoIcons.settings),
+              title: const Text('Settings'),
+              onClick: () {
+                showMacosSheet(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (context) => SettingsModal(appState: appState),
+                );
+              },
+            ),
           ),
           endSidebar: Sidebar(
             startWidth: 300,
