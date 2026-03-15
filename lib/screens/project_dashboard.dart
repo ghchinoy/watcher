@@ -39,13 +39,14 @@ class ProjectDashboard extends StatelessWidget {
               title: const Text('Dashboard'),
               actions: [
                 ToolBarIconButton(
-                label: 'Toggle Inspector',
-                icon: const MacosIcon(CupertinoIcons.sidebar_right),
-                showLabel: false,
-                tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
-              ),
-              CustomToolbarItem(
+                  label: 'Toggle Inspector',
+                  icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                  showLabel: false,
+                  tooltipMessage: 'Toggle Inspector',
+                  onPressed: () =>
+                      MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                ),
+                CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/'),
@@ -69,13 +70,14 @@ class ProjectDashboard extends StatelessWidget {
               title: const Text('Dashboard'),
               actions: [
                 ToolBarIconButton(
-                label: 'Toggle Inspector',
-                icon: const MacosIcon(CupertinoIcons.sidebar_right),
-                showLabel: false,
-                tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
-              ),
-              CustomToolbarItem(
+                  label: 'Toggle Inspector',
+                  icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                  showLabel: false,
+                  tooltipMessage: 'Toggle Inspector',
+                  onPressed: () =>
+                      MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                ),
+                CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/'),
@@ -98,13 +100,14 @@ class ProjectDashboard extends StatelessWidget {
               title: const Text('Dashboard'),
               actions: [
                 ToolBarIconButton(
-                label: 'Toggle Inspector',
-                icon: const MacosIcon(CupertinoIcons.sidebar_right),
-                showLabel: false,
-                tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
-              ),
-              CustomToolbarItem(
+                  label: 'Toggle Inspector',
+                  icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                  showLabel: false,
+                  tooltipMessage: 'Toggle Inspector',
+                  onPressed: () =>
+                      MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                ),
+                CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/'),
@@ -122,7 +125,9 @@ class ProjectDashboard extends StatelessWidget {
                       children: [
                         Text(
                           'Error: ${appState.error}',
-                          style: const TextStyle(color: MacosColors.systemRedColor),
+                          style: const TextStyle(
+                            color: MacosColors.systemRedColor,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
@@ -140,11 +145,21 @@ class ProjectDashboard extends StatelessWidget {
                   ),
                 ),
               ),
-            ],          );
+            ],
+          );
         }
 
         final issues = appState.currentIssues;
         final openCount = issues.where((i) => i.status == 'open').length;
+        final openP1Count = issues
+            .where((i) => i.status == 'open' && i.priority == 1)
+            .length;
+        final openP2Count = issues
+            .where((i) => i.status == 'open' && i.priority == 2)
+            .length;
+        final openP3Count = issues
+            .where((i) => i.status == 'open' && i.priority == 3)
+            .length;
         final inProgressCount = issues
             .where((i) => i.status == 'in_progress')
             .length;
@@ -179,7 +194,8 @@ class ProjectDashboard extends StatelessWidget {
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
                 showLabel: false,
                 tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                onPressed: () =>
+                    MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
               ),
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const Padding(
@@ -205,13 +221,13 @@ class ProjectDashboard extends StatelessWidget {
                       const SizedBox(height: 20),
                       Row(
                         children: [
+                          _buildStatCard(context, 'Open', openCount.toString()),
+                          const SizedBox(width: 16),
                           _buildStatCard(
                             context,
-                            'Total Issues',
-                            issues.length.toString(),
+                            'Priority Open',
+                            'P1: $openP1Count   P2: $openP2Count   P3: $openP3Count',
                           ),
-                          const SizedBox(width: 16),
-                          _buildStatCard(context, 'Open', openCount.toString()),
                           const SizedBox(width: 16),
                           _buildStatCard(
                             context,
@@ -224,6 +240,12 @@ class ProjectDashboard extends StatelessWidget {
                             'Closed',
                             closedCount.toString(),
                           ),
+                          const SizedBox(width: 16),
+                          _buildStatCard(
+                            context,
+                            'Total',
+                            issues.length.toString(),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 32),
@@ -235,16 +257,28 @@ class ProjectDashboard extends StatelessWidget {
                       if (appState.currentPeers.isEmpty)
                         Container(
                           decoration: BoxDecoration(
-                            color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
+                            color: MacosDynamicColor.resolve(
+                              MacosColors.controlBackgroundColor,
+                              context,
+                            ),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: MacosColors.systemGrayColor.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: MacosColors.systemGrayColor.withValues(
+                                alpha: 0.2,
+                              ),
+                            ),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('No peers configured', style: MacosTheme.of(context).typography.headline),
+                                Text(
+                                  'No peers configured',
+                                  style: MacosTheme.of(
+                                    context,
+                                  ).typography.headline,
+                                ),
                                 const SizedBox(height: 4),
                                 const Text('This project only exists locally.'),
                                 const SizedBox(height: 12),
@@ -255,7 +289,8 @@ class ProjectDashboard extends StatelessWidget {
                                     showMacosSheet(
                                       context: context,
                                       barrierDismissible: true,
-                                      builder: (context) => FederationModal(appState: appState),
+                                      builder: (context) =>
+                                          FederationModal(appState: appState),
                                     );
                                   },
                                 ),
@@ -266,9 +301,16 @@ class ProjectDashboard extends StatelessWidget {
                       else
                         Container(
                           decoration: BoxDecoration(
-                            color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
+                            color: MacosDynamicColor.resolve(
+                              MacosColors.controlBackgroundColor,
+                              context,
+                            ),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: MacosColors.systemGrayColor.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: MacosColors.systemGrayColor.withValues(
+                                alpha: 0.2,
+                              ),
+                            ),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -276,13 +318,19 @@ class ProjectDashboard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('${appState.currentPeers.length} Peers Configured', style: MacosTheme.of(context).typography.headline),
+                                    Text(
+                                      '${appState.currentPeers.length} Peers Configured',
+                                      style: MacosTheme.of(
+                                        context,
+                                      ).typography.headline,
+                                    ),
                                     PushButton(
-                                  controlSize: ControlSize.regular,
-                                  secondary: true,
-                                  onPressed: () {
+                                      controlSize: ControlSize.regular,
+                                      secondary: true,
+                                      onPressed: () {
                                         appState.syncPeer();
                                       },
                                       child: const Text('Sync All'),
@@ -290,18 +338,37 @@ class ProjectDashboard extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                ...appState.currentPeers.map((peer) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 8.0),
-                                      child: Row(
-                                        children: [
-                                          const MacosIcon(CupertinoIcons.cloud, size: 16),
-                                          const SizedBox(width: 8),
-                                          Text(peer['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                          const SizedBox(width: 8),
-                                          Text(peer['url'] ?? '', style: MacosTheme.of(context).typography.footnote.copyWith(color: MacosColors.systemGrayColor)),
-                                        ],
-                                      ),
-                                    )),
+                                ...appState.currentPeers.map(
+                                  (peer) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Row(
+                                      children: [
+                                        const MacosIcon(
+                                          CupertinoIcons.cloud,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          peer['name'] ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          peer['url'] ?? '',
+                                          style: MacosTheme.of(context)
+                                              .typography
+                                              .footnote
+                                              .copyWith(
+                                                color:
+                                                    MacosColors.systemGrayColor,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
                                 PushButton(
                                   controlSize: ControlSize.regular,
@@ -310,7 +377,8 @@ class ProjectDashboard extends StatelessWidget {
                                     showMacosSheet(
                                       context: context,
                                       barrierDismissible: true,
-                                      builder: (context) => FederationModal(appState: appState),
+                                      builder: (context) =>
+                                          FederationModal(appState: appState),
                                     );
                                   },
                                 ),
@@ -340,7 +408,10 @@ class ProjectDashboard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
+        color: MacosDynamicColor.resolve(
+          MacosColors.controlBackgroundColor,
+          context,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

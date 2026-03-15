@@ -1,64 +1,107 @@
 digraph G {
-    node [shape=box, style=rounded, fontname="Helvetica"];
-    edge [dir=none];
+    node [shape=box, style=filled, fillcolor="#EDEDF4", color="#C4C6D0", fontname="Helvetica", fontcolor="#191C20"];
+    edge [dir=none, color="#74777F"];
+    bgcolor="#F9F9FF";
 
-    WatcherApp -> ListenableBuilder [label="build"];
-    ListenableBuilder -> "MacosApp.router";
-    "MacosApp.router" -> GoRouter [label="routerConfig"];
-    GoRouter -> ShellRoute [label="routes"];
-    ShellRoute -> HomeScreen [label="builder"];
-    
-    HomeScreen -> ListenableBuilder;
-    ListenableBuilder -> MacosWindow;
-    
-    MacosWindow -> "Sidebar (Projects)" [label="sidebar"];
-    "Sidebar (Projects)" -> SidebarItems [label="builder"];
-    "Sidebar (Projects)" -> MacosListTile [label="bottom"];
-    MacosListTile -> SettingsScreen [label="router.go('/settings')"];
-    
-    MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar"];
-    "Sidebar (Issue Inspector)" -> IssueInspector [label="builder"];
-    IssueInspector -> MacosPopupButton [label="Status/Priority"];
-    IssueInspector -> "Comments Section" [label="Timeline & Input"];
-    
-    MacosWindow -> _InspectorController [label="child"];
-    _InspectorController -> ChildWidget;
+    subgraph cluster_app {
+        label="App Root";
+        style=rounded;
+        color="#415F91";
+        fontcolor="#415F91";
+        
+        WatcherApp -> ListenableBuilder [label="build", fontcolor="#44474E", fontsize=10];
+        ListenableBuilder -> "MacosApp.router";
+        "MacosApp.router" -> GoRouter [label="routerConfig", fontcolor="#44474E", fontsize=10];
+        GoRouter -> ShellRoute [label="routes", fontcolor="#44474E", fontsize=10];
+    }
 
-    ChildWidget -> ProjectDashboard [label="/"];
-    ChildWidget -> TreeViewScreen [label="/tree"];
-    ChildWidget -> KanbanScreen [label="/kanban"];
-    ChildWidget -> SettingsScreen [label="/settings"];
+    subgraph cluster_shell {
+        label="Shell (HomeScreen)";
+        style=rounded;
+        color="#565F71";
+        fontcolor="#565F71";
 
-    ProjectDashboard -> "MacosScaffold (Dashboard)";
-    "MacosScaffold (Dashboard)" -> "ToolBar (Dashboard)" [label="toolBar"];
-    "MacosScaffold (Dashboard)" -> "ContentArea (Dashboard)" [label="children"];
-    "ContentArea (Dashboard)" -> SingleChildScrollView;
-    SingleChildScrollView -> "Container (Federation Status)";
-    "Container (Federation Status)" -> FederationModal [label="onClick (MacosSheet)"];
-    SingleChildScrollView -> ActivityTicker [label="Recent Activity"];
-    
-    "ToolBar (Dashboard)" -> ViewModeSegmentedControl [label="actions"];
-    "ToolBar (Tree)" -> ViewModeSegmentedControl [label="actions"];
-    "ToolBar (Kanban)" -> ViewModeSegmentedControl [label="actions"];
+        ShellRoute -> HomeScreen [label="builder", fontcolor="#44474E", fontsize=10];
+        HomeScreen -> "ListenableBuilder (Home)";
+        "ListenableBuilder (Home)" -> MacosWindow;
+        
+        MacosWindow -> "Sidebar (Projects)" [label="sidebar", fontcolor="#44474E", fontsize=10];
+        "Sidebar (Projects)" -> SidebarItems [label="builder", fontcolor="#44474E", fontsize=10];
+        "Sidebar (Projects)" -> MacosListTile [label="bottom", fontcolor="#44474E", fontsize=10];
+        MacosListTile -> SettingsScreen [label="router.go('/settings')", fontcolor="#44474E", fontsize=10];
+        
+        MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar", fontcolor="#44474E", fontsize=10];
+        "Sidebar (Issue Inspector)" -> IssueInspector [label="builder", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> MacosPopupButton [label="Status/Priority", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "Comments Section" [label="Timeline & Input", fontcolor="#44474E", fontsize=10];
+        
+        MacosWindow -> _InspectorController [label="child", fontcolor="#44474E", fontsize=10];
+        _InspectorController -> ChildWidget;
+    }
 
-    SettingsScreen -> "MacosScaffold (Settings)";
-    "MacosScaffold (Settings)" -> "ToolBar (Settings)" [label="toolBar"];
-    "ToolBar (Settings)" -> MacosBackButton [label="leading"];
+    ChildWidget -> ProjectDashboard [label="/", fontcolor="#44474E", fontsize=10];
+    ChildWidget -> TreeViewScreen [label="/tree", fontcolor="#44474E", fontsize=10];
+    ChildWidget -> KanbanScreen [label="/kanban", fontcolor="#44474E", fontsize=10];
+    ChildWidget -> SettingsScreen [label="/settings", fontcolor="#44474E", fontsize=10];
 
-    TreeViewScreen -> "MacosScaffold (Tree)";
-    "MacosScaffold (Tree)" -> "ToolBar (Tree)" [label="toolBar"];
-    "MacosScaffold (Tree)" -> "ContentArea (Tree)" [label="children"];
-    "ContentArea (Tree)" -> "ListView (Tree)" [label="builder"];
-    "ListView (Tree)" -> TreeNode [label="itemBuilder"];
+    subgraph cluster_dashboard {
+        label="Dashboard";
+        style=rounded;
+        color="#415F91";
+        fontcolor="#415F91";
 
-    KanbanScreen -> "MacosScaffold (Kanban)";
-    "MacosScaffold (Kanban)" -> "ToolBar (Kanban)" [label="toolBar"];
-    "MacosScaffold (Kanban)" -> "ContentArea (Kanban)" [label="children"];
-    "ContentArea (Kanban)" -> "SingleChildScrollView (Kanban)" [label="builder"];
-    "SingleChildScrollView (Kanban)" -> Row [label="child"];
-    Row -> KanbanColumn [label="children"];
-    KanbanColumn -> DragTarget [label="build"];
-    DragTarget -> "ListView (Column)" [label="builder"];
-    "ListView (Column)" -> KanbanCard [label="itemBuilder"];
-    KanbanCard -> Draggable [label="build"];
+        ProjectDashboard -> "MacosScaffold (Dashboard)";
+        "MacosScaffold (Dashboard)" -> "ToolBar (Dashboard)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "MacosScaffold (Dashboard)" -> "ContentArea (Dashboard)" [label="children", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Dashboard)" -> "SingleChildScrollView (Dashboard)";
+        "SingleChildScrollView (Dashboard)" -> "Row (Stats)";
+        "SingleChildScrollView (Dashboard)" -> "Container (Federation Status)";
+        "Container (Federation Status)" -> FederationModal [label="onClick (MacosSheet)", fontcolor="#44474E", fontsize=10];
+        "SingleChildScrollView (Dashboard)" -> ActivityTicker [label="Recent Activity", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Dashboard)" -> "ViewModeSegmentedControl (Dash)" [label="actions", fontcolor="#44474E", fontsize=10];
+    }
+
+    subgraph cluster_settings {
+        label="Settings";
+        style=rounded;
+        color="#565F71";
+        fontcolor="#565F71";
+
+        SettingsScreen -> "MacosScaffold (Settings)";
+        "MacosScaffold (Settings)" -> "ToolBar (Settings)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Settings)" -> MacosBackButton [label="leading", fontcolor="#44474E", fontsize=10];
+    }
+
+    subgraph cluster_tree {
+        label="Tree View";
+        style=rounded;
+        color="#415F91";
+        fontcolor="#415F91";
+
+        TreeViewScreen -> "MacosScaffold (Tree)";
+        "MacosScaffold (Tree)" -> "ToolBar (Tree)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "MacosScaffold (Tree)" -> "ContentArea (Tree)" [label="children", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Tree)" -> "ListView (Tree)" [label="builder", fontcolor="#44474E", fontsize=10];
+        "ListView (Tree)" -> TreeNode [label="itemBuilder", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Tree)" -> "ViewModeSegmentedControl (Tree)" [label="actions", fontcolor="#44474E", fontsize=10];
+    }
+
+    subgraph cluster_kanban {
+        label="Kanban View";
+        style=rounded;
+        color="#565F71";
+        fontcolor="#565F71";
+
+        KanbanScreen -> "MacosScaffold (Kanban)";
+        "MacosScaffold (Kanban)" -> "ToolBar (Kanban)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "MacosScaffold (Kanban)" -> "ContentArea (Kanban)" [label="children", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Kanban)" -> "SingleChildScrollView (Kanban)" [label="builder", fontcolor="#44474E", fontsize=10];
+        "SingleChildScrollView (Kanban)" -> "Row (Kanban)" [label="child", fontcolor="#44474E", fontsize=10];
+        "Row (Kanban)" -> KanbanColumn [label="children", fontcolor="#44474E", fontsize=10];
+        KanbanColumn -> DragTarget [label="build", fontcolor="#44474E", fontsize=10];
+        DragTarget -> "ListView (Column)" [label="builder", fontcolor="#44474E", fontsize=10];
+        "ListView (Column)" -> KanbanCard [label="itemBuilder", fontcolor="#44474E", fontsize=10];
+        KanbanCard -> Draggable [label="build", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Kanban)" -> "ViewModeSegmentedControl (Kanban)" [label="actions", fontcolor="#44474E", fontsize=10];
+    }
 }
