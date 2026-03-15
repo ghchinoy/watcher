@@ -52,7 +52,8 @@ digraph G {
     "BeadsService" -> "watcher-daemon (Go)" [label=" JSON-RPC\n(stdin/stdout)"];
     "PlannerService" -> "gemini-cli (Node)" [label=" Spawn\n--approval-mode plan"];
     
-    "watcher-daemon (Go)" -> "dolt sql-server" [label=" MySQL Wire Protocol\n(TCP localhost)"];
+    "watcher-daemon (Go)" -> "dolt sql-server" [label=" 1. Pre-boot Cleanup\n(bd dolt killall)"];
+    "watcher-daemon (Go)" -> "dolt sql-server" [label=" 2. MySQL Wire Protocol\n(TCP localhost)"];
     "dolt sql-server" -> ".beads/dolt/ (Disk)" [label=" Read/Write"];
     
     // Cloud Connections
