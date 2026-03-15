@@ -13,6 +13,8 @@ digraph G {
     
     MacosWindow -> "Sidebar (Projects)" [label="sidebar"];
     "Sidebar (Projects)" -> SidebarItems [label="builder"];
+    "Sidebar (Projects)" -> MacosListTile [label="bottom"];
+    MacosListTile -> SettingsModal [label="onClick (MacosSheet)"];
     
     MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar"];
     "Sidebar (Issue Inspector)" -> IssueInspector [label="builder"];
@@ -29,6 +31,8 @@ digraph G {
     "MacosScaffold (Dashboard)" -> "ToolBar (Dashboard)" [label="toolBar"];
     "MacosScaffold (Dashboard)" -> "ContentArea (Dashboard)" [label="children"];
     "ContentArea (Dashboard)" -> SingleChildScrollView;
+    SingleChildScrollView -> "Container (Federation Status)";
+    "Container (Federation Status)" -> FederationModal [label="onClick (MacosSheet)"];
     SingleChildScrollView -> ActivityTicker [label="Recent Activity"];
     
     "ToolBar (Dashboard)" -> ViewModeSegmentedControl [label="actions"];
