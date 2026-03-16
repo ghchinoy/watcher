@@ -203,13 +203,37 @@ class AppState extends ChangeNotifier {
       'project_paths',
       projects.map((p) => p.path).toList(),
     );
-    notifyListeners();
 
     if (selectedProject == null) {
       selectProject(projects.last);
     }
   }
-Future<void> removeProject(Project project) async {
+
+  Future<void> reorderProjects(int oldIndex, int newIndex, {bool isAdjusted = false}) async {
+    if (oldIndex < 0 ||
+        oldIndex >= projects.length ||
+        newIndex < 0 ||
+        newIndex > projects.length) {
+      return;
+    }
+
+    if (!isAdjusted && oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    final project = projects.removeAt(oldIndex);
+    projects.insert(newIndex, project);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      'project_paths',
+      projects.map((p) => p.path).toList(),
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> removeProject(Project project) async {
   projects.remove(project);
   projectErrors.remove(project.path);
   final prefs = await SharedPreferences.getInstance();
