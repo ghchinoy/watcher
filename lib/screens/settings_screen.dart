@@ -184,6 +184,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               key: ValueKey(project.path),
                               color: MacosColors.transparent,
                               child: ListTile(
+                                hoverColor: MacosColors.transparent,
+                                selectedTileColor: MacosColors.transparent,
+                                selectedColor: MacosColors.transparent,
                                 dense: true,
                                 title: Text(
                                   project.name,
