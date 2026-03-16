@@ -49,6 +49,7 @@ app.*.map.json
 # Watcher specific
 docs/screenshots/
 temp_issues.jsonl
+daemon/watcher-daemon
 
 # Dolt database files (added by bd init)
 .dolt/
