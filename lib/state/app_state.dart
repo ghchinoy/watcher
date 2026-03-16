@@ -23,6 +23,7 @@ class AppState extends ChangeNotifier {
   List<Map<String, String>> currentPeers = [];
   Issue? selectedIssue;
   List<Map<String, dynamic>> selectedIssueComments = [];
+  String? daemonVersion;
 
   bool isLoading = false;
   bool isRefreshing = false;
@@ -313,6 +314,10 @@ String? getProjectLastActivity(Project project) {
 
     try {
       _currentService = BeadsService(project.path);
+      
+      // Fetch daemon version explicitly on first load
+      daemonVersion = await _currentService!.getVersion();
+
       currentIssues = await _currentService!.getIssues();
       currentGraph = await _currentService!.getGraph();
       currentInteractions = await _currentService!.getInteractions();

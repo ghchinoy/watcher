@@ -198,6 +198,14 @@ class BeadsService {
     });
   }
   
+  Future<String?> getVersion() async {
+    final result = await _sendRpcRequest('get_version', {});
+    if (result is String) {
+      return result;
+    }
+    return null;
+  }
+
   Future<List<Map<String, dynamic>>> getComments(String issueId) async {
     final result = await _sendRpcRequest('get_comments', {'id': issueId});
     if (result is List) {

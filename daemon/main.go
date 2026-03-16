@@ -391,8 +391,7 @@ func main() {
 			if err.Error() == "EOF" {
 				break
 			}
-			// Send parse error
-			sendError(0, -32700, "Parse error")
+			sendError(-1, -32700, "Parse error")
 			continue
 		}
 
@@ -415,6 +414,8 @@ func main() {
 			handleAddPeer(ctx, storage, req)
 		case "sync_peer":
 			handleSyncPeer(ctx, storage, req)
+		case "get_version":
+			sendResponse(Response{JSONRPC: "2.0", Result: "v0.61.0", ID: req.ID})
 		case "ping":
 			sendResponse(Response{JSONRPC: "2.0", Result: "pong", ID: req.ID})
 		default:

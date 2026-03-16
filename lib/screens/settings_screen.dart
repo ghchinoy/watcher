@@ -204,6 +204,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }).toList(),
                         ),
                       ),
+                      const SizedBox(height: 40),
+                      const Text(
+                        'System Information',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Daemon version: ${appState.daemonVersion ?? "Unknown"}',
+                        style: MacosTheme.of(context).typography.body,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Database backend: Dolt SQL',
+                        style: MacosTheme.of(context).typography.body,
+                      ),
                     ],
                   ),
                 );
