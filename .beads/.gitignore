@@ -50,3 +50,4 @@ bd.db
 # Config files (metadata.json, config.yaml) are tracked by git by default
 # since no pattern above ignores them.
 dolt-monitor.pid.lock
+.beads-credential-key
