@@ -161,6 +161,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: ReorderableListView(
                           shrinkWrap: true,
                           buildDefaultDragHandles: false,
+                          proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                            return Material(
+                              color: MacosColors.transparent,
+                              elevation: 0.0,
+                              child: child,
+                            );
+                          },
                           onReorderItem: (oldIndex, newIndex) {
                             // ReorderableListView.onReorderItem already adjusts the index!
                             // If we use this modern API, we don't need the manual -1 adjustment

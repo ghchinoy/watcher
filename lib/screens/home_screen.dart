@@ -64,6 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ), // Transparent to allow vibrancy
           sidebar: Sidebar(
             minWidth: 200,
+            decoration: const BoxDecoration(
+              color: MacosColors.transparent,
+            ),
             builder: (context, scrollController) {
               return SidebarItems(
                 currentIndex: _currentIndex,
