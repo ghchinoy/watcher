@@ -47,34 +47,29 @@ class _IssueInspectorState extends State<IssueInspector> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Core Attributes
                   _buildStatusDropdown(context),
                   _buildPriorityDropdown(context),
                   _buildSection('Type', issue.issueType.toUpperCase(), context),
+                  
+                  // People
                   _buildEditableField('Owner', issue.owner ?? '', context, (value) {
                     appState.updateIssue(issue.id, owner: value);
                   }),
                   _buildEditableField('Assignee', issue.assignee ?? '', context, (value) {
                     appState.updateIssue(issue.id, assignee: value);
                   }),
-                  if (issue.createdBy != null && issue.createdBy!.isNotEmpty)
-                    _buildSection('Created By', issue.createdBy!, context),
-                  _buildSection('Created', _formatDate(issue.createdAt), context),
-                  _buildSection('Updated', _formatDate(issue.updatedAt), context),
-                  if (issue.closedAt != null)
-                    _buildSection('Closed', _formatDate(issue.closedAt!), context),
-                  if (issue.closeReason != null &&
-                      issue.closeReason!.isNotEmpty)
-                    _buildSection('Close Reason', issue.closeReason!, context),
 
                   _buildDependenciesSection(context),
 
+                  const SizedBox(height: 8),
+                  Container(height: 1, color: theme.dividerColor),
                   const SizedBox(height: 16),
-                  _buildCommentsSection(context),
 
-                  const SizedBox(height: 16),
+                  // Description
                   Text(
                     'Description',
-                    style: MacosTheme.of(context).typography.headline,
+                    style: theme.typography.headline,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -87,6 +82,16 @@ class _IssueInspectorState extends State<IssueInspector> {
                           : MacosColors.systemGrayColor,
                     ),
                   ),
+
+                  // Metadata (compact)
+                  _buildMetadataSection(context, issue),
+
+                  const SizedBox(height: 16),
+                  Container(height: 1, color: theme.dividerColor),
+                  const SizedBox(height: 16),
+
+                  // Comments
+                  _buildCommentsSection(context),
                 ],
               ),
             ),
@@ -96,9 +101,36 @@ class _IssueInspectorState extends State<IssueInspector> {
     );
   }
 
+  Widget _buildMetadataSection(BuildContext context, Issue issue) {
+    final theme = MacosTheme.of(context);
+    final textStyle = theme.typography.footnote.copyWith(
+      color: MacosColors.systemGrayColor,
+    );
+    
+    return Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (issue.createdBy != null && issue.createdBy!.isNotEmpty)
+            Text('Created by ${issue.createdBy} on ${_formatDate(issue.createdAt)}', style: textStyle)
+          else
+            Text('Created on ${_formatDate(issue.createdAt)}', style: textStyle),
+          
+          Text('Last updated ${_formatDate(issue.updatedAt)}', style: textStyle),
+          
+          if (issue.closedAt != null)
+            Text(
+              'Closed on ${_formatDate(issue.closedAt!)}${issue.closeReason?.isNotEmpty == true ? ' (${issue.closeReason})' : ''}', 
+              style: textStyle
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDependenciesSection(BuildContext context) {
     final issue = widget.issue;
-    // Find what this issue blocks
     final blocksIds =
         issue.dependencies
             ?.where((d) => d.type == 'blocks')
@@ -106,7 +138,6 @@ class _IssueInspectorState extends State<IssueInspector> {
             .toList() ??
         [];
 
-    // Find what this issue is blocked by
     final blockedByIds = appState.currentIssues
         .where(
           (i) =>
@@ -331,7 +362,7 @@ class _IssueInspectorState extends State<IssueInspector> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          comment['actor']?.toString() ?? 'Unknown',
+                          comment['author']?.toString() ?? 'Unknown',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                         Text(
@@ -347,7 +378,7 @@ class _IssueInspectorState extends State<IssueInspector> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      comment['body']?.toString() ?? '',
+                      comment['text']?.toString() ?? '',
                       style: const TextStyle(fontSize: 13),
                     ),
                   ],
@@ -364,18 +395,22 @@ class _IssueInspectorState extends State<IssueInspector> {
                 controller: _commentController,
                 placeholder: 'Add a comment...',
                 maxLines: 3,
+                minLines: 1,
               ),
             ),
             const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
+            MacosIconButton(
+              icon: MacosIcon(
+                CupertinoIcons.arrow_up_circle_fill,
+                color: MacosTheme.of(context).primaryColor,
+                size: 24,
+              ),
               onPressed: () {
                 if (_commentController.text.trim().isNotEmpty) {
                   appState.addComment(widget.issue.id, _commentController.text.trim());
                   _commentController.clear();
                 }
               },
-              child: const Text('Post'),
             ),
           ],
         ),
