@@ -218,6 +218,32 @@ class ProjectDashboard extends StatelessWidget {
                         style: MacosTheme.of(context).typography.largeTitle,
                       ),
                       const SizedBox(height: 20),
+                      if (appState.projectRequiredVersion != null &&
+                          appState.daemonVersion != null &&
+                          appState.projectRequiredVersion != appState.daemonVersion)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: MacosColors.systemRedColor.withValues(alpha: 0.1),
+                              border: Border.all(color: MacosColors.systemRedColor),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const MacosIcon(CupertinoIcons.exclamationmark_octagon_fill, color: MacosColors.systemRedColor),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Incompatible Version: This project requires beads version ${appState.projectRequiredVersion}, but your Watcher daemon is running ${appState.daemonVersion}. Some features may be broken or unreadable.',
+                                    style: MacosTheme.of(context).typography.body,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       Row(
                         children: [
                           SimpleStatCard(

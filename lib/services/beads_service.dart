@@ -218,6 +218,20 @@ class BeadsService {
     return null;
   }
 
+  Future<String?> getProjectRequiredVersion() async {
+    try {
+      final file = File('$workingDirectory/.beads/metadata.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final data = json.decode(content);
+        return data['required_version'] as String?;
+      }
+    } catch (e) {
+      debugPrint('Failed to read project required version: $e');
+    }
+    return null;
+  }
+
   Future<List<Map<String, dynamic>>> getComments(String issueId) async {
     final result = await _sendRpcRequest('get_comments', {'id': issueId});
     if (result is List) {

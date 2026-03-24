@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/issue.dart';
@@ -25,6 +27,8 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> selectedIssueComments = [];
   String? daemonVersion;
   String? cliVersion;
+  String? upstreamVersion;
+  String? projectRequiredVersion;
 
   bool isLoading = false;
   bool isRefreshing = false;
@@ -319,6 +323,8 @@ String? getProjectLastActivity(Project project) {
       // Fetch daemon and CLI versions explicitly on first load
       daemonVersion = await _currentService!.getVersion();
       cliVersion = await _currentService!.getCliVersion();
+      projectRequiredVersion = await _currentService!.getProjectRequiredVersion();
+      _checkUpstreamVersion();
 
       currentIssues = await _currentService!.getIssues();
       currentGraph = await _currentService!.getGraph();
@@ -477,5 +483,18 @@ String? getProjectLastActivity(Project project) {
     _syncTimer?.cancel();
     _currentService?.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkUpstreamVersion() async {
+    try {
+      final response = await http.get(Uri.parse('https://api.github.com/repos/steveyegge/beads/releases/latest'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        upstreamVersion = data['tag_name'] as String?;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch upstream version: $e');
+    }
   }
 }

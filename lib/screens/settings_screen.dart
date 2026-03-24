@@ -249,6 +249,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ],
                             ),
                           ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Upstream Beads Version',
+                                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                                    color: MacosColors.systemGrayColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  appState.upstreamVersion ?? "Checking...",
+                                  style: MacosTheme.of(context).typography.body,
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                       if (appState.daemonVersion != null && appState.cliVersion != null && appState.daemonVersion != appState.cliVersion)
@@ -268,6 +286,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Expanded(
                                   child: Text(
                                     'Version Mismatch: Your embedded daemon and local CLI are running different versions. This may cause synchronization issues or errors reading newer schema changes.',
+                                    style: MacosTheme.of(context).typography.footnote,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (appState.upstreamVersion != null && appState.daemonVersion != null && appState.upstreamVersion != appState.daemonVersion)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: MacosColors.systemBlueColor.withValues(alpha: 0.1),
+                              border: Border.all(color: MacosColors.systemBlueColor),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const MacosIcon(CupertinoIcons.info_circle_fill, color: MacosColors.systemBlueColor),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Update Available: A newer version of beads (${appState.upstreamVersion}) is available upstream. Consider rebuilding Watcher to bundle the latest daemon.',
                                     style: MacosTheme.of(context).typography.footnote,
                                   ),
                                 ),
