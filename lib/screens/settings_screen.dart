@@ -209,12 +209,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'System Information',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Daemon version: ${appState.daemonVersion ?? "Unknown"}',
-                        style: MacosTheme.of(context).typography.body,
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Embedded Daemon Version',
+                                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                                    color: MacosColors.systemGrayColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  appState.daemonVersion ?? "Unknown",
+                                  style: MacosTheme.of(context).typography.body,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Local bd CLI Version',
+                                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                                    color: MacosColors.systemGrayColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  appState.cliVersion ?? "Not installed or unavailable",
+                                  style: MacosTheme.of(context).typography.body,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
+                      if (appState.daemonVersion != null && appState.cliVersion != null && appState.daemonVersion != appState.cliVersion)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: MacosColors.systemYellowColor.withValues(alpha: 0.1),
+                              border: Border.all(color: MacosColors.systemYellowColor),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const MacosIcon(CupertinoIcons.exclamationmark_triangle_fill, color: MacosColors.systemYellowColor),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Version Mismatch: Your embedded daemon and local CLI are running different versions. This may cause synchronization issues or errors reading newer schema changes.',
+                                    style: MacosTheme.of(context).typography.footnote,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
                       Text(
                         'Database backend: Dolt SQL',
                         style: MacosTheme.of(context).typography.body,

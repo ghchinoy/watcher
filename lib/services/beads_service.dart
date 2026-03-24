@@ -206,6 +206,18 @@ class BeadsService {
     return null;
   }
 
+  Future<String?> getCliVersion() async {
+    try {
+      final result = await Process.run('bd', ['version'], workingDirectory: workingDirectory);
+      if (result.exitCode == 0) {
+        return result.stdout.toString().trim();
+      }
+    } catch (e) {
+      debugPrint('Failed to get CLI version: $e');
+    }
+    return null;
+  }
+
   Future<List<Map<String, dynamic>>> getComments(String issueId) async {
     final result = await _sendRpcRequest('get_comments', {'id': issueId});
     if (result is List) {

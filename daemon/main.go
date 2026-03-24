@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 
 	"github.com/steveyegge/beads"
 	"gopkg.in/yaml.v3"
@@ -415,7 +416,16 @@ func main() {
 		case "sync_peer":
 			handleSyncPeer(ctx, storage, req)
 		case "get_version":
-			sendResponse(Response{JSONRPC: "2.0", Result: "v0.61.0", ID: req.ID})
+			version := "unknown"
+			if info, ok := debug.ReadBuildInfo(); ok {
+				for _, dep := range info.Deps {
+					if dep.Path == "github.com/steveyegge/beads" {
+						version = dep.Version
+						break
+					}
+				}
+			}
+			sendResponse(Response{JSONRPC: "2.0", Result: version, ID: req.ID})
 		case "ping":
 			sendResponse(Response{JSONRPC: "2.0", Result: "pong", ID: req.ID})
 		default:
