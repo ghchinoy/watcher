@@ -1,4 +1,4 @@
-.PHONY: help build install clean run
+.PHONY: help build install clean run update-bd
 
 APP_NAME = Watcher.app
 # Use absolute path for the build directory so the symlink resolves correctly from anywhere
@@ -25,6 +25,12 @@ build: build-daemon ## Build the macOS release app and embed the daemon
 build-daemon: ## Build the Go daemon
 	@echo "Building watcher-daemon..."
 	cd daemon && go build -o watcher-daemon
+
+update-bd: ## Update the embedded beads dependency to the latest upstream main
+	@echo "Updating github.com/steveyegge/beads to latest main..."
+	cd daemon && go get -u github.com/steveyegge/beads@main && go mod tidy
+	@echo "Update complete. Run 'make install' to rebuild Watcher."
+
 install: build ## Build and install a symlink to /Applications
 	@echo "Installing $(APP_NAME) alias to $(INSTALL_DIR)..."
 	@rm -rf $(INSTALL_DIR)/$(APP_NAME)
