@@ -83,6 +83,25 @@ class _IssueInspectorState extends State<IssueInspector> {
                     ),
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // Notes
+                  Text(
+                    'Notes',
+                    style: theme.typography.headline,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    issue.notes?.isNotEmpty == true
+                        ? issue.notes!
+                        : 'No notes provided.',
+                    style: TextStyle(
+                      color: issue.notes?.isNotEmpty == true
+                          ? null
+                          : MacosColors.systemGrayColor,
+                    ),
+                  ),
+
                   // Metadata (compact)
                   _buildMetadataSection(context, issue),
 

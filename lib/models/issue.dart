@@ -29,6 +29,7 @@ class Issue {
   final String issueType;
   final String? owner;
   final String? assignee;
+  final String? notes;
   final DateTime createdAt;
   final String? createdBy;
   final DateTime updatedAt;
@@ -48,6 +49,7 @@ class Issue {
     required this.issueType,
     this.owner,
     this.assignee,
+    this.notes,
     required this.createdAt,
     this.createdBy,
     required this.updatedAt,
