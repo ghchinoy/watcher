@@ -16,6 +16,7 @@
 - **🌳 Hierarchical Tree View:** Visualize your Epics, Tasks, and Subtasks exactly how they relate to each other, complete with native disclosure triangles to expand or collapse complex trees.
 - **📋 Kanban Board:** See the flow of your work at a glance with automatically organized columns for Open, In Progress, and Closed issues.
 - **🔍 Issue Inspector:** Click any issue to slide out a detailed inspector panel containing the full description, priority, owner, and timestamps.
+- **🤖 AI Terminal Orchestration:** Run AI Health Assessments and Planners transparently! Watcher seamlessly orchestrates `tmux` sessions in the background and can launch your preferred terminal emulator (Ghostty, iTerm2, or Terminal.app) so you can watch the AI agent work in real-time, approve commands, and retain context across sessions.
 
 ## 🚀 Getting Started
 
@@ -23,6 +24,7 @@
 
 1. Ensure you have the [beads (`bd`) CLI](https://github.com/steveyegge/beads) installed and initialized in at least one local repository.
 2. Install the [Flutter SDK](https://docs.flutter.dev/get-started/install/macos).
+3. Ensure you have `tmux` installed (`brew install tmux`) for AI Terminal Orchestration features.
 
 ### Installation
 
@@ -60,6 +62,15 @@ flutter run -d macos
 Watcher is strictly a **frontend viewer** designed to work in harmony with the `bd` CLI, rather than replacing it. 
 
 Instead of connecting directly to the underlying Dolt database, Watcher uses OS-level file watching (via `fsevents`) on your `.beads` directory. When it detects a change, it shells out to the `bd export` and `bd graph` commands behind the scenes to fetch the latest state. This guarantees that Watcher always perfectly reflects the true state of your issue graph, exactly as the CLI sees it.
+
+### AI Terminal Orchestration
+
+Watcher leverages a unique "Asynchronous Handoff" architecture to provide AI assistance without hiding the agent's work. 
+1. When you trigger an AI action, Watcher ensures a detached `tmux` session exists for the current project.
+2. It constructs a shell command that runs `gemini`, uses `tee` to write the output to a `.beads/ai_out.md` file, and `touch`es a `.beads/ai_done` lockfile upon completion.
+3. Watcher injects this command into the `tmux` session and tells macOS to launch your Preferred Terminal (configured in Global Settings).
+4. You get to watch the AI work in a beautiful, native terminal. If the AI asks for permission to execute a shell command, you can interact with it directly!
+5. Meanwhile, Watcher's UI polls for the `.beads/ai_done` file. Once the AI finishes, Watcher reads the generated plan back into the GUI for you to review and apply.
 
 ## 🛠️ Contributing
 

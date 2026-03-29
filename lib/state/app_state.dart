@@ -11,8 +11,18 @@ import '../services/beads_service.dart';
 class Project {
   final String path;
   final String name;
+  String? tmuxSessionName;
 
-  Project(this.path) : name = path.split('/').last;
+  Project(this.path, {this.tmuxSessionName}) : name = path.split('/').last;
+
+  // Helper to get effective session name
+  String get effectiveTmuxSessionName {
+    if (tmuxSessionName != null && tmuxSessionName!.isNotEmpty) {
+      return tmuxSessionName!;
+    }
+    // Default safe deterministic name based on project name
+    return "watcher_${name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')}";
+  }
 }
 
 class AppState extends ChangeNotifier {
@@ -50,9 +60,11 @@ class AppState extends ChangeNotifier {
   Timer? _debounceTimer;
   Timer? _syncTimer;
   BeadsService? _currentService;
+  BeadsService? get currentService => _currentService;
   
   int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
   String actorName = 'Watcher UI'; // Default identity
+  String preferredTerminal = 'Ghostty'; // Default to Ghostty
 
   AppState() {
     _loadSettings();
@@ -62,6 +74,7 @@ class AppState extends ChangeNotifier {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     syncIntervalMinutes = prefs.getInt('sync_interval_minutes') ?? 5;
+    preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
     
     // Load last viewed timestamps
     final lastViewedStrings = prefs.getStringList('project_last_viewed') ?? [];
@@ -93,6 +106,13 @@ class AppState extends ChangeNotifier {
     actorName = name;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('actor_name', name);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredTerminal(String terminal) async {
+    preferredTerminal = terminal;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('preferred_terminal', terminal);
     notifyListeners();
   }
 
@@ -170,14 +190,41 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadProjects() async {
     final prefs = await SharedPreferences.getInstance();
-    final paths = prefs.getStringList('project_paths') ?? [];
-    projects = paths.map((p) => Project(p)).toList();
+    
+    // Try to load from new JSON format first
+    final projectDataList = prefs.getStringList('project_data');
+    if (projectDataList != null) {
+      projects = projectDataList.map((data) {
+        try {
+          final map = jsonDecode(data);
+          return Project(map['path'], tmuxSessionName: map['tmuxSessionName']);
+        } catch (_) {
+          return Project(data); // Fallback for bad data
+        }
+      }).toList();
+    } else {
+      // Fallback to old string paths
+      final paths = prefs.getStringList('project_paths') ?? [];
+      projects = paths.map((p) => Project(p)).toList();
+    }
+
     if (projects.isNotEmpty) {
       selectProject(projects.first);
     } else {
       notifyListeners();
     }
     _setupGlobalWatchers();
+  }
+
+  Future<void> _saveProjects() async {
+    final prefs = await SharedPreferences.getInstance();
+    final projectDataList = projects.map((p) => jsonEncode({
+      'path': p.path,
+      'tmuxSessionName': p.tmuxSessionName,
+    })).toList();
+    await prefs.setStringList('project_data', projectDataList);
+    // Also save simple paths for backwards compatibility / safety
+    await prefs.setStringList('project_paths', projects.map((p) => p.path).toList());
   }
 
   void _setupGlobalWatchers() {
@@ -204,11 +251,7 @@ class AppState extends ChangeNotifier {
     if (projects.any((p) => p.path == path)) return;
 
     projects.add(Project(path));
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      'project_paths',
-      projects.map((p) => p.path).toList(),
-    );
+    await _saveProjects();
 
     if (selectedProject == null) {
       selectProject(projects.last);
@@ -230,11 +273,7 @@ class AppState extends ChangeNotifier {
     final project = projects.removeAt(oldIndex);
     projects.insert(newIndex, project);
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      'project_paths',
-      projects.map((p) => p.path).toList(),
-    );
+    await _saveProjects();
 
     notifyListeners();
   }
@@ -242,11 +281,7 @@ class AppState extends ChangeNotifier {
   Future<void> removeProject(Project project) async {
   projects.remove(project);
   projectErrors.remove(project.path);
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setStringList(
-    'project_paths',
-    projects.map((p) => p.path).toList(),
-  );
+  await _saveProjects();
 
   _globalWatchers[project.path]?.cancel();
   _globalWatchers.remove(project.path);
@@ -300,7 +335,15 @@ String? getProjectLastActivity(Project project) {
     return '${difference.inDays}d';
   }
   return null; // Don't show anything for very old projects
-}  Future<void> selectProject(Project project) async {
+}
+
+  Future<void> setProjectTmuxSessionName(Project project, String? sessionName) async {
+    project.tmuxSessionName = sessionName;
+    await _saveProjects();
+    notifyListeners();
+  }
+
+  Future<void> selectProject(Project project) async {
     _currentService?.dispose();
     _currentService = null;
     _syncTimer?.cancel();
@@ -414,6 +457,27 @@ String? getProjectLastActivity(Project project) {
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to update issue: $e';
       notifyListeners();
+    }
+  }
+
+  Future<void> createIssue(String title, String description, String type, {String? parent, int? priority}) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      await _currentService!.createIssue(
+        title,
+        description,
+        type,
+        parent: parent,
+        priority: priority,
+        actor: actorName,
+      );
+      // Wait a moment before refreshing to allow the daemon to process the export
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _refreshData();
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to create issue: $e';
+      notifyListeners();
+      rethrow;
     }
   }
 

@@ -13,13 +13,23 @@ class ProjectSettingsScreen extends StatefulWidget {
 class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
   final _nameController = TextEditingController();
   final _urlController = TextEditingController();
+  late TextEditingController _tmuxController;
   bool _isSubmitting = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _tmuxController = TextEditingController(
+      text: appState.selectedProject?.tmuxSessionName ?? '',
+    );
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _urlController.dispose();
+    _tmuxController.dispose();
     super.dispose();
   }
 
@@ -96,6 +106,45 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        'AI Terminal Integration',
+                        style: MacosTheme.of(context).typography.largeTitle,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Configure how Watcher interacts with your terminal and tmux.',
+                        style: MacosTheme.of(context).typography.footnote.copyWith(
+                              color: MacosColors.systemGrayColor,
+                            ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Tmux Session Name (Optional)',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Leave blank to auto-generate a deterministic name (e.g. watcher_projectname).',
+                        style: MacosTheme.of(context).typography.footnote.copyWith(
+                              color: MacosColors.systemGrayColor,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: 300,
+                        child: MacosTextField(
+                          controller: _tmuxController,
+                          placeholder: 'e.g., watcher_api',
+                          onChanged: (value) {
+                            appState.setProjectTmuxSessionName(
+                              appState.selectedProject!,
+                              value.trim().isEmpty ? null : value.trim(),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
                       Text(
                         'Federation Peers',
                         style: MacosTheme.of(context).typography.largeTitle,

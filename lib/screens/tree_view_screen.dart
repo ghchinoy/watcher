@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/tree_node.dart';
+import '../widgets/create_issue_modal.dart';
 
 class TreeViewScreen extends StatefulWidget {
   const TreeViewScreen({super.key});
@@ -15,6 +16,15 @@ class TreeViewScreen extends StatefulWidget {
 class _TreeViewScreenState extends State<TreeViewScreen> {
   bool _defaultExpanded = true;
   Key _treeKey = UniqueKey();
+
+  void _showCreateIssue(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (context) => MacosSheet(
+        child: CreateIssueModal(appState: appState),
+      ),
+    );
+  }
 
   void _expandAll() {
     setState(() {
@@ -155,6 +165,13 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
             ),
             title: Text(appState.selectedProject!.name),
             actions: [
+              ToolBarIconButton(
+                label: 'Create Issue',
+                icon: const MacosIcon(CupertinoIcons.plus_square),
+                showLabel: false,
+                tooltipMessage: 'Create Issue',
+                onPressed: () => _showCreateIssue(context),
+              ),
               ToolBarIconButton(
                 label: 'Expand All',
                 icon: const MacosIcon(CupertinoIcons.chevron_down),

@@ -134,6 +134,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 40),
                       const Text(
+                        'Preferred Terminal',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Which terminal app should open when executing AI tasks?',
+                        style: MacosTheme.of(context).typography.footnote.copyWith(
+                              color: MacosColors.systemGrayColor,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: 300,
+                        child: MacosPopupButton<String>(
+                          value: appState.preferredTerminal,
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              appState.setPreferredTerminal(newValue);
+                            }
+                          },
+                          items: const [
+                            MacosPopupMenuItem(
+                              value: 'Ghostty',
+                              child: Text('Ghostty'),
+                            ),
+                            MacosPopupMenuItem(
+                              value: 'iTerm2',
+                              child: Text('iTerm2'),
+                            ),
+                            MacosPopupMenuItem(
+                              value: 'Terminal',
+                              child: Text('Terminal.app'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      const Text(
                         'Project Order',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),

@@ -59,6 +59,9 @@ digraph G {
         "Container (Federation Status)" -> FederationModal [label="onClick (MacosSheet)", fontcolor="#44474E", fontsize=10];
         "SingleChildScrollView (Dashboard)" -> ActivityTicker [label="Recent Activity", fontcolor="#44474E", fontsize=10];
         "ToolBar (Dashboard)" -> "ViewModeSegmentedControl (Dash)" [label="actions", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Dashboard)" -> CreateIssueModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Dashboard)" -> AssessmentModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Dashboard)" -> PlannerModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
     }
 
     subgraph cluster_settings {
@@ -84,6 +87,7 @@ digraph G {
         "ContentArea (Tree)" -> "ListView (Tree)" [label="builder", fontcolor="#44474E", fontsize=10];
         "ListView (Tree)" -> TreeNode [label="itemBuilder", fontcolor="#44474E", fontsize=10];
         "ToolBar (Tree)" -> "ViewModeSegmentedControl (Tree)" [label="actions", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Tree)" -> CreateIssueModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
     }
 
     subgraph cluster_kanban {
@@ -103,5 +107,6 @@ digraph G {
         "ListView (Column)" -> KanbanCard [label="itemBuilder", fontcolor="#44474E", fontsize=10];
         KanbanCard -> Draggable [label="build", fontcolor="#44474E", fontsize=10];
         "ToolBar (Kanban)" -> "ViewModeSegmentedControl (Kanban)" [label="actions", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Kanban)" -> CreateIssueModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
     }
 }

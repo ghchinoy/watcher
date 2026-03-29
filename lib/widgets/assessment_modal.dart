@@ -6,8 +6,9 @@ import '../state/app_state.dart';
 
 class AssessmentModal extends StatefulWidget {
   final Project project;
+  final AppState appState;
 
-  const AssessmentModal({super.key, required this.project});
+  const AssessmentModal({super.key, required this.project, required this.appState});
 
   @override
   State<AssessmentModal> createState() => _AssessmentModalState();
@@ -29,7 +30,25 @@ class _AssessmentModalState extends State<AssessmentModal> {
 
   Future<void> _runAssessment() async {
     try {
-      final result = await PlannerService.assessGraph(widget.project.path);
+      final started = await PlannerService.startAssessGraph(
+        workspacePath: widget.project.path,
+        sessionName: widget.project.effectiveTmuxSessionName,
+        terminalApp: widget.appState.preferredTerminal,
+        beadsService: widget.appState.currentService!,
+      );
+      
+      if (!started) {
+        if (mounted) {
+          setState(() {
+            _assessmentMarkdown = "No open issues found in the project. The graph is healthy!";
+            _isAssessing = false;
+          });
+        }
+        return;
+      }
+
+      final result = await PlannerService.pollForCompletion(widget.project.path);
+      
       if (mounted) {
         setState(() {
           _assessmentMarkdown = result;
@@ -55,10 +74,15 @@ class _AssessmentModalState extends State<AssessmentModal> {
     });
 
     try {
-      final script = await PlannerService.generateAutoFixScript(
-        widget.project.path,
-        _assessmentMarkdown!,
+      await PlannerService.startGenerateAutoFixScript(
+        workspacePath: widget.project.path,
+        assessmentMarkdown: _assessmentMarkdown!,
+        sessionName: widget.project.effectiveTmuxSessionName,
+        terminalApp: widget.appState.preferredTerminal,
       );
+      
+      final script = await PlannerService.pollForCompletion(widget.project.path);
+      
       if (mounted) {
         setState(() {
           _fixScriptMarkdown = script;
@@ -106,7 +130,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
     return Container(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
       decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
+        color: MacosTheme.of(context).canvasColor,
       ),
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -126,7 +150,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
             ],
           ),
           const SizedBox(height: 20),
-          if (_isAssessing)
+          if (_isAssessing || _isFixing)
             const Expanded(
               child: Center(
                 child: Column(
@@ -134,7 +158,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
                   children: [
                     ProgressCircle(),
                     SizedBox(height: 16),
-                    Text('Analyzing graph topology...'),
+                    Text('Check your terminal to see the AI working...'),
                   ],
                 ),
               ),

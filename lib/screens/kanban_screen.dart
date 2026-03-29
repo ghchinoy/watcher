@@ -3,9 +3,19 @@ import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/kanban_column.dart';
+import '../widgets/create_issue_modal.dart';
 
 class KanbanScreen extends StatelessWidget {
   const KanbanScreen({super.key});
+
+  void _showCreateIssue(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (context) => MacosSheet(
+        child: CreateIssueModal(appState: appState),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +122,13 @@ class KanbanScreen extends StatelessWidget {
             ),
             title: Text(appState.selectedProject!.name),
             actions: [
+              ToolBarIconButton(
+                label: 'Create Issue',
+                icon: const MacosIcon(CupertinoIcons.plus_square),
+                showLabel: false,
+                tooltipMessage: 'Create Issue',
+                onPressed: () => _showCreateIssue(context),
+              ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),

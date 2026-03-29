@@ -6,8 +6,9 @@ import '../state/app_state.dart';
 
 class PlannerModal extends StatefulWidget {
   final Project project;
+  final AppState appState;
 
-  const PlannerModal({super.key, required this.project});
+  const PlannerModal({super.key, required this.project, required this.appState});
 
   @override
   State<PlannerModal> createState() => _PlannerModalState();
@@ -36,21 +37,32 @@ class _PlannerModalState extends State<PlannerModal> {
     });
 
     try {
-      final result = await PlannerService.generatePlan(
-        widget.project.path,
-        _goalController.text,
+      await PlannerService.startGeneratePlan(
+        workspacePath: widget.project.path,
+        goal: _goalController.text,
+        sessionName: widget.project.effectiveTmuxSessionName,
+        terminalApp: widget.appState.preferredTerminal,
       );
-      setState(() {
-        _planMarkdown = result;
-      });
+      
+      final result = await PlannerService.pollForCompletion(widget.project.path);
+      
+      if (mounted) {
+        setState(() {
+          _planMarkdown = result;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
     } finally {
-      setState(() {
-        _isPlanning = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPlanning = false;
+        });
+      }
     }
   }
 
@@ -85,7 +97,7 @@ class _PlannerModalState extends State<PlannerModal> {
     return Container(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
       decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
+        color: MacosTheme.of(context).canvasColor,
       ),
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -136,7 +148,7 @@ class _PlannerModalState extends State<PlannerModal> {
                   controlSize: ControlSize.large,
                   onPressed: _isPlanning ? null : _generatePlan,
                   child: _isPlanning
-                      ? const ProgressCircle(radius: 8)
+                      ? const Text('Check terminal...')
                       : const Text('Generate Plan'),
                 ),
               ],

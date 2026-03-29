@@ -6,6 +6,7 @@ import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/activity_ticker.dart';
 import '../widgets/planner_modal.dart';
 import '../widgets/assessment_modal.dart';
+import '../widgets/create_issue_modal.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
@@ -14,7 +15,7 @@ class ProjectDashboard extends StatelessWidget {
     showMacosSheet(
       context: context,
       builder: (context) =>
-          MacosSheet(child: PlannerModal(project: appState.selectedProject!)),
+          MacosSheet(child: PlannerModal(project: appState.selectedProject!, appState: appState)),
     );
   }
 
@@ -22,7 +23,16 @@ class ProjectDashboard extends StatelessWidget {
     showMacosSheet(
       context: context,
       builder: (context) => MacosSheet(
-        child: AssessmentModal(project: appState.selectedProject!),
+        child: AssessmentModal(project: appState.selectedProject!, appState: appState),
+      ),
+    );
+  }
+
+  void _showCreateIssue(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (context) => MacosSheet(
+        child: CreateIssueModal(appState: appState),
       ),
     );
   }
@@ -174,6 +184,13 @@ class ProjectDashboard extends StatelessWidget {
             ),
             title: Text(appState.selectedProject!.name),
             actions: [
+              ToolBarIconButton(
+                label: 'Create Issue',
+                icon: const MacosIcon(CupertinoIcons.plus_square),
+                showLabel: false,
+                tooltipMessage: 'Create Issue',
+                onPressed: () => _showCreateIssue(context),
+              ),
               ToolBarIconButton(
                 label: 'AI Health Assessment',
                 icon: const MacosIcon(CupertinoIcons.heart),

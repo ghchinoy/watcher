@@ -197,6 +197,27 @@ class BeadsService {
       'actor': actor,
     });
   }
+
+  Future<String> createIssue(String title, String description, String type, {String? parent, int? priority, required String actor}) async {
+    final args = ['create', title, '--description', description, '-t', type];
+    if (parent != null && parent.isNotEmpty) {
+      args.addAll(['--parent', parent]);
+    }
+    if (priority != null) {
+      args.addAll(['-p', priority.toString()]);
+    }
+
+    final result = await Process.run('bd', args, workingDirectory: workingDirectory, environment: {'BD_ACTOR': actor});
+
+    if (result.exitCode != 0) {
+      throw Exception('Failed to create issue: ${result.stderr}');
+    }
+
+    // Trigger an export to update the JSONL files so the UI file watcher picks it up
+    await Process.run('bd', ['export'], workingDirectory: workingDirectory);
+
+    return result.stdout.toString().trim();
+  }
   
   Future<String?> getVersion() async {
     final result = await _sendRpcRequest('get_version', {});

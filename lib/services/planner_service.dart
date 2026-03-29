@@ -1,9 +1,17 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
+import 'beads_service.dart';
+import 'tmux_service.dart';
 
 class PlannerService {
-  static Future<String> generatePlan(String workspacePath, String goal) async {
-    final prompt =
-        '''
+  static Future<void> startGeneratePlan({
+    required String workspacePath,
+    required String goal,
+    required String sessionName,
+    required String terminalApp,
+  }) async {
+    final prompt = '''
 You are an expert AI Project Manager and Planner.
 The user wants to accomplish the following goal in the current workspace: "$goal"
 
@@ -17,23 +25,54 @@ Make sure to use '--parent' to nest tasks under epics, and use '--type epic' and
 Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands.
 ''';
 
-    // We use the 'plan' approval mode so the agent can read files but won't modify them
-    final result = await Process.run('gemini', [
-      '-p',
-      prompt,
-      '--approval-mode',
-      'plan',
-    ], workingDirectory: workspacePath);
+    // 1. Write the prompt to a temp file to avoid complex shell escaping in tmux send-keys
+    final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
+    await promptFile.writeAsString(prompt);
 
-    if (result.exitCode != 0 && result.exitCode != 2) {
-      // Sometimes gemini might exit with non-zero if it thinks it failed a tool, but still output text.
-      // We'll throw if it's completely empty or a massive failure.
-      if (result.stdout.toString().isEmpty) {
-        throw Exception('Planner failed: ${result.stderr}');
-      }
+    // 2. Clean up previous run files if they exist
+    final doneFile = File('$workspacePath/.beads/ai_done');
+    final outFile = File('$workspacePath/.beads/ai_out.md');
+    if (doneFile.existsSync()) await doneFile.delete();
+    if (outFile.existsSync()) await outFile.delete();
+
+    // 3. Ensure the tmux session exists
+    await TmuxService.ensureSession(sessionName, workspacePath);
+
+    // 4. Construct the shell pipeline to run inside tmux
+    // It reads the prompt file, runs gemini, tees the output, and writes the lockfile when done
+    final command = 'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
+    
+    // 5. Send keys to the tmux session
+    await TmuxService.sendKeys(sessionName, command);
+
+    // 6. Launch the preferred terminal to show the session
+    await TmuxService.attachInTerminal(sessionName, terminalApp: terminalApp);
+  }
+
+  static Future<String> pollForCompletion(String workspacePath) async {
+    final doneFile = File('$workspacePath/.beads/ai_done');
+    final outFile = File('$workspacePath/.beads/ai_out.md');
+    
+    // Poll every second until ai_done exists
+    while (!doneFile.existsSync()) {
+      await Future.delayed(const Duration(seconds: 1));
     }
 
-    return result.stdout.toString();
+    // Read the output
+    String result = '';
+    if (outFile.existsSync()) {
+      result = await outFile.readAsString();
+    }
+
+    // Clean up temp files
+    try {
+      await doneFile.delete();
+      await outFile.delete();
+      final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
+      if (promptFile.existsSync()) await promptFile.delete();
+    } catch (_) {}
+
+    return result;
   }
 
   static Future<void> executeScript(String workspacePath, String script) async {
@@ -65,27 +104,24 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     }
   }
 
-  static Future<String> assessGraph(String workspacePath) async {
-    // Get the current bd export state
-    final exportResult = await Process.run('bd', [
-      'export',
-    ], workingDirectory: workspacePath);
-
-    if (exportResult.exitCode != 0) {
-      throw Exception(
-        'Failed to export bd data for assessment: ${exportResult.stderr}',
-      );
-    }
-
-    final String exportData = exportResult.stdout.toString();
+  static Future<bool> startAssessGraph({
+    required String workspacePath,
+    required String sessionName,
+    required String terminalApp,
+    required BeadsService beadsService,
+  }) async {
+    // Get the current bd export state via the internal daemon
+    final issues = await beadsService.getIssues();
 
     // Safety check if there are no issues
-    if (exportData.trim().isEmpty) {
-      return "No open issues found in the project. The graph is healthy!";
+    if (issues.isEmpty) {
+      return false; // Indicates no work needed
     }
 
-    final prompt =
-        '''
+    // Convert issues back to JSONL for the prompt
+    final exportData = issues.map((i) => jsonEncode(i.toJson())).join('\n');
+
+    final prompt = '''
 You are an expert Agile Scrum Master and Project Manager.
 Analyze the following JSONL output from the `bd` issue tracker for a software project.
 
@@ -101,31 +137,36 @@ JSONL Data:
 $exportData
 ''';
 
-    // We use the 'plan' approval mode so the agent can read files but won't modify them
-    final result = await Process.run('gemini', [
-      '-p',
-      prompt,
-      '--approval-mode',
-      'plan',
-    ], workingDirectory: workspacePath);
+    // 1. Write prompt
+    final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
+    await promptFile.writeAsString(prompt);
 
-    if (result.exitCode != 0 && result.exitCode != 2) {
-      if (result.stdout.toString().isEmpty) {
-        throw Exception('Assessment failed: ${result.stderr}');
-      }
-    }
+    // 2. Clean up
+    final doneFile = File('$workspacePath/.beads/ai_done');
+    final outFile = File('$workspacePath/.beads/ai_out.md');
+    if (doneFile.existsSync()) await doneFile.delete();
+    if (outFile.existsSync()) await outFile.delete();
 
-    final assessmentMarkdown = result.stdout.toString();
+    // 3. Ensure session
+    await TmuxService.ensureSession(sessionName, workspacePath);
 
-    return assessmentMarkdown;
+    // 4. Command
+    final command = 'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
+    
+    // 5. Run & Attach
+    await TmuxService.sendKeys(sessionName, command);
+    await TmuxService.attachInTerminal(sessionName, terminalApp: terminalApp);
+
+    return true; // Indicates work started
   }
 
-  static Future<String> generateAutoFixScript(
-    String workspacePath,
-    String assessmentMarkdown,
-  ) async {
-    final prompt =
-        '''
+  static Future<void> startGenerateAutoFixScript({
+    required String workspacePath,
+    required String assessmentMarkdown,
+    required String sessionName,
+    required String terminalApp,
+  }) async {
+    final prompt = '''
   You are an expert Agile Scrum Master. Below is an AI Health Assessment of a project's issue tracker.
 
   Your task is to write a bash script containing EXCLUSIVELY `bd update` commands to fix the issues identified in the assessment (e.g., fixing priority inversions by changing priorities, or reparenting orphaned tasks). 
@@ -137,19 +178,24 @@ $exportData
   $assessmentMarkdown
   ''';
 
-    final result = await Process.run('gemini', [
-      '-p',
-      prompt,
-      '--approval-mode',
-      'plan',
-    ], workingDirectory: workspacePath);
+    // 1. Write prompt
+    final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
+    await promptFile.writeAsString(prompt);
 
-    if (result.exitCode != 0 && result.exitCode != 2) {
-      if (result.stdout.toString().isEmpty) {
-        throw Exception('Auto-fix planning failed: ${result.stderr}');
-      }
-    }
+    // 2. Clean up
+    final doneFile = File('$workspacePath/.beads/ai_done');
+    final outFile = File('$workspacePath/.beads/ai_out.md');
+    if (doneFile.existsSync()) await doneFile.delete();
+    if (outFile.existsSync()) await outFile.delete();
 
-    return result.stdout.toString();
+    // 3. Ensure session
+    await TmuxService.ensureSession(sessionName, workspacePath);
+
+    // 4. Command
+    final command = 'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
+    
+    // 5. Run & Attach
+    await TmuxService.sendKeys(sessionName, command);
+    await TmuxService.attachInTerminal(sessionName, terminalApp: terminalApp);
   }
 }
