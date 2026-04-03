@@ -283,44 +283,21 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	})
 }
 
-type depReader interface {
-	GetDependencyRecordsForIssues(ctx context.Context, issueIDs []string) (map[string][]*beads.Dependency, error)
-}
-
 func handleGraph(ctx context.Context, storage beads.Storage, id int) {
 	// Use SearchIssues to fetch everything (empty query, empty filter)
-	filter := beads.IssueFilter{}
+	// We include dependencies directly on the issue records via the hydration filter (beads 1.0).
+	filter := beads.IssueFilter{
+		IncludeDependencies: true,
+	}
 	nodes, err := storage.SearchIssues(ctx, "", filter)
 	if err != nil {
 		sendError(id, -32000, fmt.Sprintf("failed to search issues: %v", err))
 		return
 	}
 
-	var allDeps map[string][]*beads.Dependency
-	if dr, ok := storage.(depReader); ok {
-		issueIDs := make([]string, len(nodes))
-		for i, n := range nodes {
-			issueIDs[i] = n.ID
-		}
-		allDeps, _ = dr.GetDependencyRecordsForIssues(ctx, issueIDs)
-	}
-
-	type issueWithDeps struct {
-		*beads.Issue
-		Dependencies []*beads.Dependency `json:"dependencies,omitempty"`
-	}
-
-	result := make([]issueWithDeps, len(nodes))
-	for i, n := range nodes {
-		result[i] = issueWithDeps{
-			Issue:        n,
-			Dependencies: allDeps[n.ID],
-		}
-	}
-
 	sendResponse(Response{
 		JSONRPC: "2.0",
-		Result:  result,
+		Result:  nodes,
 		ID:      id,
 	})
 }

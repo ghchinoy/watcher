@@ -3,7 +3,7 @@ module github.com/ghchinoy/watcher-daemon
 go 1.25.8
 
 require (
-	github.com/steveyegge/beads v0.62.1-0.20260323201754-51936e38c4a0
+	github.com/steveyegge/beads v1.0.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

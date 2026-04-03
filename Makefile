@@ -26,9 +26,9 @@ build-daemon: ## Build the Go daemon
 	@echo "Building watcher-daemon..."
 	cd daemon && go build -o watcher-daemon
 
-update-bd: ## Update the embedded beads dependency to the latest upstream main
-	@echo "Updating github.com/steveyegge/beads to latest main..."
-	cd daemon && go get -u github.com/steveyegge/beads@main && go mod tidy
+update-bd: ## Update the embedded beads dependency to the latest upstream release
+	@echo "Updating github.com/steveyegge/beads to v1.0.0..."
+	cd daemon && go get github.com/steveyegge/beads@v1.0.0 && go mod tidy
 	@echo "Update complete. Run 'make install' to rebuild Watcher."
 
 install: build ## Build and install a symlink to /Applications
