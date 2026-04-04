@@ -1,7 +1,7 @@
 name: agent_watcher
 description: "A macOS GUI for the beads (bd) issue tracker."
 publish_to: 'none'
-version: 0.2.0+1
+version: 0.3.0+1
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -9,6 +9,8 @@ environment:
 dependencies:
   cupertino_icons: ^1.0.8
   file_selector: ^1.1.0
+  firebase_ai: ^3.10.0
+  firebase_core: ^4.6.0
   flutter:
     sdk: flutter
   flutter_markdown_plus: ^1.0.7

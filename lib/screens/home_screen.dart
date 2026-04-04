@@ -73,7 +73,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 onChanged: _onItemTapped,
                 scrollController: scrollController,
                 items: [
-                  const SidebarItem(section: true, label: Text('PROJECTS')),
+                  SidebarItem(
+                    section: true,
+                    label: Row(
+                      children: [
+                        const Expanded(child: Text('PROJECTS')),
+                        if (appState.selectedProject != null) ...[
+                          MacosTooltip(
+                            message: 'Voice Mode (Watcher Live)',
+                            child: MacosIconButton(
+                              icon: const MacosIcon(
+                                CupertinoIcons.mic,
+                                size: 14,
+                                color: MacosColors.systemGrayColor,
+                              ),
+                              onPressed: () {
+                                // TODO: Implement Watcher Live Modal
+                              },
+                              boxConstraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          MacosTooltip(
+                            message: 'Refresh current project',
+                            child: MacosIconButton(
+                              icon: MacosIcon(
+                                CupertinoIcons.refresh,
+                                size: 14,
+                                color: appState.isRefreshing
+                                    ? MacosTheme.of(context).primaryColor
+                                    : MacosColors.systemGrayColor,
+                              ),
+                              onPressed: appState.refreshActiveProject,
+                              boxConstraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                   ...appState.projects.map((p) {
                     final isSelected = appState.selectedProject == p && _currentIndex != -1;
                     final isRefreshing = isSelected && appState.isRefreshing;

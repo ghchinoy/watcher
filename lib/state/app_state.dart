@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../models/issue.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
+import '../services/generative_ai_service.dart';
 
 class Project {
   final String path;
@@ -61,6 +62,7 @@ class AppState extends ChangeNotifier {
   final Map<String, StreamSubscription<FileSystemEvent>> _globalWatchers = {};
   Timer? _debounceTimer;
   Timer? _syncTimer;
+  Timer? _heartbeatTimer;
   BeadsService? _currentService;
   BeadsService? get currentService => _currentService;
   
@@ -70,9 +72,29 @@ class AppState extends ChangeNotifier {
   String? ghosttyTheme;
   String? ghosttyFontFamily;
 
+  // Vertex AI Settings
+  String? gcpProjectId;
+  String vertexLocation = 'us-central1';
+  String geminiModel = 'gemini-3-flash-preview';
+
   AppState() {
     _loadSettings();
     _loadProjects();
+    _startHeartbeat();
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    // Refresh the active project every 30 seconds as a safety heartbeat
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (selectedProject != null && !isLoading && !isRefreshing) {
+        _refreshData();
+      }
+    });
+  }
+
+  Future<void> refreshActiveProject() async {
+    await _refreshData();
   }
 
   Future<void> _loadSettings() async {
@@ -84,6 +106,16 @@ class AppState extends ChangeNotifier {
     preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
     ghosttyTheme = prefs.getString('ghostty_theme');
     ghosttyFontFamily = prefs.getString('ghostty_font_family');
+
+    // Load Vertex AI Settings
+    gcpProjectId = prefs.getString('gcp_project_id');
+    vertexLocation = prefs.getString('vertex_location') ?? 'us-central1';
+    geminiModel = prefs.getString('gemini_model') ?? 'gemini-3-flash-preview';
+    
+    // Default region logic: preview models MUST be global
+    if (geminiModel.contains('-preview') && vertexLocation != 'global') {
+      vertexLocation = 'global';
+    }
     
     // Load last viewed timestamps
     final lastViewedStrings = prefs.getStringList('project_last_viewed') ?? [];
@@ -144,6 +176,37 @@ class AppState extends ChangeNotifier {
     } else {
       await prefs.remove('ghostty_font_family');
     }
+    notifyListeners();
+  }
+
+  Future<void> setGcpProjectId(String? projectId) async {
+    gcpProjectId = projectId;
+    final prefs = await SharedPreferences.getInstance();
+    if (projectId != null && projectId.isNotEmpty) {
+      await prefs.setString('gcp_project_id', projectId);
+    } else {
+      await prefs.remove('gcp_project_id');
+    }
+    notifyListeners();
+  }
+
+  Future<void> setVertexLocation(String location) async {
+    vertexLocation = location;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('vertex_location', location);
+    notifyListeners();
+  }
+
+  Future<void> setGeminiModel(String model) async {
+    geminiModel = model;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('gemini_model', model);
+    
+    // Automatically switch to global for preview models
+    if (model.contains('-preview') && vertexLocation != 'global') {
+      await setVertexLocation('global');
+    }
+    
     notifyListeners();
   }
 
@@ -283,6 +346,8 @@ class AppState extends ChangeNotifier {
 
     projects.add(Project(path));
     await _saveProjects();
+
+    _setupGlobalWatchers(); // Update watchers to include new project
 
     if (selectedProject == null) {
       selectProject(projects.last);
@@ -484,10 +549,36 @@ String? getProjectLastActivity(Project project) {
           owner: owner,
           assignee: assignee,
           actor: actorName,
-          );      }
+        );
+
+        // If closing, trigger background summarization (Task watcher-v2n.4 / b2n.2)
+        if (status == 'closed') {
+          final issue = currentIssues.where((i) => i.id == id).firstOrNull;
+          if (issue != null) {
+            _summarizeResolution(issue);
+          }
+        }
+      }
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to update issue: $e';
       notifyListeners();
+    }
+  }
+
+  Future<void> _summarizeResolution(Issue issue) async {
+    try {
+      final comments = await _currentService!.getComments(issue.id);
+      final summary = await GenerativeAiService.summarizeIssueResolution(
+        appState: this,
+        issue: issue,
+        comments: comments,
+      );
+
+      if (summary != null && summary.isNotEmpty) {
+        await addComment(issue.id, '🤖 **Resolution Summary:**\n$summary');
+      }
+    } catch (e) {
+      debugPrint('Background summarization failed: $e');
     }
   }
 

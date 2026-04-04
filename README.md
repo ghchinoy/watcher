@@ -17,6 +17,7 @@
 - **📋 Kanban Board:** See the flow of your work at a glance with automatically organized columns for Open, In Progress, and Closed issues.
 - **🔍 Issue Inspector:** Click any issue to slide out a detailed inspector panel containing the full description, priority, owner, and timestamps.
 - **🤖 AI Terminal Orchestration:** Run AI Health Assessments and Planners transparently! Watcher seamlessly orchestrates `tmux` sessions in the background and can launch your preferred terminal emulator (Ghostty, iTerm2, or Terminal.app) so you can watch the AI agent work in real-time, approve commands, and retain context across sessions.
+- **🤖 Native AI Integration:** Direct integration with Gemini via Firebase AI Logic (Vertex AI backend) for background task summarization and future voice mode features.
 
 ## 🚀 Getting Started
 
@@ -25,6 +26,30 @@
 1. Ensure you have the [beads (`bd`) CLI](https://github.com/steveyegge/beads) installed and initialized in at least one local repository.
 2. Install the [Flutter SDK](https://docs.flutter.dev/get-started/install/macos).
 3. Ensure you have `tmux` installed (`brew install tmux`) for AI Terminal Orchestration features.
+
+### 🤖 Firebase & AI Setup
+
+Watcher uses **Firebase AI Logic** with the **Vertex AI** backend for native Gemini integration.
+
+1.  **Install Firebase CLI:**
+    ```bash
+    npm install -g firebase-tools
+    ```
+2.  **Configure Firebase:**
+    In the project root, run:
+    ```bash
+    flutterfire configure --project=YOUR_GCP_PROJECT_ID
+    ```
+    Select `macos` as the supported platform. This will generate `lib/firebase_options.dart`.
+3.  **Enable APIs:**
+    Ensure the **Vertex AI API** is enabled in your Google Cloud Console for the selected project.
+4.  **Configure Watcher:**
+    - Open Watcher Settings (`Cmd + ,`).
+    - Enter your **GCP Project ID**.
+    - Set your preferred **Vertex Location** (default: `us-central1`).
+    - Select a **Gemini Model** (e.g., `gemini-3-flash-preview`).
+
+*Note: Preview models like Gemini 3 Flash automatically use the `global` region.*
 
 ### Installation
 

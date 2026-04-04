@@ -223,6 +223,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                       const SizedBox(height: 40),
                       const Text(
+                        'Gemini & Vertex AI',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'GCP Project ID',
+                                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                                        color: MacosColors.systemGrayColor,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                MacosTextField(
+                                  placeholder: 'e.g. my-project-id',
+                                  onChanged: appState.setGcpProjectId,
+                                  controller: TextEditingController(text: appState.gcpProjectId),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Vertex Location',
+                                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                                        color: MacosColors.systemGrayColor,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                MacosTextField(
+                                  placeholder: 'e.g. us-central1 or global',
+                                  onChanged: appState.setVertexLocation,
+                                  controller: TextEditingController(text: appState.vertexLocation),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Gemini Model',
+                            style: MacosTheme.of(context).typography.footnote.copyWith(
+                                  color: MacosColors.systemGrayColor,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: 300,
+                            child: MacosPopupButton<String>(
+                              value: appState.geminiModel,
+                              onChanged: (String? value) {
+                                if (value != null) appState.setGeminiModel(value);
+                              },
+                              items: const [
+                                MacosPopupMenuItem(
+                                  value: 'gemini-3-flash-preview',
+                                  child: Text('Gemini 3 Flash (Preview)'),
+                                ),
+                                MacosPopupMenuItem(
+                                  value: 'gemini-2.5-flash',
+                                  child: Text('Gemini 2.5 Flash'),
+                                ),
+                                MacosPopupMenuItem(
+                                  value: 'gemini-2.5-flash-lite-preview',
+                                  child: Text('Gemini 2.5 Flash Lite (Preview)'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Note: Preview models will automatically set location to "global".',
+                            style: MacosTheme.of(context).typography.caption1.copyWith(
+                                  color: MacosColors.systemGrayColor,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
+                      const Text(
                         'Project Order',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),

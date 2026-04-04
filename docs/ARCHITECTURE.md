@@ -21,7 +21,9 @@ The Watcher application needs to reflect changes to the `beads` issues in near r
    * *Cons:* Relies on polling which consumes constant CPU and disk I/O. Integrating a SQL driver or managing a background `dolt sql-server` process adds significant complexity and overhead to a lightweight desktop viewer.
 
 **Implementation Strategy:**
-The `AppState` or `BeadsService` will instantiate a file watcher on the `.beads` folder when a project is selected. When file modifications are detected, a debounce timer is reset. Once the timer fires, the app calls `bd export` and `bd graph` to refresh the in-memory models.
+The `AppState` or `BeadsService` will instantiate a file watcher on the `.beads` folder when a project is selected. When file modifications are detected, a debounce timer is reset. Once the timer fires, the app calls `bd export` and `bd graph` to refresh the in-memory models. 
+
+Additionally, a **30-second background heartbeat** timer ensures the UI stays synchronized even if OS-level file events are missed or coalesced.
 
 ## macOS Native UI Paradigms
 
@@ -49,18 +51,29 @@ Watcher needs to allow users to update task statuses and priorities, as well as 
 3. **Agent Locks:** To prevent a user from accidentally dragging a task away from an active agent, `KanbanCard`s conditionally disable their `Draggable` wrapper and display a Lock icon if `status == 'in_progress'` or if the `owner` field is populated.
 4. **Activity Monitoring:** `BeadsService` parses the `.beads/interactions.jsonl` log file to construct a live `ActivityTicker` on the Dashboard, giving users a real-time, scrolling heartbeat of exactly what agents (or other developers) are doing in the repository.
 
-## AI Integration (Terminal Orchestration)
+## AI Integration (Hybrid Strategy)
 
-**Decision:** Leverage `tmux` and native terminal emulators to run `geminicli` workloads interactively, improving visibility, transparency, and context retention compared to headless background execution.
+**Decision:** Employ a hybrid AI strategy: leverage `tmux` and native terminal emulators for interactive agent workloads, while using the direct **Firebase AI Logic** SDK (Vertex AI backend) for automated background tasks and real-time voice mode.
 
 **Context:**
-Watcher aims to be an "AI-Augmented Controller." It needs the ability to generate new project plans and assess the health of the current graph. Originally, Watcher ran `gemini` headlessly via synchronous `Process.run` and parsed the standard output. While effective, this hid the AI's "thought process" (e.g. streaming responses, tool usage, errors) from the user and destroyed the LLM's context window between every invocation, making iterative interactions impossible.
+Watcher aims to be an "AI-Augmented Controller." It needs to balance transparency (seeing the agent think) with efficiency (silent background summarization).
 
 **Implementation Strategy:**
+
+### 1. Interactive Agents (Terminal Orchestration)
+For complex planning or health assessments where user interaction/approval is required, Watcher orchestrates `tmux` sessions.
 1. **The tmux Anchor:** When an AI action is triggered, Watcher's `TmuxService` checks if a specific `tmux` session exists for the current project. If not, it spawns one in detached mode. This session acts as the persistent context anchor for `geminicli`.
 2. **Asynchronous Handoff:** Watcher writes the complex LLM prompt to a temporary file (`.beads/ai_prompt.txt`) to bypass shell-escaping nightmares. It then sends a command pipeline to the tmux pane: `gemini -p "$(cat .beads/ai_prompt.txt)" | tee .beads/ai_out.md; touch .beads/ai_done`.
 3. **Foreground Visibility:** Watcher immediately shells out to macOS (`open -a`) to bring the user's preferred native terminal (e.g., Ghostty, iTerm2, or Terminal.app) to the foreground, automatically attaching it to the running tmux session. The user can watch the AI stream text, approve tool executions natively, and intervene if necessary.
 4. **File Polling & Resolution:** Meanwhile, Watcher UI enters a non-blocking "Check your terminal" loading state. It spins up an async loop polling for the existence of the `.beads/ai_done` lockfile. Once the lockfile is created by the terminal process, Watcher cleans up the temporary files, parses `.beads/ai_out.md`, and renders the generated action plan in a native `MacosSheet` for final user execution.
+
+### 2. Background Agents (Direct API)
+For automated, non-interactive tasks, Watcher calls the Gemini API directly via the `firebase_ai` package.
+1. **The Summarization Pipeline:** When a task is closed, `AppState` triggers an asynchronous call to `GenerativeAiService`. It uses `gemini-3-flash-preview` (via Vertex AI) to summarize the resolution based on comment history and description context.
+2. **System Comments:** The resulting summary is posted back to the issue as a system comment (e.g., `🤖 Resolution Summary: ...`), ensuring the resolution intent is captured in the `interactions.jsonl` audit trail and dashboard ticker.
+
+### 3. Future: Watcher Live (Voice Mode)
+We plan to implement a real-time, multimodal "Live" mode using `liveGenerativeModel`. This will allow bidirectional audio streaming to query the status of all local projects simultaneously using natural language (e.g., *"Which of my projects has the most P0 tasks?"*).
 
 ## macOS HIG Compliance: Outline Views
 
