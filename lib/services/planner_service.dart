@@ -10,6 +10,8 @@ class PlannerService {
     required String goal,
     required String sessionName,
     required String terminalApp,
+    String? ghosttyTheme,
+    String? ghosttyFontFamily,
   }) async {
     final prompt = '''
 You are an expert AI Project Manager and Planner.
@@ -46,7 +48,12 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     await TmuxService.sendKeys(sessionName, command);
 
     // 6. Launch the preferred terminal to show the session
-    await TmuxService.attachInTerminal(sessionName, terminalApp: terminalApp);
+    await TmuxService.attachInTerminal(
+      sessionName,
+      terminalApp: terminalApp,
+      ghosttyTheme: ghosttyTheme,
+      ghosttyFontFamily: ghosttyFontFamily,
+    );
   }
 
   static Future<String> pollForCompletion(String workspacePath) async {
@@ -109,6 +116,8 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     required String sessionName,
     required String terminalApp,
     required BeadsService beadsService,
+    String? ghosttyTheme,
+    String? ghosttyFontFamily,
   }) async {
     // Get the current bd export state via the internal daemon
     final issues = await beadsService.getIssues();
@@ -155,7 +164,12 @@ $exportData
     
     // 5. Run & Attach
     await TmuxService.sendKeys(sessionName, command);
-    await TmuxService.attachInTerminal(sessionName, terminalApp: terminalApp);
+    await TmuxService.attachInTerminal(
+      sessionName,
+      terminalApp: terminalApp,
+      ghosttyTheme: ghosttyTheme,
+      ghosttyFontFamily: ghosttyFontFamily,
+    );
 
     return true; // Indicates work started
   }
@@ -165,6 +179,8 @@ $exportData
     required String assessmentMarkdown,
     required String sessionName,
     required String terminalApp,
+    String? ghosttyTheme,
+    String? ghosttyFontFamily,
   }) async {
     final prompt = '''
   You are an expert Agile Scrum Master. Below is an AI Health Assessment of a project's issue tracker.
@@ -196,6 +212,11 @@ $exportData
     
     // 5. Run & Attach
     await TmuxService.sendKeys(sessionName, command);
-    await TmuxService.attachInTerminal(sessionName, terminalApp: terminalApp);
+    await TmuxService.attachInTerminal(
+      sessionName,
+      terminalApp: terminalApp,
+      ghosttyTheme: ghosttyTheme,
+      ghosttyFontFamily: ghosttyFontFamily,
+    );
   }
 }

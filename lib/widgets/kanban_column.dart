@@ -48,7 +48,7 @@ class KanbanColumn extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 child: Text(
                   '$title (${issues.length})',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: MacosTheme.of(context).typography.headline,
                 ),
               ),
               Container(height: 1, color: MacosTheme.of(context).dividerColor),

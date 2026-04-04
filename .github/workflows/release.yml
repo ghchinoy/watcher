@@ -1,0 +1,57 @@
+name: Release Watcher
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache-dependency-path: daemon/go.sum
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Go Daemon
+        run: |
+          cd daemon
+          CGO_ENABLED=1 go build -o watcher-daemon main.go
+
+      - name: Build Flutter macOS
+        run: flutter build macos --release
+
+      - name: Bundle Daemon into App
+        run: |
+          APP_PATH="build/macos/Build/Products/Release/Watcher.app"
+          mkdir -p "$APP_PATH/Contents/Resources"
+          cp daemon/watcher-daemon "$APP_PATH/Contents/Resources/watcher-daemon"
+          # Re-sign with ad-hoc signature (matching Makefile behavior)
+          codesign --force --deep --sign - "$APP_PATH"
+
+      - name: Compress App
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../Watcher-macOS.zip Watcher.app
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Watcher-macOS.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

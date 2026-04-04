@@ -42,6 +42,8 @@ class _PlannerModalState extends State<PlannerModal> {
         goal: _goalController.text,
         sessionName: widget.project.effectiveTmuxSessionName,
         terminalApp: widget.appState.preferredTerminal,
+        ghosttyTheme: widget.appState.ghosttyTheme,
+        ghosttyFontFamily: widget.appState.ghosttyFontFamily,
       );
       
       final result = await PlannerService.pollForCompletion(widget.project.path);

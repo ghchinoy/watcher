@@ -72,19 +72,43 @@ class TmuxService {
   }
 
   /// Launches the preferred terminal app and attaches it to the tmux session.
-  static Future<void> attachInTerminal(String sessionName, {String terminalApp = 'Ghostty'}) async {
+  static Future<void> attachInTerminal(
+    String sessionName, {
+    String terminalApp = 'Ghostty',
+    String? ghosttyTheme,
+    String? ghosttyFontFamily,
+  }) async {
     final tmux = await _getTmuxPath();
 
     if (terminalApp == 'Ghostty') {
-      // Ghostty can be launched with -e to execute a command
-      final ghosttyPath = '/Applications/Ghostty.app/Contents/MacOS/ghostty';
-      if (await File(ghosttyPath).exists()) {
-        // Pass arguments individually so Ghostty doesn't treat the whole string as one executable name
-        await Process.start(ghosttyPath, ['-e', tmux, 'attach', '-t', sessionName], environment: _env);
-      } else {
-        // Fallback if not found in standard location
-        await Process.run('open', ['-a', 'Ghostty']);
+      final styleArgs = <String>[];
+      if (ghosttyTheme != null && ghosttyTheme.isNotEmpty) {
+        styleArgs.add('--theme=$ghosttyTheme');
       }
+      if (ghosttyFontFamily != null && ghosttyFontFamily.isNotEmpty) {
+        styleArgs.add('--font-family=$ghosttyFontFamily');
+      }
+
+      // We use the 'open -na' approach but without the -e flag to just get the window, 
+      // then use AppleScript to write the text. This avoids the security dialog.
+      
+      final styleArgsList = <String>['-na', 'Ghostty'];
+      if (styleArgs.isNotEmpty) {
+        styleArgsList.add('--args');
+        styleArgsList.addAll(styleArgs);
+      }
+
+      await Process.run('open', styleArgsList, environment: _env);
+      
+      // Wait a moment for window to appear
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final writeScript = '''
+        tell application "Ghostty"
+          write front window's selected tab's focused terminal text "$tmux attach -t $sessionName" & linefeed
+        end tell
+      ''';
+      await Process.run('osascript', ['-e', writeScript]);
     } else if (terminalApp == 'iTerm2') {
       // iTerm2 AppleScript to create a new window and attach
       final script = '''

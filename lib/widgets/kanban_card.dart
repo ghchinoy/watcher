@@ -24,7 +24,9 @@ class KanbanCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: MacosDynamicColor.resolve(
-              MacosColors.controlBackgroundColor,
+              MacosTheme.of(context).brightness.isDark
+                  ? MacosColors.alternatingContentBackgroundColor
+                  : MacosColors.controlBackgroundColor,
               context,
             ),
             borderRadius: BorderRadius.circular(6),
@@ -40,8 +42,7 @@ class KanbanCard extends StatelessWidget {
                     children: [
                       Text(
                         issue.id,
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: MacosTheme.of(context).typography.footnote.copyWith(
                           color: MacosColors.systemGrayColor,
                         ),
                       ),
@@ -64,19 +65,21 @@ class KanbanCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 issue.title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: MacosTheme.of(context).typography.body.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (issue.assignee != null && issue.assignee!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   'Assignee: ${issue.assignee}',
-                  style: const TextStyle(fontSize: 11),
+                  style: MacosTheme.of(context).typography.footnote,
                 ),
               ] else if (issue.owner != null && issue.owner!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   'Owner: ${issue.owner}',
-                  style: const TextStyle(fontSize: 11),
+                  style: MacosTheme.of(context).typography.footnote,
                 ),
               ],
             ],

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../models/issue.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
@@ -39,6 +40,7 @@ class AppState extends ChangeNotifier {
   String? cliVersion;
   String? upstreamVersion;
   String? projectRequiredVersion;
+  String? appVersion;
 
   bool isLoading = false;
   bool isRefreshing = false;
@@ -65,6 +67,8 @@ class AppState extends ChangeNotifier {
   int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
   String actorName = 'Watcher UI'; // Default identity
   String preferredTerminal = 'Ghostty'; // Default to Ghostty
+  String? ghosttyTheme;
+  String? ghosttyFontFamily;
 
   AppState() {
     _loadSettings();
@@ -72,9 +76,14 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _loadSettings() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+
     final prefs = await SharedPreferences.getInstance();
     syncIntervalMinutes = prefs.getInt('sync_interval_minutes') ?? 5;
     preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
+    ghosttyTheme = prefs.getString('ghostty_theme');
+    ghosttyFontFamily = prefs.getString('ghostty_font_family');
     
     // Load last viewed timestamps
     final lastViewedStrings = prefs.getStringList('project_last_viewed') ?? [];
@@ -113,6 +122,28 @@ class AppState extends ChangeNotifier {
     preferredTerminal = terminal;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('preferred_terminal', terminal);
+    notifyListeners();
+  }
+
+  Future<void> setGhosttyTheme(String? theme) async {
+    ghosttyTheme = theme;
+    final prefs = await SharedPreferences.getInstance();
+    if (theme != null && theme.isNotEmpty) {
+      await prefs.setString('ghostty_theme', theme);
+    } else {
+      await prefs.remove('ghostty_theme');
+    }
+    notifyListeners();
+  }
+
+  Future<void> setGhosttyFontFamily(String? fontFamily) async {
+    ghosttyFontFamily = fontFamily;
+    final prefs = await SharedPreferences.getInstance();
+    if (fontFamily != null && fontFamily.isNotEmpty) {
+      await prefs.setString('ghostty_font_family', fontFamily);
+    } else {
+      await prefs.remove('ghostty_font_family');
+    }
     notifyListeners();
   }
 

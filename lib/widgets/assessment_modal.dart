@@ -35,6 +35,8 @@ class _AssessmentModalState extends State<AssessmentModal> {
         sessionName: widget.project.effectiveTmuxSessionName,
         terminalApp: widget.appState.preferredTerminal,
         beadsService: widget.appState.currentService!,
+        ghosttyTheme: widget.appState.ghosttyTheme,
+        ghosttyFontFamily: widget.appState.ghosttyFontFamily,
       );
       
       if (!started) {
@@ -79,6 +81,8 @@ class _AssessmentModalState extends State<AssessmentModal> {
         assessmentMarkdown: _assessmentMarkdown!,
         sessionName: widget.project.effectiveTmuxSessionName,
         terminalApp: widget.appState.preferredTerminal,
+        ghosttyTheme: widget.appState.ghosttyTheme,
+        ghosttyFontFamily: widget.appState.ghosttyFontFamily,
       );
       
       final script = await PlannerService.pollForCompletion(widget.project.path);

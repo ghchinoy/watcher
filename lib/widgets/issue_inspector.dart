@@ -369,7 +369,9 @@ class _IssueInspectorState extends State<IssueInspector> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: MacosDynamicColor.resolve(
-                    MacosColors.controlBackgroundColor,
+                    MacosTheme.of(context).brightness.isDark
+                        ? MacosColors.alternatingContentBackgroundColor
+                        : MacosColors.controlBackgroundColor,
                     context,
                   ),
                   borderRadius: BorderRadius.circular(6),
@@ -382,13 +384,16 @@ class _IssueInspectorState extends State<IssueInspector> {
                       children: [
                         Text(
                           comment['author']?.toString() ?? 'Unknown',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                          style: MacosTheme.of(context).typography.body.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                         Text(
                           comment['created_at'] != null 
                             ? _formatDate(DateTime.parse(comment['created_at'].toString()).toLocal()) 
                             : '',
-                          style: const TextStyle(
+                          style: MacosTheme.of(context).typography.footnote.copyWith(
                             color: MacosColors.systemGrayColor,
                             fontSize: 10,
                           ),
@@ -398,7 +403,7 @@ class _IssueInspectorState extends State<IssueInspector> {
                     const SizedBox(height: 6),
                     Text(
                       comment['text']?.toString() ?? '',
-                      style: const TextStyle(fontSize: 13),
+                      style: MacosTheme.of(context).typography.body.copyWith(fontSize: 13),
                     ),
                   ],
                 ),

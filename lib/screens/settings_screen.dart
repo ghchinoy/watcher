@@ -170,6 +170,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
+                      if (appState.preferredTerminal == 'Ghostty') ...[
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Ghostty Custom Settings',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Theme',
+                                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                                          color: MacosColors.systemGrayColor,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  MacosTextField(
+                                    placeholder: 'e.g. catppuccin-mocha',
+                                    onChanged: appState.setGhosttyTheme,
+                                    controller: TextEditingController(text: appState.ghosttyTheme),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Font Family',
+                                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                                          color: MacosColors.systemGrayColor,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  MacosTextField(
+                                    placeholder: 'e.g. JetBrains Mono',
+                                    onChanged: appState.setGhosttyFontFamily,
+                                    controller: TextEditingController(text: appState.ghosttyFontFamily),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 40),
                       const Text(
                         'Project Order',
@@ -256,6 +307,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
+                                  'Watcher App Version',
+                                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                                    color: MacosColors.systemGrayColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  appState.appVersion ?? "Unknown",
+                                  style: MacosTheme.of(context).typography.body,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
                                   'Embedded Daemon Version',
                                   style: MacosTheme.of(context).typography.footnote.copyWith(
                                     color: MacosColors.systemGrayColor,
@@ -269,6 +338,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ],
                             ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

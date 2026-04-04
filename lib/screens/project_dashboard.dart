@@ -305,16 +305,19 @@ class ProjectDashboard extends StatelessWidget {
                         Container(
                           decoration: BoxDecoration(
                             color: MacosDynamicColor.resolve(
-                              MacosColors.controlBackgroundColor,
+                              MacosTheme.of(context).brightness.isDark
+                                  ? MacosColors.alternatingContentBackgroundColor
+                                  : MacosColors.controlBackgroundColor,
                               context,
                             ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: MacosColors.systemGrayColor.withValues(
-                                alpha: 0.2,
+                                alpha: MacosTheme.of(context).brightness.isDark ? 0.1 : 0.2,
                               ),
                             ),
                           ),
+
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -327,7 +330,11 @@ class ProjectDashboard extends StatelessWidget {
                                   ).typography.headline,
                                 ),
                                 const SizedBox(height: 4),
-                                const Text('This project only exists locally.'),
+                                Text(
+                                  'This project only exists locally.',
+                                  style: MacosTheme.of(context).typography.body,
+                                ),
+
                                 const SizedBox(height: 12),
                                 PushButton(
                                   controlSize: ControlSize.regular,
@@ -344,16 +351,19 @@ class ProjectDashboard extends StatelessWidget {
                         Container(
                           decoration: BoxDecoration(
                             color: MacosDynamicColor.resolve(
-                              MacosColors.controlBackgroundColor,
+                              MacosTheme.of(context).brightness.isDark
+                                  ? MacosColors.alternatingContentBackgroundColor
+                                  : MacosColors.controlBackgroundColor,
                               context,
                             ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: MacosColors.systemGrayColor.withValues(
-                                alpha: 0.2,
+                                alpha: MacosTheme.of(context).brightness.isDark ? 0.1 : 0.2,
                               ),
                             ),
                           ),
+
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -392,9 +402,7 @@ class ProjectDashboard extends StatelessWidget {
                                         const SizedBox(width: 8),
                                         Text(
                                           peer['name'] ?? '',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: MacosTheme.of(context).typography.headline,
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
@@ -450,16 +458,19 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = MacosTheme.of(context).brightness.isDark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MacosDynamicColor.resolve(
-          MacosColors.controlBackgroundColor,
+          isDark 
+            ? MacosColors.alternatingContentBackgroundColor 
+            : MacosColors.controlBackgroundColor,
           context,
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: MacosColors.systemGrayColor.withValues(alpha: 0.2),
+          color: MacosColors.systemGrayColor.withValues(alpha: isDark ? 0.1 : 0.2),
         ),
       ),
       child: Column(
@@ -491,7 +502,9 @@ class SimpleStatCard extends StatelessWidget {
       title: title,
       child: Text(
         value,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        style: MacosTheme.of(context).typography.title1.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -511,7 +524,7 @@ class PriorityStatCard extends StatelessWidget {
     required this.p3Count,
   });
 
-  Widget _buildBadge(String label, int count, Color color) {
+  Widget _buildBadge(BuildContext context, String label, int count, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -534,7 +547,9 @@ class PriorityStatCard extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           count.toString(),
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: MacosTheme.of(context).typography.title2.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -548,14 +563,14 @@ class PriorityStatCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (p0Count > 0) ...[
-            _buildBadge('P0', p0Count, MacosColors.systemRedColor),
+            _buildBadge(context, 'P0', p0Count, MacosColors.systemRedColor),
             const SizedBox(width: 12),
           ],
-          _buildBadge('P1', p1Count, MacosColors.systemOrangeColor),
+          _buildBadge(context, 'P1', p1Count, MacosColors.systemOrangeColor),
           const SizedBox(width: 12),
-          _buildBadge('P2', p2Count, MacosColors.systemYellowColor),
+          _buildBadge(context, 'P2', p2Count, MacosColors.systemYellowColor),
           const SizedBox(width: 12),
-          _buildBadge('P3', p3Count, MacosColors.systemBlueColor),
+          _buildBadge(context, 'P3', p3Count, MacosColors.systemBlueColor),
         ],
       ),
     );

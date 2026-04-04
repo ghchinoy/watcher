@@ -15,7 +15,9 @@ class ActivityTicker extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: MacosDynamicColor.resolve(
-            MacosColors.controlBackgroundColor,
+            MacosTheme.of(context).brightness.isDark
+                ? MacosColors.alternatingContentBackgroundColor
+                : MacosColors.controlBackgroundColor,
             context,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -31,7 +33,12 @@ class ActivityTicker extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: MacosDynamicColor.resolve(MacosColors.controlBackgroundColor, context),
+        color: MacosDynamicColor.resolve(
+          MacosTheme.of(context).brightness.isDark
+              ? MacosColors.alternatingContentBackgroundColor
+              : MacosColors.controlBackgroundColor,
+          context,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: MacosTheme.of(context).dividerColor),
       ),
@@ -70,7 +77,7 @@ class ActivityTicker extends StatelessWidget {
                     children: [
                       Text(
                         interaction.actor,
-                        style: const TextStyle(
+                        style: MacosTheme.of(context).typography.body.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -121,7 +128,7 @@ class ActivityTicker extends StatelessWidget {
 
     return Text(
       text,
-      style: const TextStyle(fontSize: 13),
+      style: MacosTheme.of(context).typography.body.copyWith(fontSize: 13),
     );
   }
 
