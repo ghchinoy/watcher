@@ -40,3 +40,14 @@ For detailed architectural decisions, always refer to and update `docs/ARCHITECT
 - **Prefer Internal Daemon (`BeadsService`) over CLI Shell-outs:** When Watcher needs to read data (e.g., getting the issue graph for AI assessments), **do not shell out to `bd export`**. Always use the active `BeadsService` daemon RPC calls (e.g., `await appState.currentService!.getIssues()`). It avoids all macOS `$PATH` limitations and is significantly faster because the database connection is already hot.
 - **Ghostty Execution (`ghostty -e`):** When telling Ghostty to execute a command via Dart's `Process.start`, **never pass the command as a single string** (e.g., `['-e', 'tmux attach -t session']`). Ghostty will interpret the entire string as a single executable filename and instantly crash the terminal instance. Pass every argument as a separate item in the list: `['-e', 'tmux', 'attach', '-t', 'sessionName']`.
 - **Dart String Interpolation with Regex:** Be extremely careful when using Dart string interpolation `${...}` that contains nested raw strings or Regular Expressions (like `r'[^a-zA-Z0-9_]'`). Always use **double quotes** for the outer string (e.g., `"watcher_${name.replaceAll(...)}"`). If you use single quotes, the internal quotes in the regex will break the parser or force you into confusing escape sequences.
+
+## Hybrid AI Strategy
+- **Interactive Agents (Terminal):** Use the `tmux` + `geminicli` orchestration pattern for tasks requiring user visibility or multi-step tool interactions (e.g., Health Assessment, Planning).
+- **Background Agents (Direct API):** Use `firebase_ai` (Vertex AI backend) for high-frequency, non-interactive tasks like automated task resolution summarization. This avoids UI disruption and terminal popups.
+
+## Ghostty & AppleScript
+- **Bypassing Security Dialogs:** Never use the `-e` flag with `open` for Ghostty as it triggers a per-command execution security check. Instead, use **AppleScript** (`osascript`) to "write text" into a fresh Ghostty window launched with `open -na`. This ensures a single-window experience and bypasses the dialog.
+
+## Data Consistency
+- **Refresh Heartbeat:** In addition to file watching, the application maintains a 30-second background heartbeat to ensure the UI stays synchronized even if OS-level events are missed.
+- **Manual Refresh:** Always provide a manual refresh trigger in the UI (e.g., the PROJECTS header button) to allow users to force a data reload.
