@@ -13,16 +13,28 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _actorController;
+  late TextEditingController _ghosttyThemeController;
+  late TextEditingController _ghosttyFontFamilyController;
+  late TextEditingController _gcpProjectIdController;
+  late TextEditingController _vertexLocationController;
 
   @override
   void initState() {
     super.initState();
     _actorController = TextEditingController(text: appState.actorName);
+    _ghosttyThemeController = TextEditingController(text: appState.ghosttyTheme);
+    _ghosttyFontFamilyController = TextEditingController(text: appState.ghosttyFontFamily);
+    _gcpProjectIdController = TextEditingController(text: appState.gcpProjectId);
+    _vertexLocationController = TextEditingController(text: appState.vertexLocation);
   }
 
   @override
   void dispose() {
     _actorController.dispose();
+    _ghosttyThemeController.dispose();
+    _ghosttyFontFamilyController.dispose();
+    _gcpProjectIdController.dispose();
+    _vertexLocationController.dispose();
     super.dispose();
   }
 
@@ -193,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   MacosTextField(
                                     placeholder: 'e.g. catppuccin-mocha',
                                     onChanged: appState.setGhosttyTheme,
-                                    controller: TextEditingController(text: appState.ghosttyTheme),
+                                    controller: _ghosttyThemeController,
                                   ),
                                 ],
                               ),
@@ -213,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   MacosTextField(
                                     placeholder: 'e.g. JetBrains Mono',
                                     onChanged: appState.setGhosttyFontFamily,
-                                    controller: TextEditingController(text: appState.ghosttyFontFamily),
+                                    controller: _ghosttyFontFamilyController,
                                   ),
                                 ],
                               ),
@@ -243,7 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 MacosTextField(
                                   placeholder: 'e.g. my-project-id',
                                   onChanged: appState.setGcpProjectId,
-                                  controller: TextEditingController(text: appState.gcpProjectId),
+                                  controller: _gcpProjectIdController,
                                 ),
                               ],
                             ),
@@ -263,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 MacosTextField(
                                   placeholder: 'e.g. us-central1 or global',
                                   onChanged: appState.setVertexLocation,
-                                  controller: TextEditingController(text: appState.vertexLocation),
+                                  controller: _vertexLocationController,
                                 ),
                               ],
                             ),
