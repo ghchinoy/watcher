@@ -1,8 +1,10 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:agent_watcher/state/app_state.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('Project model', () {
     test('extracts name from path correctly', () {
       final project = Project('/Users/username/projects/my_project');
@@ -21,12 +23,27 @@ void main() {
   group('AppState', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      // Mock PackageInfo
+      const MethodChannel('dev.fluttercommunity.plus/package_info')
+          .setMockMethodCallHandler((MethodCall methodCall) async {
+        if (methodCall.method == 'getAll') {
+          return <String, dynamic>{
+            'appName': 'watcher',
+            'packageName': 'wtf.ghc.watcher',
+            'version': '1.0.0',
+            'buildNumber': '1',
+            'buildSignature': '',
+          };
+        }
+        return null;
+      });
     });
 
     test('initializes with empty projects if no shared prefs', () async {
       final state = AppState();
-      // AppState calls _loadProjects() in constructor which is async.
-      // We can wait a microtask or just check the initial synchronous state.
+      // AppState calls _loadSettings() which calls PackageInfo.fromPlatform()
+      // We need to wait for it to complete.
+      await Future.delayed(const Duration(milliseconds: 100));
       expect(state.projects, isEmpty);
       expect(state.selectedProject, isNull);
     });

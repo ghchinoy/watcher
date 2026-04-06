@@ -3,7 +3,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:go_router/go_router.dart';
 import '../main.dart';
+import '../state/app_state.dart';
 import '../widgets/issue_inspector.dart';
+import '../widgets/settings_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   final Widget child;
@@ -114,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  ...appState.projects.map((p) {
+                  ...appState.sortedProjects.map((p) {
                     final isSelected = appState.selectedProject == p && _currentIndex != -1;
                     final isRefreshing = isSelected && appState.isRefreshing;
                     final hasError = appState.projectErrors.containsKey(p.path);
@@ -129,7 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     } else {
                       final timeStr = appState.getProjectLastActivity(p);
-                      if (timeStr != null) {
+                      // Only show activity timestamp if sorting by activity
+                      if (timeStr != null && appState.sidebarSortOrder == SidebarSortOrder.activity) {
                         leadingIcon = SizedBox(
                           width: 24,
                           child: Text(
@@ -207,19 +210,14 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             bottom: MacosListTile(
-              leading: MacosIcon(
+              leading: const MacosIcon(
                 CupertinoIcons.settings,
-                color: _currentIndex == -1 ? MacosTheme.of(context).primaryColor : null,
               ),
-              title: Text(
+              title: const Text(
                 'Settings',
-                style: TextStyle(
-                  color: _currentIndex == -1 ? MacosTheme.of(context).primaryColor : null,
-                  fontWeight: _currentIndex == -1 ? FontWeight.bold : FontWeight.normal,
-                ),
               ),
               onClick: () {
-                context.go('/settings');
+                SettingsModal.show(context);
               },
             ),
           ),

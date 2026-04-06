@@ -5,6 +5,17 @@ class TmuxService {
     'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
   };
 
+  /// Resolves the absolute path to the bd executable.
+  static Future<String> _getBdPath() async {
+    const paths = ['/opt/homebrew/bin/bd', '/usr/local/bin/bd', '/usr/bin/bd'];
+    for (final path in paths) {
+      if (await File(path).exists()) {
+        return path;
+      }
+    }
+    return 'bd'; // Fallback
+  }
+
   /// Resolves the absolute path to the tmux executable to bypass macOS GUI PATH limitations.
   static Future<String> _getTmuxPath() async {
     const paths = ['/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', '/usr/bin/tmux'];
@@ -56,11 +67,18 @@ class TmuxService {
   /// Sends keys (a command) to the specified tmux session and presses Enter.
   static Future<void> sendKeys(String sessionName, String command) async {
     final tmux = await _getTmuxPath();
+    // Resolve bd path if the command starts with it
+    var finalCommand = command;
+    if (command.startsWith('bd ')) {
+      final bd = await _getBdPath();
+      finalCommand = command.replaceFirst('bd ', '$bd ');
+    }
+
     try {
       final result = await Process.run(tmux, [
         'send-keys',
         '-t', sessionName,
-        command,
+        finalCommand,
         'C-m'
       ], environment: _env);
       if (result.exitCode != 0) {
@@ -77,16 +95,20 @@ class TmuxService {
     String terminalApp = 'Ghostty',
     String? ghosttyTheme,
     String? ghosttyFontFamily,
+    String? workingDirectory,
   }) async {
     final tmux = await _getTmuxPath();
 
     if (terminalApp == 'Ghostty') {
-      final styleArgs = <String>[];
+      final styleArgs = <String>['--window-save-state=never'];
       if (ghosttyTheme != null && ghosttyTheme.isNotEmpty) {
         styleArgs.add('--theme=$ghosttyTheme');
       }
       if (ghosttyFontFamily != null && ghosttyFontFamily.isNotEmpty) {
         styleArgs.add('--font-family=$ghosttyFontFamily');
+      }
+      if (workingDirectory != null && workingDirectory.isNotEmpty) {
+        styleArgs.add('--working-directory=$workingDirectory');
       }
 
       // We use the 'open -na' approach but without the -e flag to just get the window, 

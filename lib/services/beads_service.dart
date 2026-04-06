@@ -13,8 +13,9 @@ class BeadsService {
   bool _isInitializing = false;
 
   bool _isDisposed = false;
+  Function(String)? onModeChanged;
 
-  BeadsService(this.workingDirectory);
+  BeadsService(this.workingDirectory, {this.onModeChanged});
 
   Future<void> _ensureDaemonRunning() async {
     if (_isDisposed) throw Exception('Service disposed');
@@ -64,7 +65,11 @@ class BeadsService {
           
           // Handle server-initiated notifications
           if (response['method'] == 'boot_status') {
-             debugPrint('Daemon Notification: ${response['params']}');
+             final params = response['params'] as Map<String, dynamic>;
+             debugPrint('Daemon Notification: $params');
+             if (params.containsKey('mode') && onModeChanged != null) {
+               onModeChanged!(params['mode'] as String);
+             }
              return;
           }
           
@@ -219,6 +224,11 @@ class BeadsService {
     return result.stdout.toString().trim();
   }
   
+  Future<HealthCheckResult> checkHealth() async {
+    final result = await _sendRpcRequest('check_health', {});
+    return HealthCheckResult.fromJson(result as Map<String, dynamic>);
+  }
+
   Future<String?> getVersion() async {
     final result = await _sendRpcRequest('get_version', {});
     if (result is String) {

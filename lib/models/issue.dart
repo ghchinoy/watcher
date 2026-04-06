@@ -84,6 +84,40 @@ class GraphNode {
   Map<String, dynamic> toJson() => _$GraphNodeToJson(this);
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
+class Diagnostic {
+  final String issueId;
+  final String type;
+  final String message;
+  final String? fix;
+
+  Diagnostic({
+    required this.issueId,
+    required this.type,
+    required this.message,
+    this.fix,
+  });
+
+  factory Diagnostic.fromJson(Map<String, dynamic> json) =>
+      _$DiagnosticFromJson(json);
+  Map<String, dynamic> toJson() => _$DiagnosticToJson(this);
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class HealthCheckResult {
+  final String status;
+  final List<Diagnostic> diagnostics;
+
+  HealthCheckResult({
+    required this.status,
+    required this.diagnostics,
+  });
+
+  factory HealthCheckResult.fromJson(Map<String, dynamic> json) =>
+      _$HealthCheckResultFromJson(json);
+  Map<String, dynamic> toJson() => _$HealthCheckResultToJson(this);
+}
+
 extension IssueHierarchy on Issue {
   bool isDirectChildOf(Issue parent) {
     final explicit = dependencies?.any(

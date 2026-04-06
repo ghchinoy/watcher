@@ -11,4 +11,4 @@ PRODUCT_NAME = Watcher
 PRODUCT_BUNDLE_IDENTIFIER = wtf.ghc.watcher
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 Google LLC. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Google LLC. All rights reserved. 

@@ -84,3 +84,32 @@ Map<String, dynamic> _$GraphNodeToJson(GraphNode instance) => <String, dynamic>{
   'Dependencies': instance.dependencies,
   'IssueMap': instance.issueMap,
 };
+
+Diagnostic _$DiagnosticFromJson(Map<String, dynamic> json) => Diagnostic(
+  issueId: json['issue_id'] as String,
+  type: json['type'] as String,
+  message: json['message'] as String,
+  fix: json['fix'] as String?,
+);
+
+Map<String, dynamic> _$DiagnosticToJson(Diagnostic instance) =>
+    <String, dynamic>{
+      'issue_id': instance.issueId,
+      'type': instance.type,
+      'message': instance.message,
+      'fix': instance.fix,
+    };
+
+HealthCheckResult _$HealthCheckResultFromJson(Map<String, dynamic> json) =>
+    HealthCheckResult(
+      status: json['status'] as String,
+      diagnostics: (json['diagnostics'] as List<dynamic>)
+          .map((e) => Diagnostic.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$HealthCheckResultToJson(HealthCheckResult instance) =>
+    <String, dynamic>{
+      'status': instance.status,
+      'diagnostics': instance.diagnostics,
+    };

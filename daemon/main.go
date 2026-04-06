@@ -283,6 +283,79 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	})
 }
 
+type Diagnostic struct {
+	IssueID string `json:"issue_id"`
+	Type    string `json:"type"` // e.g., "inverted_hierarchy", "dangling_ref", "cycle"
+	Message string `json:"message"`
+	Fix     string `json:"fix,omitempty"`
+}
+
+type HealthCheckResult struct {
+	Status      string       `json:"status"` // "healthy" or "issues_found"
+	Diagnostics []Diagnostic `json:"diagnostics"`
+}
+
+func handleCheckHealth(ctx context.Context, storage beads.Storage, id int) {
+	// 1. Fetch all issues with dependencies
+	filter := beads.IssueFilter{
+		IncludeDependencies: true,
+	}
+	issues, err := storage.SearchIssues(ctx, "", filter)
+	if err != nil {
+		sendError(id, -32000, fmt.Sprintf("failed to search issues for health check: %v", err))
+		return
+	}
+
+	var diagnostics []Diagnostic
+	issueMap := make(map[string]*beads.Issue)
+	for _, issue := range issues {
+		issueMap[issue.ID] = issue
+	}
+
+	// 2. Perform structural checks
+	for _, issue := range issues {
+		// Check for inverted hierarchy (Epics having parents)
+		if issue.IssueType == "epic" {
+			for _, dep := range issue.Dependencies {
+				if dep.Type == "parent-child" {
+					diagnostics = append(diagnostics, Diagnostic{
+						IssueID: issue.ID,
+						Type:    "inverted_hierarchy",
+						Message: fmt.Sprintf("Epic '%s' is incorrectly configured as a child of '%s'. Epics should be top-level containers.", issue.Title, dep.DependsOnID),
+						Fix:     fmt.Sprintf("bd update %s --parent \"\"", issue.ID),
+					})
+				}
+			}
+		}
+
+		// Check for dangling references
+		for _, dep := range issue.Dependencies {
+			if _, exists := issueMap[dep.DependsOnID]; !exists {
+				diagnostics = append(diagnostics, Diagnostic{
+					IssueID: issue.ID,
+					Type:    "dangling_ref",
+					Message: fmt.Sprintf("Issue '%s' depends on '%s', but that issue does not exist in the database.", issue.ID, dep.DependsOnID),
+					Fix:     fmt.Sprintf("bd update %s --parent \"\"", issue.ID),
+				})
+			}
+		}
+	}
+
+	status := "healthy"
+	if len(diagnostics) > 0 {
+		status = "issues_found"
+	}
+
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result: HealthCheckResult{
+			Status:      status,
+			Diagnostics: diagnostics,
+		},
+		ID: id,
+	})
+}
+
 func handleGraph(ctx context.Context, storage beads.Storage, id int) {
 	// Use SearchIssues to fetch everything (empty query, empty filter)
 	// We include dependencies directly on the issue records via the hydration filter (beads 1.0).
@@ -328,7 +401,11 @@ func main() {
 
 	// Emit a special bootstrapping notification so the UI knows we are
 	// establishing the database connection and might be waiting for the Dolt server.
-	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database"}}` + "\n")
+	mode := "server"
+	if _, err := os.Stat(filepath.Join(beadsDir, "dolt", "sql-server.pid")); os.IsNotExist(err) {
+		mode = "embedded"
+	}
+	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database","mode":"%s"}}` + "\n", mode)
 
 	// Proactively kill any orphaned dolt sql-server processes on the system
 	// that might be holding a dead port or a dead file lock before we attempt to connect.
@@ -376,6 +453,8 @@ func main() {
 		switch req.Method {
 		case "graph":
 			handleGraph(ctx, storage, req.ID)
+		case "check_health":
+			handleCheckHealth(ctx, storage, req.ID)
 		case "create_issue":
 			handleCreateIssue(ctx, storage, req)
 		case "update_issue":

@@ -107,6 +107,37 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                        'Database Diagnostics',
+                        style: MacosTheme.of(context).typography.largeTitle,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Detailed status information about the local beads database connection.',
+                        style: MacosTheme.of(context).typography.footnote.copyWith(
+                              color: MacosColors.systemGrayColor,
+                            ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Connection Mode',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        appState.currentConnectionMode == 'server' 
+                          ? 'Server (Multi-Writer) - Recommended' 
+                          : appState.currentConnectionMode == 'embedded'
+                            ? 'Embedded (Single-Writer) - Potential for lock contention'
+                            : 'Detecting...',
+                        style: MacosTheme.of(context).typography.body.copyWith(
+                          color: appState.currentConnectionMode == 'server' 
+                            ? MacosColors.systemGreenColor 
+                            : MacosColors.systemOrangeColor,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      Text(
                         'AI Terminal Integration',
                         style: MacosTheme.of(context).typography.largeTitle,
                       ),

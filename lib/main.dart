@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'state/app_state.dart';
 import 'router.dart';
 import 'firebase_options.dart';
+import 'widgets/settings_modal.dart';
 
 final appState = AppState();
 
@@ -60,7 +61,10 @@ class WatcherApp extends StatelessWidget {
                         LogicalKeyboardKey.comma,
                         meta: true,
                       ),
-                      onSelected: () => appRouter.go('/settings'),
+                      onSelected: () {
+                        final context = appRouter.routerDelegate.navigatorKey.currentContext;
+                        if (context != null) SettingsModal.show(context);
+                      },
                     ),
                   ],
                 ),
@@ -197,7 +201,11 @@ class WatcherApp extends StatelessWidget {
             child: Actions(
               actions: <Type, Action<Intent>>{
                 _OpenSettingsIntent: CallbackAction<_OpenSettingsIntent>(
-                  onInvoke: (intent) => appRouter.go('/settings'),
+                  onInvoke: (intent) {
+                    final context = appRouter.routerDelegate.navigatorKey.currentContext;
+                    if (context != null) SettingsModal.show(context);
+                    return null;
+                  },
                 ),
               },
               child: MacosApp.router(

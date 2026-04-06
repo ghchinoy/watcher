@@ -28,18 +28,19 @@ class GenerativeAiService {
   }) async {
     await ensureInitialized();
 
-    if (appState.gcpProjectId == null) {
-      debugPrint('GCP Project ID not configured. Skipping summarization.');
+    final config = appState.defaultAiModel;
+    if (appState.gcpProjectId == null || config == null) {
+      debugPrint('AI Configuration missing. Skipping summarization.');
       return null;
     }
 
     try {
       final ai = FirebaseAI.vertexAI(
-        location: appState.vertexLocation,
+        location: config.region,
       );
 
       final model = ai.generativeModel(
-        model: appState.geminiModel,
+        model: config.identifier,
         generationConfig: GenerationConfig(
           maxOutputTokens: 250,
           temperature: 0.2,

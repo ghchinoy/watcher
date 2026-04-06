@@ -9,6 +9,7 @@ import '../models/issue.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
 import '../services/generative_ai_service.dart';
+import '../services/tmux_service.dart';
 
 class Project {
   final String path;
@@ -27,9 +28,44 @@ class Project {
   }
 }
 
+class GenerativeModelConfig {
+  final String id;
+  final String displayName;
+  final String identifier;
+  final String region;
+
+  GenerativeModelConfig({
+    required this.id,
+    required this.displayName,
+    required this.identifier,
+    required this.region,
+  });
+
+  factory GenerativeModelConfig.fromJson(Map<String, dynamic> json) =>
+      GenerativeModelConfig(
+        id: json['id'] as String,
+        displayName: json['display_name'] as String,
+        identifier: json['identifier'] as String,
+        region: json['region'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'display_name': displayName,
+        'identifier': identifier,
+        'region': region,
+      };
+}
+
+enum SidebarSortOrder { alphabetical, activity }
+
 class AppState extends ChangeNotifier {
   List<Project> projects = [];
   Project? selectedProject;
+  SidebarSortOrder sidebarSortOrder = SidebarSortOrder.alphabetical;
+
+  List<GenerativeModelConfig> aiModels = [];
+  String? defaultAiModelId;
 
   List<Issue> currentIssues = [];
   List<GraphNode> currentGraph = [];
@@ -42,6 +78,7 @@ class AppState extends ChangeNotifier {
   String? upstreamVersion;
   String? projectRequiredVersion;
   String? appVersion;
+  String? currentConnectionMode;
 
   bool isLoading = false;
   bool isRefreshing = false;
@@ -72,6 +109,11 @@ class AppState extends ChangeNotifier {
   String? ghosttyTheme;
   String? ghosttyFontFamily;
 
+  GenerativeModelConfig? get defaultAiModel {
+    if (defaultAiModelId == null || aiModels.isEmpty) return null;
+    return aiModels.firstWhere((m) => m.id == defaultAiModelId, orElse: () => aiModels.first);
+  }
+
   // Vertex AI Settings
   String? gcpProjectId;
   String vertexLocation = 'us-central1';
@@ -97,6 +139,13 @@ class AppState extends ChangeNotifier {
     await _refreshData();
   }
 
+  Future<HealthCheckResult> checkHealth() async {
+    if (_currentService == null) {
+      throw Exception('No project selected');
+    }
+    return await _currentService!.checkHealth();
+  }
+
   Future<void> _loadSettings() async {
     final packageInfo = await PackageInfo.fromPlatform();
     appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
@@ -106,15 +155,39 @@ class AppState extends ChangeNotifier {
     preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
     ghosttyTheme = prefs.getString('ghostty_theme');
     ghosttyFontFamily = prefs.getString('ghostty_font_family');
+    
+    final sortOrderStr = prefs.getString('sidebar_sort_order') ?? 'alphabetical';
+    sidebarSortOrder = sortOrderStr == 'activity' 
+        ? SidebarSortOrder.activity 
+        : SidebarSortOrder.alphabetical;
 
     // Load Vertex AI Settings
     gcpProjectId = prefs.getString('gcp_project_id');
     vertexLocation = prefs.getString('vertex_location') ?? 'us-central1';
     geminiModel = prefs.getString('gemini_model') ?? 'gemini-3-flash-preview';
     
-    // Default region logic: preview models MUST be global
-    if (geminiModel.contains('-preview') && vertexLocation != 'global') {
-      vertexLocation = 'global';
+    final modelData = prefs.getStringList('ai_models') ?? [];
+    aiModels = modelData.map((d) => GenerativeModelConfig.fromJson(jsonDecode(d))).toList();
+    defaultAiModelId = prefs.getString('default_ai_model_id');
+
+    // Migration: If no models exist, add the legacy defaults
+    if (aiModels.isEmpty) {
+      aiModels = [
+        GenerativeModelConfig(
+          id: 'default-flash-3',
+          displayName: 'Gemini 3 Flash (Preview)',
+          identifier: 'gemini-3-flash-preview',
+          region: 'global',
+        ),
+        GenerativeModelConfig(
+          id: 'default-flash-2.5',
+          displayName: 'Gemini 2.5 Flash',
+          identifier: 'gemini-2.5-flash',
+          region: 'us-central1',
+        ),
+      ];
+      defaultAiModelId = 'default-flash-3';
+      _saveAiModels();
     }
     
     // Load last viewed timestamps
@@ -374,6 +447,39 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _saveAiModels() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modelData = aiModels.map((m) => jsonEncode(m.toJson())).toList();
+    await prefs.setStringList('ai_models', modelData);
+    if (defaultAiModelId != null) {
+      await prefs.setString('default_ai_model_id', defaultAiModelId!);
+    }
+  }
+
+  Future<void> addAiModel(GenerativeModelConfig model) async {
+    aiModels.add(model);
+    if (defaultAiModelId == null) {
+      defaultAiModelId = model.id;
+    }
+    await _saveAiModels();
+    notifyListeners();
+  }
+
+  Future<void> removeAiModel(String id) async {
+    aiModels.removeWhere((m) => m.id == id);
+    if (defaultAiModelId == id) {
+      defaultAiModelId = aiModels.isNotEmpty ? aiModels.first.id : null;
+    }
+    await _saveAiModels();
+    notifyListeners();
+  }
+
+  Future<void> setDefaultAiModel(String id) async {
+    defaultAiModelId = id;
+    await _saveAiModels();
+    notifyListeners();
+  }
+
   Future<void> removeProject(Project project) async {
   projects.remove(project);
   projectErrors.remove(project.path);
@@ -433,6 +539,29 @@ String? getProjectLastActivity(Project project) {
   return null; // Don't show anything for very old projects
 }
 
+  List<Project> get sortedProjects {
+    final list = List<Project>.from(projects);
+    if (sidebarSortOrder == SidebarSortOrder.alphabetical) {
+      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    } else {
+      list.sort((a, b) {
+        final fileA = File('${a.path}/.beads/backup/events.jsonl');
+        final fileB = File('${b.path}/.beads/backup/events.jsonl');
+        final timeA = fileA.existsSync() ? fileA.lastModifiedSync() : DateTime(1970);
+        final timeB = fileB.existsSync() ? fileB.lastModifiedSync() : DateTime(1970);
+        return timeB.compareTo(timeA); // Newest first
+      });
+    }
+    return list;
+  }
+
+  Future<void> setSidebarSortOrder(SidebarSortOrder order) async {
+    sidebarSortOrder = order;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('sidebar_sort_order', order.name);
+    notifyListeners();
+  }
+
   Future<void> setProjectTmuxSessionName(Project project, String? sessionName) async {
     project.tmuxSessionName = sessionName;
     await _saveProjects();
@@ -446,6 +575,7 @@ String? getProjectLastActivity(Project project) {
     
     selectedProject = project;
     isLoading = true;
+    currentConnectionMode = null;
     projectErrors.remove(project.path);
 
     projectLastViewed[project.path] = DateTime.now();
@@ -457,7 +587,13 @@ String? getProjectLastActivity(Project project) {
     _setupWatcher(project.path);
 
     try {
-      _currentService = BeadsService(project.path);
+      _currentService = BeadsService(
+        project.path,
+        onModeChanged: (mode) {
+          currentConnectionMode = mode;
+          notifyListeners();
+        },
+      );
       
       // Fetch daemon and CLI versions explicitly on first load
       daemonVersion = await _currentService!.getVersion();
@@ -654,6 +790,31 @@ String? getProjectLastActivity(Project project) {
       await _refreshData();
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to add peer: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> reconnectActiveProject() async {
+    if (selectedProject == null) return;
+    await selectProject(selectedProject!);
+  }
+
+  Future<void> launchDoltServer() async {
+    if (selectedProject == null) return;
+    
+    final sessionName = "${selectedProject!.effectiveTmuxSessionName}_server";
+    try {
+      await TmuxService.ensureSession(sessionName, selectedProject!.path);
+      await TmuxService.sendKeys(sessionName, "bd dolt server");
+      await TmuxService.attachInTerminal(
+        sessionName,
+        terminalApp: preferredTerminal,
+        ghosttyTheme: ghosttyTheme,
+        ghosttyFontFamily: ghosttyFontFamily,
+        workingDirectory: selectedProject!.path,
+      );
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to launch Dolt server: $e';
       notifyListeners();
     }
   }

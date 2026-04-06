@@ -100,15 +100,18 @@ Originally, Watcher shelled out to the `bd` CLI for every query and mutation. Th
 3. **Why not gRPC?** While Dolt uses gRPC internally for syncing (`remotesapi`), running a local gRPC server for the UI-to-daemon bridge would require binding to a local TCP port (e.g., `localhost:9090`). Local ports are prone to conflicts, aggressive firewalls, and orphaned zombie processes if the UI crashes. Stdin/stdout anonymous pipes are inherently tied to the parent UI process's lifecycle—if Watcher dies, the pipe breaks, and the Go daemon gracefully self-terminates immediately.
 4. **Why not CGO / Dart FFI?** Building C-bindings to pass complex nested structs (like a graph of issues and dependencies) across the memory boundary between Go and Dart is notoriously brittle and requires manual memory management. Using standard JSON over IPC provides a clean, type-safe contract that Dart's `json_serializable` handles perfectly with zero CGO boilerplate.
 
-## Database Connections: Embedded vs. Server Mode
+## Database Connections: Server Mode vs. Embedded Mode
 
-**Decision:** The `watcher-daemon` proactively cleans up stale database server connections before initialization to prevent cross-process lock contention and circuit-breaker timeouts.
+**Decision:** The `watcher-daemon` strongly recommends and defaults to **Dolt Server Mode**. It proactively cleans up stale database server connections before initialization to prevent cross-process lock contention and circuit-breaker timeouts.
 
 **Context:**
-Dolt operates in two modes: 'Embedded' (direct file I/O, single writer lock) and 'Server' (background TCP daemon, multi-writer). `beads` strongly defaults to Server mode to allow multiple AI agents to operate on the same repository concurrently without hitting 'database is locked' errors. However, because Watcher spins up its own daemon, it was hitting a race condition where the TCP port was already bound by a stale terminal process, causing the `beads.OpenFromConfig()` circuit breaker to trip and crash the app.
+Dolt operates in two modes: 
+1. **Server Mode (Recommended):** A background TCP daemon (`dolt sql-server`) manages the database. This allows multiple concurrent readers and writers (e.g., the Watcher UI, multiple AI agents, and a developer in the terminal) to operate on the same repository without hitting 'database is locked' errors.
+2. **Embedded Mode:** Direct file I/O with a single writer lock. While simpler for single-user CLI tools, it is **not recommended** for use with Watcher because the UI and background agents will frequently collide, leading to `noms LOCK` errors and application crashes.
 
 **Implementation Strategy:**
-1. **Pre-boot Cleanup:** Before the Go daemon attempts to connect to the Dolt database, it shells out to `bd dolt killall`. This mimics the behavior of `bd doctor`, proactively scanning the OS process tree and SIGKILLing any orphaned Dolt SQL servers that might be holding a dead lock on the `.beads/dolt/` directory.
-2. **Graceful IPC Errors:** If a database is fundamentally corrupted (e.g. `noms LOCK` from an embedded crash), the daemon catches the initialization error and prints a serialized JSON-RPC error payload to `stdout` before exiting. This ensures the Dart UI can gracefully render the error state on the dashboard instead of succumbing to an unhandled asynchronous `SocketException`.
+1. **Enforced Server Mode:** The `beads` library is configured to prefer Server mode. If a server is not already running, `beads` will attempt to start one automatically.
+2. **Pre-boot Cleanup:** Before the Go daemon attempts to connect to the Dolt database, it shells out to `bd dolt killall`. This mimics the behavior of `bd doctor`, proactively scanning the OS process tree and SIGKILLing any orphaned Dolt SQL servers that might be holding a dead lock on the `.beads/dolt/` directory.
+3. **Graceful IPC Errors:** If a database is fundamentally corrupted (e.g. `noms LOCK` from an embedded crash), the daemon catches the initialization error and prints a serialized JSON-RPC error payload to `stdout` before exiting. This ensures the Dart UI can gracefully render the error state on the dashboard instead of succumbing to an unhandled asynchronous `SocketException`.
 3. **Stream Accumulation:** To prevent large JSON-RPC payloads (like graphs containing massive architectural `.md` files) from being truncated or fragmented by Dart's internal buffer limits, the UI decodes the `stdout` stream using the raw `json.decoder` rather than the naive `LineSplitter()`.
 

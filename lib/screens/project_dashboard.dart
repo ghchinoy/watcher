@@ -7,9 +7,19 @@ import '../widgets/activity_ticker.dart';
 import '../widgets/planner_modal.dart';
 import '../widgets/assessment_modal.dart';
 import '../widgets/create_issue_modal.dart';
+import '../widgets/health_check_modal.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
+
+  void _showHealthCheck(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (context) => MacosSheet(
+        child: HealthCheckModal(appState: appState),
+      ),
+    );
+  }
 
   void _showPlanner(BuildContext context) {
     showMacosSheet(
@@ -192,6 +202,13 @@ class ProjectDashboard extends StatelessWidget {
                 onPressed: () => _showCreateIssue(context),
               ),
               ToolBarIconButton(
+                label: 'Project Health Check',
+                icon: const MacosIcon(CupertinoIcons.heart_fill),
+                showLabel: false,
+                tooltipMessage: 'Project Health Check',
+                onPressed: () => _showHealthCheck(context),
+              ),
+              ToolBarIconButton(
                 label: 'AI Health Assessment',
                 icon: const MacosIcon(CupertinoIcons.heart),
                 showLabel: false,
@@ -256,6 +273,44 @@ class ProjectDashboard extends StatelessWidget {
                                     'Incompatible Version: This project requires beads version ${appState.projectRequiredVersion}, but your Watcher daemon is running ${appState.daemonVersion}. Some features may be broken or unreadable.',
                                     style: MacosTheme.of(context).typography.body,
                                   ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (appState.currentConnectionMode == 'embedded')
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: MacosColors.systemOrangeColor.withValues(alpha: 0.1),
+                              border: Border.all(color: MacosColors.systemOrangeColor),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const MacosIcon(CupertinoIcons.info_circle_fill, color: MacosColors.systemOrangeColor),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Dolt Embedded Mode: This project is running in single-writer mode. To avoid lock contention with background AI agents, we recommended running "bd dolt server" in your terminal.',
+                                    style: MacosTheme.of(context).typography.body,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                PushButton(
+                                  controlSize: ControlSize.small,
+                                  secondary: true,
+                                  onPressed: () => appState.launchDoltServer(),
+                                  child: const Text('Start Server'),
+                                ),
+                                const SizedBox(width: 8),
+                                PushButton(
+                                  controlSize: ControlSize.small,
+                                  secondary: true,
+                                  onPressed: () => appState.reconnectActiveProject(),
+                                  child: const Text('Reconnect'),
                                 ),
                               ],
                             ),
