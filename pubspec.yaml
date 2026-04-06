@@ -1,7 +1,7 @@
 name: agent_watcher
 description: "A macOS GUI for the beads (bd) issue tracker."
 publish_to: 'none'
-version: 0.4.0+1
+version: 0.4.1+1
 
 environment:
   sdk: '>=3.11.0 <4.0.0'

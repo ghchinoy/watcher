@@ -25,21 +25,23 @@ class _HomeScreenState extends State<HomeScreen> {
       return -1;
     }
 
-    if (appState.projects.isEmpty) return 0;
-    if (appState.selectedProject == null) return appState.projects.length;
-    final index = appState.projects.indexOf(appState.selectedProject!);
+    final projects = appState.sortedProjects;
+    if (projects.isEmpty) return 0;
+    if (appState.selectedProject == null) return projects.length;
+    final index = projects.indexOf(appState.selectedProject!);
     return index == -1 ? 0 : index;
   }
 
   void _onItemTapped(int index) {
-    if (index >= 0 && index < appState.projects.length) {
-      appState.selectProject(appState.projects[index]);
+    final projects = appState.sortedProjects;
+    if (index >= 0 && index < projects.length) {
+      appState.selectProject(projects[index]);
       // If we are on the settings page, pop back to the dashboard
       final location = GoRouterState.of(context).uri.toString();
       if (location == '/settings') {
         context.go('/');
       }
-    } else if (index == appState.projects.length) {
+    } else if (index == projects.length) {
       _addProject();
     }
   }
