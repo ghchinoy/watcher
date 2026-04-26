@@ -24,16 +24,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.x'
+          go-version: '1.26.x'
           cache-dependency-path: daemon/go.sum
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          brew install icu4c
+          flutter pub get
 
       - name: Build Go Daemon
-        run: |
-          cd daemon
-          CGO_ENABLED=1 go build -o watcher-daemon main.go
+        run: make build-daemon
 
       - name: Build Flutter macOS
         run: flutter build macos --release
