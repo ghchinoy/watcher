@@ -17,13 +17,13 @@ The preferred way to release is via the automated GitHub Actions workflow.
 
 1.  **Update Version:** Bump the version in `pubspec.yaml`.
     ```yaml
-    version: 0.5.0+1
+    version: 0.6.0+1
     ```
 2.  **Commit and Push:** Commit the version bump to `main`.
 3.  **Create Tag:** Create a git tag matching the version (prefixed with `v`).
     ```bash
-    git tag v0.5.0
-    git push origin v0.5.0
+    git tag v0.6.0
+    git push origin v0.6.0
     ```
 4.  **Verification:** Monitor the "Actions" tab on GitHub. The "Release Watcher" workflow will build the Go daemon, the Flutter macOS app, bundle them, and create a new GitHub Release with the `.app.zip` attached.
 
