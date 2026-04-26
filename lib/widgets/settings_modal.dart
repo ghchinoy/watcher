@@ -26,6 +26,7 @@ class _SettingsModalState extends State<SettingsModal> {
   late TextEditingController _ghosttyFontFamilyController;
   late TextEditingController _gcpProjectIdController;
   late TextEditingController _vertexLocationController;
+  late TextEditingController _customBdPathController;
 
   void _addModel() {
     showMacosSheet(
@@ -42,6 +43,7 @@ class _SettingsModalState extends State<SettingsModal> {
     _ghosttyFontFamilyController = TextEditingController(text: appState.ghosttyFontFamily);
     _gcpProjectIdController = TextEditingController(text: appState.gcpProjectId);
     _vertexLocationController = TextEditingController(text: appState.vertexLocation);
+    _customBdPathController = TextEditingController(text: appState.customBdPath);
   }
 
   @override
@@ -51,6 +53,7 @@ class _SettingsModalState extends State<SettingsModal> {
     _ghosttyFontFamilyController.dispose();
     _gcpProjectIdController.dispose();
     _vertexLocationController.dispose();
+    _customBdPathController.dispose();
     super.dispose();
   }
 
@@ -105,6 +108,29 @@ class _SettingsModalState extends State<SettingsModal> {
                             placeholder: 'e.g., Jane Doe',
                             onChanged: (value) {
                               appState.setActorName(value);
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        const Text(
+                          'Custom bd Path',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Optional. Absolute path to the bd executable if it is not in your normal PATH.',
+                          style: MacosTheme.of(context).typography.footnote.copyWith(
+                                color: MacosColors.systemGrayColor,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: 300,
+                          child: MacosTextField(
+                            controller: _customBdPathController,
+                            placeholder: '/opt/homebrew/bin/bd',
+                            onChanged: (value) {
+                              appState.setCustomBdPath(value);
                             },
                           ),
                         ),

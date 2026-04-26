@@ -4,9 +4,13 @@ import 'dart:io';
 import '../models/issue.dart';
 import '../models/interaction.dart';
 import 'package:flutter/foundation.dart';
+import '../main.dart';
 
 class BeadsService {
   final String workingDirectory;
+
+  String get _bdExecutable => appState.customBdPath.isNotEmpty ? appState.customBdPath : 'bd';
+
   Process? _daemonProcess;
   int _requestId = 1;
   final Map<int, Completer<dynamic>> _pendingRequests = {};
@@ -213,7 +217,7 @@ class BeadsService {
       args.addAll(['-p', priority.toString()]);
     }
 
-    final result = await Process.run('bd', args, workingDirectory: workingDirectory, environment: {
+    final result = await Process.run(_bdExecutable, args, workingDirectory: workingDirectory, environment: {
       'BD_ACTOR': actor,
       'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
     });
@@ -223,7 +227,7 @@ class BeadsService {
     }
 
     // Trigger an export to update the JSONL files so the UI file watcher picks it up
-    await Process.run('bd', ['export'], workingDirectory: workingDirectory, environment: {
+    await Process.run(_bdExecutable, ['export'], workingDirectory: workingDirectory, environment: {
       'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
     });
 
@@ -245,7 +249,7 @@ class BeadsService {
 
   Future<String?> getCliVersion() async {
     try {
-      final result = await Process.run('bd', ['version'], workingDirectory: workingDirectory, environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'});
+      final result = await Process.run(_bdExecutable, ['version'], workingDirectory: workingDirectory, environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'});
       if (result.exitCode == 0) {
         return result.stdout.toString().trim();
       }

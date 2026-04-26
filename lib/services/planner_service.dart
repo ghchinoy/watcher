@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'beads_service.dart';
 import 'tmux_service.dart';
+import '../main.dart';
 
 class PlannerService {
   static Future<void> startGeneratePlan({
@@ -97,10 +98,16 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     final tempFile = File('$workspacePath/.beads/temp_plan.sh');
     await tempFile.writeAsString(bashCommands);
 
+    String basePath = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
+    if (appState.customBdPath.isNotEmpty) {
+      final customDir = File(appState.customBdPath).parent.path;
+      basePath = '$customDir:$basePath';
+    }
+
     final result = await Process.run('bash', [
       '.beads/temp_plan.sh',
     ], workingDirectory: workspacePath, environment: {
-      'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+      'PATH': basePath,
     });
 
     // Clean up

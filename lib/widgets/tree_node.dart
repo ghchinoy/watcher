@@ -48,16 +48,16 @@ class _TreeNodeState extends State<TreeNode> {
     // UNLESS the closed child has its own open children.
     final children = widget.allIssues.where((potentialChild) {
       if (!potentialChild.isDirectChildOf(widget.issue)) return false;
-      
-      if (potentialChild.status != 'closed') return true;
 
-      final hasOpenGrandchild = widget.allIssues.any((grandchild) => 
-        grandchild.isDirectChildOf(potentialChild) && grandchild.status != 'closed'
-      );
+      if (!appState.showClosedInTree && potentialChild.status == 'closed') {
+        final hasOpenGrandchild = widget.allIssues.any((grandchild) =>
+          grandchild.isDirectChildOf(potentialChild) && grandchild.status != 'closed'
+        );
+        return hasOpenGrandchild;
+      }
 
-      return hasOpenGrandchild;
+      return true;
     }).toList();
-
     return Padding(
       padding: EdgeInsets.only(
         left: widget.depth == 0 ? 16 : 24,

@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../main.dart';
 
 class TmuxService {
   static const _env = {
@@ -7,6 +8,11 @@ class TmuxService {
 
   /// Resolves the absolute path to the bd executable.
   static Future<String> _getBdPath() async {
+    if (appState.customBdPath.isNotEmpty) {
+      if (await File(appState.customBdPath).exists()) {
+        return appState.customBdPath;
+      }
+    }
     const paths = ['/opt/homebrew/bin/bd', '/usr/local/bin/bd', '/usr/bin/bd'];
     for (final path in paths) {
       if (await File(path).exists()) {

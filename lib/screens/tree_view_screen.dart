@@ -62,6 +62,13 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
               title: const Text('Tree View'),
               actions: [
                 ToolBarIconButton(
+                label: 'Toggle Closed Issues',
+                icon: MacosIcon(appState.showClosedInTree ? CupertinoIcons.eye : CupertinoIcons.eye_slash),
+                showLabel: false,
+                tooltipMessage: appState.showClosedInTree ? 'Hide Closed Issues' : 'Show Closed Issues',
+                onPressed: appState.toggleShowClosedInTree,
+              ),
+              ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
                 showLabel: false,
@@ -91,6 +98,13 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
               title: const Text('Tree View'),
               actions: [
                 ToolBarIconButton(
+                label: 'Toggle Closed Issues',
+                icon: MacosIcon(appState.showClosedInTree ? CupertinoIcons.eye : CupertinoIcons.eye_slash),
+                showLabel: false,
+                tooltipMessage: appState.showClosedInTree ? 'Hide Closed Issues' : 'Show Closed Issues',
+                onPressed: appState.toggleShowClosedInTree,
+              ),
+              ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
                 showLabel: false,
@@ -144,16 +158,16 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
           final isTopLevel = !issue.hasParentIn(issues);
           if (!isTopLevel) return false;
           
-          if (issue.status != 'closed') return true;
+          if (!appState.showClosedInTree && issue.status == 'closed') {
+            // If it IS top-level but closed, we only show it if it has an open child.
+            // This prevents open subtasks from disappearing when the parent Epic is closed.
+            final hasOpenChild = issues.any((potentialChild) =>
+              potentialChild.isDirectChildOf(issue) && potentialChild.status != 'closed'
+            );
+            return hasOpenChild;
+          }
 
-          // If it IS top-level but closed, we only show it if it has an open child.
-          // This prevents open subtasks from disappearing when the parent Epic is closed.
-          final hasOpenChild = issues.any((potentialChild) => 
-            potentialChild.isDirectChildOf(issue) && potentialChild.status != 'closed'
-          );
-          
-          return hasOpenChild;
-        }).toList();
+          return true;        }).toList();
 
         return MacosScaffold(
           toolBar: ToolBar(
@@ -185,6 +199,13 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                 showLabel: false,
                 tooltipMessage: 'Collapse All',
                 onPressed: _collapseAll,
+              ),
+              ToolBarIconButton(
+                label: 'Toggle Closed Issues',
+                icon: MacosIcon(appState.showClosedInTree ? CupertinoIcons.eye : CupertinoIcons.eye_slash),
+                showLabel: false,
+                tooltipMessage: appState.showClosedInTree ? 'Hide Closed Issues' : 'Show Closed Issues',
+                onPressed: appState.toggleShowClosedInTree,
               ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',

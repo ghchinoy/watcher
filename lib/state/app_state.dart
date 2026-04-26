@@ -109,6 +109,9 @@ class AppState extends ChangeNotifier {
   String? ghosttyTheme;
   String? ghosttyFontFamily;
 
+  bool showClosedInTree = false;
+  String customBdPath = '';
+
   GenerativeModelConfig? get defaultAiModel {
     if (defaultAiModelId == null || aiModels.isEmpty) return null;
     return aiModels.firstWhere((m) => m.id == defaultAiModelId, orElse: () => aiModels.first);
@@ -155,6 +158,9 @@ class AppState extends ChangeNotifier {
     preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
     ghosttyTheme = prefs.getString('ghostty_theme');
     ghosttyFontFamily = prefs.getString('ghostty_font_family');
+    
+    showClosedInTree = prefs.getBool('show_closed_in_tree') ?? false;
+    customBdPath = prefs.getString('custom_bd_path') ?? '';
     
     final sortOrderStr = prefs.getString('sidebar_sort_order') ?? 'alphabetical';
     sidebarSortOrder = sortOrderStr == 'activity' 
@@ -251,6 +257,20 @@ class AppState extends ChangeNotifier {
     } else {
       await prefs.remove('ghostty_font_family');
     }
+    notifyListeners();
+  }
+
+  Future<void> toggleShowClosedInTree() async {
+    showClosedInTree = !showClosedInTree;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_closed_in_tree', showClosedInTree);
+    notifyListeners();
+  }
+
+  Future<void> setCustomBdPath(String path) async {
+    customBdPath = path;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_bd_path', path);
     notifyListeners();
   }
 
