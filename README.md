@@ -26,6 +26,7 @@
 1. Ensure you have the [beads (`bd`) CLI](https://github.com/steveyegge/beads) installed and initialized in at least one local repository.
 2. Install the [Flutter SDK](https://docs.flutter.dev/get-started/install/macos).
 3. Ensure you have `tmux` installed (`brew install tmux`) for AI Terminal Orchestration features.
+4. Ensure you have `icu4c` installed (`brew install icu4c`) for compiling the Go daemon with the latest `beads` dependency.
 
 ### 🤖 Firebase & AI Setup
 

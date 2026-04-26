@@ -49,6 +49,7 @@ class BeadsService {
         daemonPath,
         [workingDirectory],
         workingDirectory: workingDirectory,
+        environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'},
       );
 
       // Prevent unhandled async exceptions if the process crashes and the pipe breaks
@@ -212,14 +213,19 @@ class BeadsService {
       args.addAll(['-p', priority.toString()]);
     }
 
-    final result = await Process.run('bd', args, workingDirectory: workingDirectory, environment: {'BD_ACTOR': actor});
+    final result = await Process.run('bd', args, workingDirectory: workingDirectory, environment: {
+      'BD_ACTOR': actor,
+      'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+    });
 
     if (result.exitCode != 0) {
       throw Exception('Failed to create issue: ${result.stderr}');
     }
 
     // Trigger an export to update the JSONL files so the UI file watcher picks it up
-    await Process.run('bd', ['export'], workingDirectory: workingDirectory);
+    await Process.run('bd', ['export'], workingDirectory: workingDirectory, environment: {
+      'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+    });
 
     return result.stdout.toString().trim();
   }
@@ -239,7 +245,7 @@ class BeadsService {
 
   Future<String?> getCliVersion() async {
     try {
-      final result = await Process.run('bd', ['version'], workingDirectory: workingDirectory);
+      final result = await Process.run('bd', ['version'], workingDirectory: workingDirectory, environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'});
       if (result.exitCode == 0) {
         return result.stdout.toString().trim();
       }

@@ -17,13 +17,13 @@ The preferred way to release is via the automated GitHub Actions workflow.
 
 1.  **Update Version:** Bump the version in `pubspec.yaml`.
     ```yaml
-    version: 0.2.0+1
+    version: 0.5.0+1
     ```
 2.  **Commit and Push:** Commit the version bump to `main`.
 3.  **Create Tag:** Create a git tag matching the version (prefixed with `v`).
     ```bash
-    git tag v0.2.0
-    git push origin v0.2.0
+    git tag v0.5.0
+    git push origin v0.5.0
     ```
 4.  **Verification:** Monitor the "Actions" tab on GitHub. The "Release Watcher" workflow will build the Go daemon, the Flutter macOS app, bundle them, and create a new GitHub Release with the `.app.zip` attached.
 
@@ -45,7 +45,7 @@ If you need to build a release build locally for testing:
 3.  **Manual Bundling:**
     To create a standalone `.app` bundle manually:
     - Run `flutter build macos --release`.
-    - Build the daemon: `cd daemon && CGO_ENABLED=1 go build -o watcher-daemon main.go`.
+    - Build the daemon: `make build-daemon`.
     - Copy the daemon to `build/macos/Build/Products/Release/Watcher.app/Contents/Resources/`.
     - Re-sign: `codesign --force --deep --sign - build/macos/Build/Products/Release/Watcher.app`.
 

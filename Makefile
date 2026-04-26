@@ -24,7 +24,7 @@ build: build-daemon ## Build the macOS release app and embed the daemon
 
 build-daemon: ## Build the Go daemon
 	@echo "Building watcher-daemon..."
-	cd daemon && go build -o watcher-daemon
+	cd daemon && CGO_CFLAGS="-I/opt/homebrew/opt/icu4c/include" CGO_LDFLAGS="-L/opt/homebrew/opt/icu4c/lib" CGO_CXXFLAGS="-std=c++17 -I/opt/homebrew/opt/icu4c/include" go build -o watcher-daemon
 
 update-bd: ## Update the embedded beads dependency to the latest upstream release
 	@echo "Updating github.com/steveyegge/beads to @latest..."

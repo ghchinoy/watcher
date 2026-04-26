@@ -402,7 +402,7 @@ func main() {
 	// Emit a special bootstrapping notification so the UI knows we are
 	// establishing the database connection and might be waiting for the Dolt server.
 	mode := "server"
-	if _, err := os.Stat(filepath.Join(beadsDir, "dolt", "sql-server.pid")); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(beadsDir, "dolt-server.pid")); os.IsNotExist(err) {
 		mode = "embedded"
 	}
 	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database","mode":"%s"}}` + "\n", mode)

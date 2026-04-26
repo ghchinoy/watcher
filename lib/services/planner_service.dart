@@ -99,7 +99,9 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
 
     final result = await Process.run('bash', [
       '.beads/temp_plan.sh',
-    ], workingDirectory: workspacePath);
+    ], workingDirectory: workspacePath, environment: {
+      'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+    });
 
     // Clean up
     if (await tempFile.exists()) {

@@ -205,7 +205,9 @@ class AppState extends ChangeNotifier {
       actorName = savedActor;
     } else {
       try {
-        final result = await Process.run('git', ['config', 'user.name']);
+        final result = await Process.run('git', ['config', 'user.name'], environment: {
+          'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+        });
         if (result.exitCode == 0 && result.stdout.toString().trim().isNotEmpty) {
           actorName = result.stdout.toString().trim();
         }
