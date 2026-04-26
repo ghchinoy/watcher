@@ -11,21 +11,21 @@ Watcher follows [Semantic Versioning](https://semver.org/).
 
 Versions are tracked in `pubspec.yaml`.
 
-## Automated Releases (GitHub Actions)
+## Automated Releases (GitHub Actions & Release Please)
 
-The preferred way to release is via the automated GitHub Actions workflow.
+Watcher uses [Release Please](https://github.com/googleapis/release-please-action) to fully automate versioning, changelog generation, and GitHub Release creation based on [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-1.  **Update Version:** Bump the version in `pubspec.yaml`.
-    ```yaml
-    version: 0.6.0+1
-    ```
-2.  **Commit and Push:** Commit the version bump to `main`.
-3.  **Create Tag:** Create a git tag matching the version (prefixed with `v`).
-    ```bash
-    git tag v0.6.0
-    git push origin v0.6.0
-    ```
-4.  **Verification:** Monitor the "Actions" tab on GitHub. The "Release Watcher" workflow will build the Go daemon, the Flutter macOS app, bundle them, and create a new GitHub Release with the `.app.zip` attached.
+1.  **Merge to Main:** Every time you push or merge code to the `main` branch, the Release Please GitHub Action runs.
+2.  **Release PR:** It parses your commit messages (e.g., `feat:`, `fix:`) and automatically creates or updates a "Release PR". This PR contains the drafted `CHANGELOG.md` and the updated `version` string in `pubspec.yaml`.
+3.  **Approve & Merge:** When you are ready to cut a release, simply approve and merge that Release PR into `main`.
+4.  **Automatic Bundling:** Once the Release PR is merged, Release Please automatically creates the GitHub Release and Git Tag. This triggers the `build-macos` job, which compiles the Go daemon, the Flutter macOS app, bundles them together, and uploads the final `.app.zip` to the GitHub Release.
+
+### Controlling Version Bumps
+
+Your commit messages determine the version bump:
+- **Patch (0.0.x):** Use the `fix:` prefix (e.g., `fix: resolve crash on startup`).
+- **Minor (0.x.0):** Use the `feat:` prefix (e.g., `feat: add new dashboard`).
+- **Major (x.0.0):** Use the `feat!:` or `fix!:` prefix, or include `BREAKING CHANGE:` in the commit footer.
 
 ## Local/Manual Release
 

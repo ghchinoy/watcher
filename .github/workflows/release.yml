@@ -2,14 +2,26 @@ name: Release Watcher
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+
   build-macos:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -51,10 +63,7 @@ jobs:
           cd build/macos/Build/Products/Release
           zip -r ../../../../Watcher-macOS.zip Watcher.app
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: Watcher-macOS.zip
-          generate_release_notes: true
+      - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ needs.release-please.outputs.tag_name }} Watcher-macOS.zip
