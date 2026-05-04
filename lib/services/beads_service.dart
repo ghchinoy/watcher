@@ -150,7 +150,7 @@ class BeadsService {
   }
 
   Future<List<Interaction>> getInteractions() async {
-    final file = File('$workingDirectory/.beads/backup/events.jsonl');
+    final file = File('$workingDirectory/.beads/interactions.jsonl');
     if (!await file.exists()) {
       return [];
     }
