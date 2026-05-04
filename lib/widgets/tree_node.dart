@@ -50,10 +50,7 @@ class _TreeNodeState extends State<TreeNode> {
       if (!potentialChild.isDirectChildOf(widget.issue)) return false;
 
       if (!appState.showClosedInTree && potentialChild.status == 'closed') {
-        final hasOpenGrandchild = widget.allIssues.any((grandchild) =>
-          grandchild.isDirectChildOf(potentialChild) && grandchild.status != 'closed'
-        );
-        return hasOpenGrandchild;
+        return potentialChild.hasOpenDescendant(widget.allIssues);
       }
 
       return true;
