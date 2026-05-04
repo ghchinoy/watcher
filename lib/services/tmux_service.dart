@@ -133,7 +133,9 @@ class TmuxService {
 
       final writeScript = '''
         tell application "Ghostty"
-          write front window's selected tab's focused terminal text "$tmux attach -t $sessionName" & linefeed
+          set active_terminal to focused terminal of selected tab of front window
+          input text "$tmux attach -t $sessionName" to active_terminal
+          send key "enter" to active_terminal
         end tell
       ''';
       await Process.run('osascript', ['-e', writeScript]);
