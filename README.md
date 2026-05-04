@@ -4,6 +4,8 @@
   <em>A beautiful, native macOS graphical interface for <a href="https://github.com/steveyegge/beads">Steve Yegge's beads (bd)</a> issue tracker.</em>
 </p>
 
+<img width="969" height="746" alt="Image" src="https://github.com/user-attachments/assets/dfa3196f-374b-458c-8b1f-74ec5a0df2a5" />
+
 ---
 
 **Watcher** is a desktop application built specifically for macOS that brings your local `bd` repositories to life. It reads directly from your `.beads` databases and provides a rich, visual way to manage your tasks, bugs, and epics without leaving the comfort of a native UI.

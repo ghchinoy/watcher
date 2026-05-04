@@ -142,4 +142,14 @@ extension IssueHierarchy on Issue {
     }
     return false;
   }
+
+  bool hasOpenDescendant(List<Issue> issues) {
+    return issues.any((child) {
+      if (child.isDirectChildOf(this)) {
+        if (child.status != 'closed') return true;
+        return child.hasOpenDescendant(issues);
+      }
+      return false;
+    });
+  }
 }

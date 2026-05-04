@@ -159,12 +159,9 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
           if (!isTopLevel) return false;
           
           if (!appState.showClosedInTree && issue.status == 'closed') {
-            // If it IS top-level but closed, we only show it if it has an open child.
+            // If it IS top-level but closed, we only show it if it has an open descendant.
             // This prevents open subtasks from disappearing when the parent Epic is closed.
-            final hasOpenChild = issues.any((potentialChild) =>
-              potentialChild.isDirectChildOf(issue) && potentialChild.status != 'closed'
-            );
-            return hasOpenChild;
+            return issue.hasOpenDescendant(issues);
           }
 
           return true;        }).toList();
