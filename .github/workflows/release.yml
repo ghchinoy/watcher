@@ -61,7 +61,7 @@ jobs:
       - name: Compress App
         run: |
           cd build/macos/Build/Products/Release
-          zip -r ../../../../Watcher-macOS.zip Watcher.app
+          zip -r ../../../../../Watcher-macOS.zip Watcher.app
 
       - name: Upload Release Asset
         env:
