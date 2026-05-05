@@ -306,7 +306,7 @@ func handleCheckHealth(ctx context.Context, storage beads.Storage, id int) {
 		return
 	}
 
-	var diagnostics []Diagnostic
+	diagnostics := make([]Diagnostic, 0)
 	issueMap := make(map[string]*beads.Issue)
 	for _, issue := range issues {
 		issueMap[issue.ID] = issue
