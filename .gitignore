@@ -57,3 +57,4 @@ daemon/watcher-daemon
 
 # Beads / Dolt files (added by bd init)
 .beads-credential-key
+sample_export.jsonl
