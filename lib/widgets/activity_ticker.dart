@@ -101,7 +101,25 @@ class ActivityTicker extends StatelessWidget {
   Widget _buildActionSemanticText(Interaction interaction, BuildContext context) {
     String text = interaction.action;
     
-    if (interaction.action == 'updated' && interaction.newValue != null) {
+    if (interaction.action == 'field_change') {
+      final field = interaction.field;
+      if (field == 'status') {
+        if (interaction.newValue == 'closed') {
+          text = 'completed';
+        } else {
+          text = 'changed status of';
+        }
+      } else if (field == 'priority') {
+        text = 'escalated priority to P${interaction.newValue} on';
+      } else if (field == 'owner' || field == 'assignee') {
+        text = 'reassigned';
+      } else if (field == 'title') {
+        text = 'renamed';
+      } else {
+        text = 'updated';
+      }
+    } else if (interaction.action == 'updated' && interaction.newValue != null) {
+      // Legacy support
       try {
         final Map<String, dynamic> changes = dart_json.jsonDecode(interaction.newValue!);
         if (changes.containsKey('priority')) {
@@ -118,12 +136,12 @@ class ActivityTicker extends StatelessWidget {
       }
     } else if (interaction.action == 'claimed') {
       text = 'claimed';
-    } else if (interaction.action == 'status_changed') {
-      text = 'changed status of';
-    } else if (interaction.action == 'closed') {
+    } else if (interaction.action == 'closed') { // Legacy
       text = 'completed';
     } else if (interaction.action == 'created') {
       text = 'created';
+    } else if (interaction.action == 'comment') {
+      text = 'commented on';
     }
 
     return Text(
