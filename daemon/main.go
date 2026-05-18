@@ -11,7 +11,6 @@ import (
 	"runtime/debug"
 
 	"github.com/steveyegge/beads"
-	"gopkg.in/yaml.v3"
 )
 
 type Request struct {
@@ -113,24 +112,22 @@ func handleGetPeers(ctx context.Context, storage beads.Storage, req Request) {
 	}
 	var peers []RemoteInfo
 
-	// Read config.yaml directly to find federation.remote
-	beadsDir := beads.FindBeadsDir()
-	if beadsDir != "" {
-		configPath := filepath.Join(beadsDir, "config.yaml")
-		data, err := os.ReadFile(configPath)
-		if err == nil {
-			var config struct {
-				Federation struct {
-					Remote string `yaml:"remote"`
-				} `yaml:"federation"`
-			}
-			if yaml.Unmarshal(data, &config) == nil && config.Federation.Remote != "" {
+	if rs, ok := storage.(beads.RemoteStore); ok {
+		if remotes, err := rs.ListRemotes(ctx); err == nil {
+			for _, r := range remotes {
 				peers = append(peers, RemoteInfo{
-					Name: "cloud",
-					URL:  config.Federation.Remote,
+					Name: r.Name,
+					URL:  r.URL,
 				})
 			}
+		} else {
+			sendError(req.ID, -32000, fmt.Sprintf("failed to list peers: %v", err))
+			return
 		}
+	}
+
+	if peers == nil {
+		peers = []RemoteInfo{}
 	}
 
 	sendResponse(Response{
