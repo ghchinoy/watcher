@@ -192,12 +192,13 @@ class BeadsService {
     return issues.map((i) => GraphNode(root: i)).toList();
   }
 
-  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee, required String actor}) async {
+  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee, String? parent, required String actor}) async {
     final Map<String, dynamic> updates = {};
     if (status != null) updates['status'] = status;
     if (priority != null) updates['priority'] = priority;
     if (owner != null) updates['owner'] = owner;
     if (assignee != null) updates['assignee'] = assignee;
+    if (parent != null) updates['parent'] = parent;
 
     if (updates.isEmpty) return;
 

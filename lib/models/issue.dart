@@ -152,4 +152,31 @@ extension IssueHierarchy on Issue {
       return false;
     });
   }
+
+  bool isDescendantOf(Issue ancestor, List<Issue> allIssues) {
+    Issue? current = this;
+    Set<String> visited = {id};
+    
+    while (current != null) {
+      if (current.isDirectChildOf(ancestor)) return true;
+      
+      String? parentId;
+      final hasExplicit = current.dependencies?.any((d) => d.type == 'parent-child') ?? false;
+      if (hasExplicit) {
+        parentId = current.dependencies!.firstWhere((d) => d.type == 'parent-child').dependsOnId;
+      } else {
+        final lastDotIndex = current.id.lastIndexOf('.');
+        if (lastDotIndex != -1) {
+          parentId = current.id.substring(0, lastDotIndex);
+        }
+      }
+      
+      if (parentId == null || visited.contains(parentId)) return false;
+      
+      visited.add(parentId);
+      final parentIdx = allIssues.indexWhere((i) => i.id == parentId);
+      current = parentIdx != -1 ? allIssues[parentIdx] : null;
+    }
+    return false;
+  }
 }

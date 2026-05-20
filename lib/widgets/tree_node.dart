@@ -87,16 +87,79 @@ class _TreeNodeState extends State<TreeNode> {
               else
                 const SizedBox(width: 16),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => appState.selectIssue(widget.issue),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: _buildIssueRow(
-                      widget.issue,
-                      context,
-                      isRoot: widget.depth == 0,
-                    ),
-                  ),
+                child: DragTarget<Issue>(
+                  onWillAcceptWithDetails: (details) {
+                    final dragged = details.data;
+                    // Cannot drop on self
+                    if (dragged.id == widget.issue.id) return false;
+                    // Cannot drop epic onto another issue (to avoid epic hierarchy)
+                    if (dragged.issueType == 'epic') return false;
+                    // Prevent circular dependencies (dragged is an ancestor of target)
+                    if (widget.issue.isDescendantOf(dragged, widget.allIssues)) return false;
+                    return true;
+                  },
+                  onAcceptWithDetails: (details) {
+                    final dragged = details.data;
+                    appState.updateIssue(dragged.id, parent: widget.issue.id);
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    final isHovered = candidateData.isNotEmpty;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: isHovered ? MacosTheme.of(context).primaryColor.withValues(alpha: 0.1) : null,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Draggable<Issue>(
+                        data: widget.issue,
+                        feedback: Opacity(
+                          opacity: 0.8,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: MacosTheme.of(context).canvasColor,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0x33000000), // black with 0.2 alpha
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: DefaultTextStyle(
+                              style: MacosTheme.of(context).typography.body,
+                              child: Text('${widget.issue.id} - ${widget.issue.title}'),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Opacity(
+                          opacity: 0.3,
+                          child: GestureDetector(
+                            onTap: () => appState.selectIssue(widget.issue),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: _buildIssueRow(
+                                widget.issue,
+                                context,
+                                isRoot: widget.depth == 0,
+                              ),
+                            ),
+                          ),
+                        ),
+                        child: GestureDetector(
+                          onTap: () => appState.selectIssue(widget.issue),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: _buildIssueRow(
+                              widget.issue,
+                              context,
+                              isRoot: widget.depth == 0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

@@ -686,7 +686,7 @@ String? getProjectLastActivity(Project project) {
     }
   }
 
-  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee}) async {
+  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee, String? parent}) async {
     if (selectedProject == null) return;
 
     // Optimistically update the selected issue if it matches
@@ -706,6 +706,7 @@ String? getProjectLastActivity(Project project) {
           priority: priority,
           owner: owner,
           assignee: assignee,
+          parent: parent,
           actor: actorName,
         );
 
