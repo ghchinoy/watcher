@@ -104,6 +104,7 @@ class AppState extends ChangeNotifier {
   BeadsService? get currentService => _currentService;
   
   int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
+  int heartbeatIntervalSeconds = 30; // Default to 30 seconds safety heartbeat. 0 means disabled.
   String actorName = 'Watcher UI'; // Default identity
   String preferredTerminal = 'Ghostty'; // Default to Ghostty
   String? ghosttyTheme;
@@ -125,13 +126,13 @@ class AppState extends ChangeNotifier {
   AppState() {
     _loadSettings();
     _loadProjects();
-    _startHeartbeat();
   }
 
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
-    // Refresh the active project every 30 seconds as a safety heartbeat
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    if (heartbeatIntervalSeconds <= 0) return; // Disabled
+    
+    _heartbeatTimer = Timer.periodic(Duration(seconds: heartbeatIntervalSeconds), (_) {
       if (selectedProject != null && !isLoading && !isRefreshing) {
         _refreshData();
       }
@@ -221,7 +222,21 @@ class AppState extends ChangeNotifier {
         // Fallback to Watcher UI if git fails
       }
     }
+
+    heartbeatIntervalSeconds = prefs.getInt('heartbeat_interval_seconds') ?? 30;
+    _startHeartbeat();
+
     notifyListeners();
+  }
+
+  Future<void> setHeartbeatInterval(int seconds) async {
+    heartbeatIntervalSeconds = seconds;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('heartbeat_interval_seconds', seconds);
+    notifyListeners();
+    
+    // Restart heartbeat with new duration
+    _startHeartbeat();
   }
 
   Future<void> setActorName(String name) async {

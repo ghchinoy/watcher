@@ -87,9 +87,17 @@ flutter run -d macos
 
 ## 🧠 How it Works
 
-Watcher is strictly a **frontend viewer** designed to work in harmony with the `bd` CLI, rather than replacing it. 
+Watcher relies on a unified hybrid architecture to manage issue data quickly and native macOS system integration robustly.
 
-Instead of connecting directly to the underlying Dolt database, Watcher uses OS-level file watching (via `fsevents`) on your `.beads` directory. When it detects a change, it shells out to the `bd export` and `bd graph` commands behind the scenes to fetch the latest state. This guarantees that Watcher always perfectly reflects the true state of your issue graph, exactly as the CLI sees it.
+### The `watcher-daemon` RPC Server
+Instead of direct, slow CLI shell-outs for data queries, Watcher packages and bundles a custom Go binary (`watcher-daemon`) located inside the `Watcher.app/Contents/Resources` bundle. 
+* **JSON-RPC 2.0**: The Flutter frontend communicates with the daemon via standard I/O (`stdin`/`stdout`) streams using JSON-RPC 2.0.
+* **macOS PATH Fallback Protection**: Because macOS GUI applications (launched via Finder or Spotlight) do not inherit the user's shell profile `$PATH`, the Go daemon explicitly injects a robust default developer environment (`PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`) on all child processes to guarantee that the `bd` CLI, `git`, and external commands are always fully resolvable.
+
+### Real-time Synchronization
+To keep the UI beautifully snappy and fully synchronized, Watcher implements two reactive synchronization loops:
+1. **OS-Level File Watching**: An active file watcher monitors the project's `.beads/backup/` directory. Whenever changes occur (triggered by either direct GUI inputs or local CLI mutations), Watcher catches the modification instantly, debounces for `100ms` to wait out disk I/O, and refreshes.
+2. **Safety Heartbeat**: As an active fallback, a configurable safety heartbeat periodically re-queries the database to ensure no filesystem events were dropped. The interval can be customized under Global Settings (`Every 10 seconds`, `Every 30 seconds`, `Every minute`, `Every 5 minutes`, or `Disabled`).
 
 ### AI Terminal Orchestration
 
