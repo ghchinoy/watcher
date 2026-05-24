@@ -86,6 +86,9 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 	// handling (including GCS gs:// plugins and auth) without battling unexported Go interfaces.
 	cmd := exec.CommandContext(ctx, "bd", "federation", "sync")
 	
+	// Inject standard macOS developer PATH environments so that GUI bundle context can locate Brew/System bin paths
+	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	
 	// Ensure it runs in the correct directory. FindBeadsDir starts from CWD.
 	beadsDir := beads.FindBeadsDir()
 	if beadsDir != "" {
@@ -155,7 +158,9 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
-	_ = exec.Command("bd", "export").Run()
+	cmd := exec.Command("bd", "export")
+	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	_ = cmd.Run()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",
@@ -184,7 +189,9 @@ func handleCloseIssue(ctx context.Context, storage beads.Storage, req Request) {
 
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
-	_ = exec.Command("bd", "export").Run()
+	cmd := exec.Command("bd", "export")
+	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	_ = cmd.Run()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",
@@ -204,6 +211,7 @@ func handleGetComments(ctx context.Context, storage beads.Storage, req Request) 
 
         // Because beads/internal/types is internal, we shell out to bd comments --json
         cmd := exec.Command("bd", "comments", params.ID, "--json")
+        cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
         out, err := cmd.Output()
         if err != nil {
                 sendError(req.ID, -32000, fmt.Sprintf("failed to get comments: %v", string(out)))
@@ -237,8 +245,11 @@ func handleAddComment(ctx context.Context, storage beads.Storage, req Request) {
         }
 
         cmd := exec.Command("bd", "comments", "add", params.ID, params.Comment)
-        // Pass actor down to the command
-        cmd.Env = append(os.Environ(), fmt.Sprintf("BD_ACTOR=%s", params.Actor))
+        // Pass actor and path down to the command
+        cmd.Env = append(os.Environ(), 
+            fmt.Sprintf("BD_ACTOR=%s", params.Actor),
+            "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        )
         
         if out, err := cmd.CombinedOutput(); err != nil {
                 sendError(req.ID, -32000, fmt.Sprintf("failed to add comment: %v - %s", err, string(out)))
@@ -271,7 +282,9 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
-	_ = exec.Command("bd", "export").Run()
+	cmd := exec.Command("bd", "export")
+	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	_ = cmd.Run()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",

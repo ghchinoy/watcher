@@ -182,6 +182,52 @@ class _SettingsModalState extends State<SettingsModal> {
                         ),
                         const SizedBox(height: 32),
                         const Text(
+                          'Safety Heartbeat Interval',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'How often should Watcher refresh the active project to ensure synchronization?',
+                          style: MacosTheme.of(context).typography.footnote.copyWith(
+                                color: MacosColors.systemGrayColor,
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: 300,
+                          child: MacosPopupButton<int>(
+                            value: appState.heartbeatIntervalSeconds,
+                            onChanged: (int? newValue) {
+                              if (newValue != null) {
+                                appState.setHeartbeatInterval(newValue);
+                              }
+                            },
+                            items: const [
+                              MacosPopupMenuItem(
+                                value: 10,
+                                child: Text('Every 10 seconds'),
+                              ),
+                              MacosPopupMenuItem(
+                                value: 30,
+                                child: Text('Every 30 seconds'),
+                              ),
+                              MacosPopupMenuItem(
+                                value: 60,
+                                child: Text('Every minute'),
+                              ),
+                              MacosPopupMenuItem(
+                                value: 300,
+                                child: Text('Every 5 minutes'),
+                              ),
+                              MacosPopupMenuItem(
+                                value: 0,
+                                child: Text('Disabled'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        const Text(
                           'Preferred Terminal',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
