@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/steveyegge/beads"
 )
+
+var outputWriter io.Writer = os.Stdout
 
 type Request struct {
 	Method string          `json:"method"`
@@ -48,7 +51,7 @@ func sendResponse(resp Response) {
 	if err != nil {
 		log.Fatalf("Failed to marshal response: %v", err)
 	}
-	fmt.Printf("%s\n", string(bytes))
+	_, _ = fmt.Fprintln(outputWriter, string(bytes))
 }
 
 func handleAddPeer(ctx context.Context, storage beads.Storage, req Request) {
@@ -421,6 +424,7 @@ func main() {
 	// that might be holding a dead port or a dead file lock before we attempt to connect.
 	// We shell out to 'bd dolt killall' since doltserver is an internal package.
 	killCmd := exec.Command("bd", "dolt", "killall")
+	killCmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
 	killCmd.Dir = repoPath
 	if out, err := killCmd.CombinedOutput(); err == nil {
 		// Just log it internally; it's a helpful sanity check
@@ -460,42 +464,46 @@ func main() {
 			continue
 		}
 
-		switch req.Method {
-		case "graph":
-			handleGraph(ctx, storage, req.ID)
-		case "check_health":
-			handleCheckHealth(ctx, storage, req.ID)
-		case "create_issue":
-			handleCreateIssue(ctx, storage, req)
-		case "update_issue":
-			handleUpdateIssue(ctx, storage, req)
-		case "get_comments":
-			handleGetComments(ctx, storage, req)
-		case "add_comment":
-			handleAddComment(ctx, storage, req)
-		case "close_issue":
-			handleCloseIssue(ctx, storage, req)
-		case "get_peers":
-			handleGetPeers(ctx, storage, req)
-		case "add_peer":
-			handleAddPeer(ctx, storage, req)
-		case "sync_peer":
-			handleSyncPeer(ctx, storage, req)
-		case "get_version":
-			version := "unknown"
-			if info, ok := debug.ReadBuildInfo(); ok {
-				for _, dep := range info.Deps {
-					if dep.Path == "github.com/steveyegge/beads" {
-						version = dep.Version
-						break
-					}
+		dispatchRequest(ctx, storage, req)
+	}
+}
+
+func dispatchRequest(ctx context.Context, storage beads.Storage, req Request) {
+	switch req.Method {
+	case "graph":
+		handleGraph(ctx, storage, req.ID)
+	case "check_health":
+		handleCheckHealth(ctx, storage, req.ID)
+	case "create_issue":
+		handleCreateIssue(ctx, storage, req)
+	case "update_issue":
+		handleUpdateIssue(ctx, storage, req)
+	case "get_comments":
+		handleGetComments(ctx, storage, req)
+	case "add_comment":
+		handleAddComment(ctx, storage, req)
+	case "close_issue":
+		handleCloseIssue(ctx, storage, req)
+	case "get_peers":
+		handleGetPeers(ctx, storage, req)
+	case "add_peer":
+		handleAddPeer(ctx, storage, req)
+	case "sync_peer":
+		handleSyncPeer(ctx, storage, req)
+	case "get_version":
+		version := "unknown"
+		if info, ok := debug.ReadBuildInfo(); ok {
+			for _, dep := range info.Deps {
+				if dep.Path == "github.com/steveyegge/beads" {
+					version = dep.Version
+					break
 				}
 			}
-			sendResponse(Response{JSONRPC: "2.0", Result: version, ID: req.ID})
-		case "ping":
-			sendResponse(Response{JSONRPC: "2.0", Result: "pong", ID: req.ID})
-		default:
-			sendError(req.ID, -32601, "Method not found")
 		}
+		sendResponse(Response{JSONRPC: "2.0", Result: version, ID: req.ID})
+	case "ping":
+		sendResponse(Response{JSONRPC: "2.0", Result: "pong", ID: req.ID})
+	default:
+		sendError(req.ID, -32601, "Method not found")
 	}
 }

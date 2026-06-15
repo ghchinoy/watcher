@@ -495,9 +495,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> addAiModel(GenerativeModelConfig model) async {
     aiModels.add(model);
-    if (defaultAiModelId == null) {
-      defaultAiModelId = model.id;
-    }
+    defaultAiModelId ??= model.id;
     await _saveAiModels();
     notifyListeners();
   }
