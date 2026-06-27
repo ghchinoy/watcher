@@ -161,6 +161,15 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		return
 	}
 
+	// Persist dependencies if any are provided on creation
+	for _, dep := range params.Issue.Dependencies {
+		dep.IssueID = params.Issue.ID
+		if err := storage.AddDependency(ctx, dep, params.Actor); err != nil {
+			sendError(req.ID, -32000, fmt.Sprintf("failed to add dependency: %v", err))
+			return
+		}
+	}
+
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
 	cmd := exec.Command("bd", "export")
@@ -170,37 +179,6 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	sendResponse(Response{
 		JSONRPC: "2.0",
 		Result:  params.Issue.ID,
-		ID:      req.ID,
-	})
-}
-
-func handleCloseIssue(ctx context.Context, storage beads.Storage, req Request) {
-	var params struct {
-		ID      string `json:"id"`
-		Reason  string `json:"reason"`
-		Actor   string `json:"actor"`
-		Session string `json:"session"`
-	}
-	if err := json.Unmarshal(req.Params, &params); err != nil {
-		sendError(req.ID, -32602, "Invalid params")
-		return
-	}
-
-	err := storage.CloseIssue(ctx, params.ID, params.Reason, params.Actor, params.Session)
-	if err != nil {
-		sendError(req.ID, -32000, fmt.Sprintf("failed to close issue: %v", err))
-		return
-	}
-
-	// Trigger a background export so .beads/backup/events.jsonl updates, 
-	// which notifies the UI file watcher that changes occurred.
-	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), macosDeveloperPath)
-	_ = cmd.Run()
-
-	sendResponse(Response{
-		JSONRPC: "2.0",
-		Result:  "ok",
 		ID:      req.ID,
 	})
 }
@@ -484,8 +462,6 @@ func dispatchRequest(ctx context.Context, storage beads.Storage, req Request) {
 		handleGetComments(ctx, storage, req)
 	case "add_comment":
 		handleAddComment(ctx, storage, req)
-	case "close_issue":
-		handleCloseIssue(ctx, storage, req)
 	case "get_peers":
 		handleGetPeers(ctx, storage, req)
 	case "add_peer":
