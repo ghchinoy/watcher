@@ -1,10 +1,9 @@
 import 'dart:io';
 import '../main.dart';
+import 'beads_service.dart';
 
 class TmuxService {
-  static const _env = {
-    'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
-  };
+  static const _env = macosPathEnv;
 
   /// Resolves the absolute path to the bd executable.
   static Future<String> _getBdPath() async {
@@ -24,7 +23,11 @@ class TmuxService {
 
   /// Resolves the absolute path to the tmux executable to bypass macOS GUI PATH limitations.
   static Future<String> _getTmuxPath() async {
-    const paths = ['/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', '/usr/bin/tmux'];
+    const paths = [
+      '/opt/homebrew/bin/tmux',
+      '/usr/local/bin/tmux',
+      '/usr/bin/tmux',
+    ];
     for (final path in paths) {
       if (await File(path).exists()) {
         return path;
@@ -37,7 +40,11 @@ class TmuxService {
   static Future<bool> hasSession(String sessionName) async {
     try {
       final tmux = await _getTmuxPath();
-      final result = await Process.run(tmux, ['has-session', '-t', sessionName], environment: _env);
+      final result = await Process.run(tmux, [
+        'has-session',
+        '-t',
+        sessionName,
+      ], environment: _env);
       return result.exitCode == 0;
     } catch (e) {
       // If tmux executable is not found, Process.run throws ProcessException
@@ -46,25 +53,35 @@ class TmuxService {
   }
 
   /// Creates a new detached tmux session.
-  static Future<void> createSession(String sessionName, String workingDirectory) async {
+  static Future<void> createSession(
+    String sessionName,
+    String workingDirectory,
+  ) async {
     final tmux = await _getTmuxPath();
     try {
       final result = await Process.run(tmux, [
         'new-session',
         '-d',
-        '-s', sessionName,
-        '-c', workingDirectory
+        '-s',
+        sessionName,
+        '-c',
+        workingDirectory,
       ], environment: _env);
       if (result.exitCode != 0) {
         throw Exception('Failed to create tmux session: ${result.stderr}');
       }
     } on ProcessException {
-      throw Exception('tmux is not installed or could not be found. Please install it (e.g. `brew install tmux`) to use AI Terminal Orchestration.');
+      throw Exception(
+        'tmux is not installed or could not be found. Please install it (e.g. `brew install tmux`) to use AI Terminal Orchestration.',
+      );
     }
   }
 
   /// Ensures a session exists, creating it if necessary.
-  static Future<void> ensureSession(String sessionName, String workingDirectory) async {
+  static Future<void> ensureSession(
+    String sessionName,
+    String workingDirectory,
+  ) async {
     if (!await hasSession(sessionName)) {
       await createSession(sessionName, workingDirectory);
     }
@@ -83,15 +100,20 @@ class TmuxService {
     try {
       final result = await Process.run(tmux, [
         'send-keys',
-        '-t', sessionName,
+        '-t',
+        sessionName,
         finalCommand,
-        'C-m'
+        'C-m',
       ], environment: _env);
       if (result.exitCode != 0) {
-        throw Exception('Failed to send keys to tmux session: ${result.stderr}');
+        throw Exception(
+          'Failed to send keys to tmux session: ${result.stderr}',
+        );
       }
     } on ProcessException {
-      throw Exception('tmux is not installed or could not be found. Please install it (e.g. `brew install tmux`) to use AI Terminal Orchestration.');
+      throw Exception(
+        'tmux is not installed or could not be found. Please install it (e.g. `brew install tmux`) to use AI Terminal Orchestration.',
+      );
     }
   }
 
@@ -117,9 +139,9 @@ class TmuxService {
         styleArgs.add('--working-directory=$workingDirectory');
       }
 
-      // We use the 'open -na' approach but without the -e flag to just get the window, 
+      // We use the 'open -na' approach but without the -e flag to just get the window,
       // then use AppleScript to write the text. This avoids the security dialog.
-      
+
       final styleArgsList = <String>['-na', 'Ghostty'];
       if (styleArgs.isNotEmpty) {
         styleArgsList.add('--args');
@@ -127,11 +149,12 @@ class TmuxService {
       }
 
       await Process.run('open', styleArgsList, environment: _env);
-      
+
       // Wait a moment for window to appear
       await Future.delayed(const Duration(milliseconds: 500));
 
-      final writeScript = '''
+      final writeScript =
+          '''
         tell application "Ghostty"
           set active_terminal to focused terminal of selected tab of front window
           input text "$tmux attach -t $sessionName" to active_terminal
@@ -141,7 +164,8 @@ class TmuxService {
       await Process.run('osascript', ['-e', writeScript]);
     } else if (terminalApp == 'iTerm2') {
       // iTerm2 AppleScript to create a new window and attach
-      final script = '''
+      final script =
+          '''
         tell application "iTerm"
           create window with default profile
           tell current session of current window
@@ -153,7 +177,8 @@ class TmuxService {
       await Process.run('osascript', ['-e', script]);
     } else {
       // Default to Apple's Terminal.app
-      final script = '''
+      final script =
+          '''
         tell application "Terminal"
           do script "$tmux attach -t $sessionName"
           activate

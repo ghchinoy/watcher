@@ -20,9 +20,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
   void _showCreateIssue(BuildContext context) {
     showMacosSheet(
       context: context,
-      builder: (context) => MacosSheet(
-        child: CreateIssueModal(appState: appState),
-      ),
+      builder: (context) =>
+          MacosSheet(child: CreateIssueModal(appState: appState)),
     );
   }
 
@@ -34,9 +33,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
     // Find all node IDs that can be expanded (those with children)
     final allParentIds = appState.currentIssues
         .where(
-          (i) => appState.currentIssues.any(
-            (child) => child.isDirectChildOf(i),
-          ),
+          (i) =>
+              appState.currentIssues.any((child) => child.isDirectChildOf(i)),
         )
         .map((i) => i.id)
         .toList();
@@ -62,20 +60,27 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
               title: const Text('Tree View'),
               actions: [
                 ToolBarIconButton(
-                label: 'Toggle Closed Issues',
-                icon: MacosIcon(appState.showClosedInTree ? CupertinoIcons.eye : CupertinoIcons.eye_slash),
-                showLabel: false,
-                tooltipMessage: appState.showClosedInTree ? 'Hide Closed Issues' : 'Show Closed Issues',
-                onPressed: appState.toggleShowClosedInTree,
-              ),
-              ToolBarIconButton(
-                label: 'Toggle Inspector',
-                icon: const MacosIcon(CupertinoIcons.sidebar_right),
-                showLabel: false,
-                tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
-              ),
-              CustomToolbarItem(
+                  label: 'Toggle Closed Issues',
+                  icon: MacosIcon(
+                    appState.showClosedInTree
+                        ? CupertinoIcons.eye
+                        : CupertinoIcons.eye_slash,
+                  ),
+                  showLabel: false,
+                  tooltipMessage: appState.showClosedInTree
+                      ? 'Hide Closed Issues'
+                      : 'Show Closed Issues',
+                  onPressed: appState.toggleShowClosedInTree,
+                ),
+                ToolBarIconButton(
+                  label: 'Toggle Inspector',
+                  icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                  showLabel: false,
+                  tooltipMessage: 'Toggle Inspector',
+                  onPressed: () =>
+                      MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                ),
+                CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/tree'),
@@ -98,20 +103,27 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
               title: const Text('Tree View'),
               actions: [
                 ToolBarIconButton(
-                label: 'Toggle Closed Issues',
-                icon: MacosIcon(appState.showClosedInTree ? CupertinoIcons.eye : CupertinoIcons.eye_slash),
-                showLabel: false,
-                tooltipMessage: appState.showClosedInTree ? 'Hide Closed Issues' : 'Show Closed Issues',
-                onPressed: appState.toggleShowClosedInTree,
-              ),
-              ToolBarIconButton(
-                label: 'Toggle Inspector',
-                icon: const MacosIcon(CupertinoIcons.sidebar_right),
-                showLabel: false,
-                tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
-              ),
-              CustomToolbarItem(
+                  label: 'Toggle Closed Issues',
+                  icon: MacosIcon(
+                    appState.showClosedInTree
+                        ? CupertinoIcons.eye
+                        : CupertinoIcons.eye_slash,
+                  ),
+                  showLabel: false,
+                  tooltipMessage: appState.showClosedInTree
+                      ? 'Hide Closed Issues'
+                      : 'Show Closed Issues',
+                  onPressed: appState.toggleShowClosedInTree,
+                ),
+                ToolBarIconButton(
+                  label: 'Toggle Inspector',
+                  icon: const MacosIcon(CupertinoIcons.sidebar_right),
+                  showLabel: false,
+                  tooltipMessage: 'Toggle Inspector',
+                  onPressed: () =>
+                      MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                ),
+                CustomToolbarItem(
                   inToolbarBuilder: (context) => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: ViewModeSegmentedControl(currentRoute: '/tree'),
@@ -129,7 +141,9 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                       children: [
                         Text(
                           'Error: ${appState.error}',
-                          style: const TextStyle(color: MacosColors.systemRedColor),
+                          style: const TextStyle(
+                            color: MacosColors.systemRedColor,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
@@ -147,7 +161,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                   ),
                 ),
               ),
-            ],          );
+            ],
+          );
         }
 
         final issues = appState.currentIssues;
@@ -157,14 +172,15 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
         final topLevelIssues = issues.where((issue) {
           final isTopLevel = !issue.hasParentIn(issues);
           if (!isTopLevel) return false;
-          
+
           if (!appState.showClosedInTree && issue.status == 'closed') {
             // If it IS top-level but closed, we only show it if it has an open descendant.
             // This prevents open subtasks from disappearing when the parent Epic is closed.
             return issue.hasOpenDescendant(issues);
           }
 
-          return true;        }).toList();
+          return true;
+        }).toList();
 
         return MacosScaffold(
           toolBar: ToolBar(
@@ -199,9 +215,15 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
               ),
               ToolBarIconButton(
                 label: 'Toggle Closed Issues',
-                icon: MacosIcon(appState.showClosedInTree ? CupertinoIcons.eye : CupertinoIcons.eye_slash),
+                icon: MacosIcon(
+                  appState.showClosedInTree
+                      ? CupertinoIcons.eye
+                      : CupertinoIcons.eye_slash,
+                ),
                 showLabel: false,
-                tooltipMessage: appState.showClosedInTree ? 'Hide Closed Issues' : 'Show Closed Issues',
+                tooltipMessage: appState.showClosedInTree
+                    ? 'Hide Closed Issues'
+                    : 'Show Closed Issues',
                 onPressed: appState.toggleShowClosedInTree,
               ),
               ToolBarIconButton(
@@ -209,7 +231,8 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
                 showLabel: false,
                 tooltipMessage: 'Toggle Inspector',
-                onPressed: () => MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
+                onPressed: () =>
+                    MacosWindowScope.maybeOf(context)?.toggleEndSidebar(),
               ),
               CustomToolbarItem(
                 inToolbarBuilder: (context) => const Padding(

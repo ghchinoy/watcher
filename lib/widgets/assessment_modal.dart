@@ -8,7 +8,11 @@ class AssessmentModal extends StatefulWidget {
   final Project project;
   final AppState appState;
 
-  const AssessmentModal({super.key, required this.project, required this.appState});
+  const AssessmentModal({
+    super.key,
+    required this.project,
+    required this.appState,
+  });
 
   @override
   State<AssessmentModal> createState() => _AssessmentModalState();
@@ -38,19 +42,22 @@ class _AssessmentModalState extends State<AssessmentModal> {
         ghosttyTheme: widget.appState.ghosttyTheme,
         ghosttyFontFamily: widget.appState.ghosttyFontFamily,
       );
-      
+
       if (!started) {
         if (mounted) {
           setState(() {
-            _assessmentMarkdown = "No open issues found in the project. The graph is healthy!";
+            _assessmentMarkdown =
+                "No open issues found in the project. The graph is healthy!";
             _isAssessing = false;
           });
         }
         return;
       }
 
-      final result = await PlannerService.pollForCompletion(widget.project.path);
-      
+      final result = await PlannerService.pollForCompletion(
+        widget.project.path,
+      );
+
       if (mounted) {
         setState(() {
           _assessmentMarkdown = result;
@@ -84,9 +91,11 @@ class _AssessmentModalState extends State<AssessmentModal> {
         ghosttyTheme: widget.appState.ghosttyTheme,
         ghosttyFontFamily: widget.appState.ghosttyFontFamily,
       );
-      
-      final script = await PlannerService.pollForCompletion(widget.project.path);
-      
+
+      final script = await PlannerService.pollForCompletion(
+        widget.project.path,
+      );
+
       if (mounted) {
         setState(() {
           _fixScriptMarkdown = script;
@@ -133,9 +142,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
-      decoration: BoxDecoration(
-        color: MacosTheme.of(context).canvasColor,
-      ),
+      decoration: BoxDecoration(color: MacosTheme.of(context).canvasColor),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

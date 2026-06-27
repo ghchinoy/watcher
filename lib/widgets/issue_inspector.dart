@@ -51,14 +51,21 @@ class _IssueInspectorState extends State<IssueInspector> {
                   _buildStatusDropdown(context),
                   _buildPriorityDropdown(context),
                   _buildSection('Type', issue.issueType.toUpperCase(), context),
-                  
+
                   // People
-                  _buildEditableField('Owner', issue.owner ?? '', context, (value) {
+                  _buildEditableField('Owner', issue.owner ?? '', context, (
+                    value,
+                  ) {
                     appState.updateIssue(issue.id, owner: value);
                   }),
-                  _buildEditableField('Assignee', issue.assignee ?? '', context, (value) {
-                    appState.updateIssue(issue.id, assignee: value);
-                  }),
+                  _buildEditableField(
+                    'Assignee',
+                    issue.assignee ?? '',
+                    context,
+                    (value) {
+                      appState.updateIssue(issue.id, assignee: value);
+                    },
+                  ),
 
                   _buildDependenciesSection(context),
 
@@ -67,10 +74,7 @@ class _IssueInspectorState extends State<IssueInspector> {
                   const SizedBox(height: 16),
 
                   // Description
-                  Text(
-                    'Description',
-                    style: theme.typography.headline,
-                  ),
+                  Text('Description', style: theme.typography.headline),
                   const SizedBox(height: 8),
                   Text(
                     issue.description?.isNotEmpty == true
@@ -86,10 +90,7 @@ class _IssueInspectorState extends State<IssueInspector> {
                   const SizedBox(height: 16),
 
                   // Notes
-                  Text(
-                    'Notes',
-                    style: theme.typography.headline,
-                  ),
+                  Text('Notes', style: theme.typography.headline),
                   const SizedBox(height: 8),
                   Text(
                     issue.notes?.isNotEmpty == true
@@ -125,23 +126,32 @@ class _IssueInspectorState extends State<IssueInspector> {
     final textStyle = theme.typography.footnote.copyWith(
       color: MacosColors.systemGrayColor,
     );
-    
+
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (issue.createdBy != null && issue.createdBy!.isNotEmpty)
-            Text('Created by ${issue.createdBy} on ${_formatDate(issue.createdAt)}', style: textStyle)
+            Text(
+              'Created by ${issue.createdBy} on ${_formatDate(issue.createdAt)}',
+              style: textStyle,
+            )
           else
-            Text('Created on ${_formatDate(issue.createdAt)}', style: textStyle),
-          
-          Text('Last updated ${_formatDate(issue.updatedAt)}', style: textStyle),
-          
+            Text(
+              'Created on ${_formatDate(issue.createdAt)}',
+              style: textStyle,
+            ),
+
+          Text(
+            'Last updated ${_formatDate(issue.updatedAt)}',
+            style: textStyle,
+          ),
+
           if (issue.closedAt != null)
             Text(
-              'Closed on ${_formatDate(issue.closedAt!)}${issue.closeReason?.isNotEmpty == true ? ' (${issue.closeReason})' : ''}', 
-              style: textStyle
+              'Closed on ${_formatDate(issue.closedAt!)}${issue.closeReason?.isNotEmpty == true ? ' (${issue.closeReason})' : ''}',
+              style: textStyle,
             ),
         ],
       ),
@@ -344,18 +354,15 @@ class _IssueInspectorState extends State<IssueInspector> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Comments',
-          style: MacosTheme.of(context).typography.headline,
-        ),
+        Text('Comments', style: MacosTheme.of(context).typography.headline),
         const SizedBox(height: 8),
         if (appState.selectedIssueComments.isEmpty)
           Text(
             'No comments yet.',
             style: MacosTheme.of(context).typography.footnote.copyWith(
-                  color: MacosColors.systemGrayColor,
-                  fontStyle: FontStyle.italic,
-                ),
+              color: MacosColors.systemGrayColor,
+              fontStyle: FontStyle.italic,
+            ),
           )
         else
           ListView.separated(
@@ -384,26 +391,34 @@ class _IssueInspectorState extends State<IssueInspector> {
                       children: [
                         Text(
                           comment['author']?.toString() ?? 'Unknown',
-                          style: MacosTheme.of(context).typography.body.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                          style: MacosTheme.of(context).typography.body
+                              .copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                         ),
                         Text(
-                          comment['created_at'] != null 
-                            ? _formatDate(DateTime.parse(comment['created_at'].toString()).toLocal()) 
-                            : '',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                            color: MacosColors.systemGrayColor,
-                            fontSize: 10,
-                          ),
+                          comment['created_at'] != null
+                              ? _formatDate(
+                                  DateTime.parse(
+                                    comment['created_at'].toString(),
+                                  ).toLocal(),
+                                )
+                              : '',
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(
+                                color: MacosColors.systemGrayColor,
+                                fontSize: 10,
+                              ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Text(
                       comment['text']?.toString() ?? '',
-                      style: MacosTheme.of(context).typography.body.copyWith(fontSize: 13),
+                      style: MacosTheme.of(
+                        context,
+                      ).typography.body.copyWith(fontSize: 13),
                     ),
                   ],
                 ),
@@ -431,7 +446,10 @@ class _IssueInspectorState extends State<IssueInspector> {
               ),
               onPressed: () {
                 if (_commentController.text.trim().isNotEmpty) {
-                  appState.addComment(widget.issue.id, _commentController.text.trim());
+                  appState.addComment(
+                    widget.issue.id,
+                    _commentController.text.trim(),
+                  );
                   _commentController.clear();
                 }
               },
@@ -462,7 +480,12 @@ class _IssueInspectorState extends State<IssueInspector> {
     );
   }
 
-  Widget _buildEditableField(String title, String initialValue, BuildContext context, Function(String) onSubmitted) {
+  Widget _buildEditableField(
+    String title,
+    String initialValue,
+    BuildContext context,
+    Function(String) onSubmitted,
+  ) {
     final controller = TextEditingController(text: initialValue);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -472,9 +495,9 @@ class _IssueInspectorState extends State<IssueInspector> {
           Text(
             title,
             style: MacosTheme.of(context).typography.footnote.copyWith(
-                  color: MacosColors.systemGrayColor,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: MacosColors.systemGrayColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           MacosTextField(

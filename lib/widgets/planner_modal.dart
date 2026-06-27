@@ -8,7 +8,11 @@ class PlannerModal extends StatefulWidget {
   final Project project;
   final AppState appState;
 
-  const PlannerModal({super.key, required this.project, required this.appState});
+  const PlannerModal({
+    super.key,
+    required this.project,
+    required this.appState,
+  });
 
   @override
   State<PlannerModal> createState() => _PlannerModalState();
@@ -45,9 +49,11 @@ class _PlannerModalState extends State<PlannerModal> {
         ghosttyTheme: widget.appState.ghosttyTheme,
         ghosttyFontFamily: widget.appState.ghosttyFontFamily,
       );
-      
-      final result = await PlannerService.pollForCompletion(widget.project.path);
-      
+
+      final result = await PlannerService.pollForCompletion(
+        widget.project.path,
+      );
+
       if (mounted) {
         setState(() {
           _planMarkdown = result;
@@ -98,9 +104,7 @@ class _PlannerModalState extends State<PlannerModal> {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
-      decoration: BoxDecoration(
-        color: MacosTheme.of(context).canvasColor,
-      ),
+      decoration: BoxDecoration(color: MacosTheme.of(context).canvasColor),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

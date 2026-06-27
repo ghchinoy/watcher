@@ -25,19 +25,20 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-              const MethodChannel('dev.fluttercommunity.plus/package_info'),
-              (MethodCall methodCall) async {
-        if (methodCall.method == 'getAll') {
-          return <String, dynamic>{
-            'appName': 'watcher',
-            'packageName': 'wtf.ghc.watcher',
-            'version': '1.0.0',
-            'buildNumber': '1',
-            'buildSignature': '',
-          };
-        }
-        return null;
-      });
+            const MethodChannel('dev.fluttercommunity.plus/package_info'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'getAll') {
+                return <String, dynamic>{
+                  'appName': 'watcher',
+                  'packageName': 'wtf.ghc.watcher',
+                  'version': '1.0.0',
+                  'buildNumber': '1',
+                  'buildSignature': '',
+                };
+              }
+              return null;
+            },
+          );
     });
 
     test('initializes with empty projects if no shared prefs', () async {
@@ -49,27 +50,33 @@ void main() {
       expect(state.selectedProject, isNull);
     });
 
-    test('addProject adds a project and selects it if it is the first', () async {
-      final state = AppState();
-      await state.addProject('/some/path');
-      
-      expect(state.projects.length, 1);
-      expect(state.projects.first.path, '/some/path');
-      expect(state.selectedProject?.path, '/some/path');
-    });
-    
-    test('removeProject removes the project and updates selected project', () async {
-      final state = AppState();
-      await state.addProject('/some/path1');
-      await state.addProject('/some/path2');
-      
-      expect(state.projects.length, 2);
-      
-      final p1 = state.projects.firstWhere((p) => p.path == '/some/path1');
-      await state.removeProject(p1);
-      
-      expect(state.projects.length, 1);
-      expect(state.projects.first.path, '/some/path2');
-    });
+    test(
+      'addProject adds a project and selects it if it is the first',
+      () async {
+        final state = AppState();
+        await state.addProject('/some/path');
+
+        expect(state.projects.length, 1);
+        expect(state.projects.first.path, '/some/path');
+        expect(state.selectedProject?.path, '/some/path');
+      },
+    );
+
+    test(
+      'removeProject removes the project and updates selected project',
+      () async {
+        final state = AppState();
+        await state.addProject('/some/path1');
+        await state.addProject('/some/path2');
+
+        expect(state.projects.length, 2);
+
+        final p1 = state.projects.firstWhere((p) => p.path == '/some/path1');
+        await state.removeProject(p1);
+
+        expect(state.projects.length, 1);
+        expect(state.projects.first.path, '/some/path2');
+      },
+    );
   });
 }

@@ -35,9 +35,7 @@ class GenerativeAiService {
     }
 
     try {
-      final ai = FirebaseAI.vertexAI(
-        location: config.region,
-      );
+      final ai = FirebaseAI.vertexAI(location: config.region);
 
       final model = ai.generativeModel(
         model: config.identifier,
@@ -62,7 +60,7 @@ ${comments.map((c) => "${c['author']}: ${c['text']}").join('\n')}
 ${gitDiff != null ? "Git Diff:\n$gitDiff" : ""}
 
 Resolution Summary:
-''')
+'''),
       ];
 
       final response = await model.generateContent(prompt);

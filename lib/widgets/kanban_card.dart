@@ -42,9 +42,8 @@ class KanbanCard extends StatelessWidget {
                     children: [
                       Text(
                         issue.id,
-                        style: MacosTheme.of(context).typography.footnote.copyWith(
-                          color: MacosColors.systemGrayColor,
-                        ),
+                        style: MacosTheme.of(context).typography.footnote
+                            .copyWith(color: MacosColors.systemGrayColor),
                       ),
                       if (isLocked) ...[
                         const SizedBox(width: 6),
@@ -65,9 +64,9 @@ class KanbanCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 issue.title,
-                style: MacosTheme.of(context).typography.body.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: MacosTheme.of(
+                  context,
+                ).typography.body.copyWith(fontWeight: FontWeight.bold),
               ),
               if (issue.assignee != null && issue.assignee!.isNotEmpty) ...[
                 const SizedBox(height: 8),

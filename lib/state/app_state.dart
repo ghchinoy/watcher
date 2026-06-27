@@ -50,11 +50,11 @@ class GenerativeModelConfig {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'display_name': displayName,
-        'identifier': identifier,
-        'region': region,
-      };
+    'id': id,
+    'display_name': displayName,
+    'identifier': identifier,
+    'region': region,
+  };
 }
 
 enum SidebarSortOrder { alphabetical, activity }
@@ -102,9 +102,10 @@ class AppState extends ChangeNotifier {
   Timer? _heartbeatTimer;
   BeadsService? _currentService;
   BeadsService? get currentService => _currentService;
-  
+
   int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
-  int heartbeatIntervalSeconds = 30; // Default to 30 seconds safety heartbeat. 0 means disabled.
+  int heartbeatIntervalSeconds =
+      30; // Default to 30 seconds safety heartbeat. 0 means disabled.
   String actorName = 'Watcher UI'; // Default identity
   String preferredTerminal = 'Ghostty'; // Default to Ghostty
   String? ghosttyTheme;
@@ -115,7 +116,10 @@ class AppState extends ChangeNotifier {
 
   GenerativeModelConfig? get defaultAiModel {
     if (defaultAiModelId == null || aiModels.isEmpty) return null;
-    return aiModels.firstWhere((m) => m.id == defaultAiModelId, orElse: () => aiModels.first);
+    return aiModels.firstWhere(
+      (m) => m.id == defaultAiModelId,
+      orElse: () => aiModels.first,
+    );
   }
 
   // Vertex AI Settings
@@ -131,12 +135,15 @@ class AppState extends ChangeNotifier {
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
     if (heartbeatIntervalSeconds <= 0) return; // Disabled
-    
-    _heartbeatTimer = Timer.periodic(Duration(seconds: heartbeatIntervalSeconds), (_) {
-      if (selectedProject != null && !isLoading && !isRefreshing) {
-        _refreshData();
-      }
-    });
+
+    _heartbeatTimer = Timer.periodic(
+      Duration(seconds: heartbeatIntervalSeconds),
+      (_) {
+        if (selectedProject != null && !isLoading && !isRefreshing) {
+          _refreshData();
+        }
+      },
+    );
   }
 
   Future<void> refreshActiveProject() async {
@@ -159,22 +166,25 @@ class AppState extends ChangeNotifier {
     preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
     ghosttyTheme = prefs.getString('ghostty_theme');
     ghosttyFontFamily = prefs.getString('ghostty_font_family');
-    
+
     showClosedInTree = prefs.getBool('show_closed_in_tree') ?? false;
     customBdPath = prefs.getString('custom_bd_path') ?? '';
-    
-    final sortOrderStr = prefs.getString('sidebar_sort_order') ?? 'alphabetical';
-    sidebarSortOrder = sortOrderStr == 'activity' 
-        ? SidebarSortOrder.activity 
+
+    final sortOrderStr =
+        prefs.getString('sidebar_sort_order') ?? 'alphabetical';
+    sidebarSortOrder = sortOrderStr == 'activity'
+        ? SidebarSortOrder.activity
         : SidebarSortOrder.alphabetical;
 
     // Load Vertex AI Settings
     gcpProjectId = prefs.getString('gcp_project_id');
     vertexLocation = prefs.getString('vertex_location') ?? 'us-central1';
     geminiModel = prefs.getString('gemini_model') ?? 'gemini-3-flash-preview';
-    
+
     final modelData = prefs.getStringList('ai_models') ?? [];
-    aiModels = modelData.map((d) => GenerativeModelConfig.fromJson(jsonDecode(d))).toList();
+    aiModels = modelData
+        .map((d) => GenerativeModelConfig.fromJson(jsonDecode(d)))
+        .toList();
     defaultAiModelId = prefs.getString('default_ai_model_id');
 
     // Migration: If no models exist, add the legacy defaults
@@ -196,7 +206,7 @@ class AppState extends ChangeNotifier {
       defaultAiModelId = 'default-flash-3';
       _saveAiModels();
     }
-    
+
     // Load last viewed timestamps
     final lastViewedStrings = prefs.getStringList('project_last_viewed') ?? [];
     for (final str in lastViewedStrings) {
@@ -212,10 +222,12 @@ class AppState extends ChangeNotifier {
       actorName = savedActor;
     } else {
       try {
-        final result = await Process.run('git', ['config', 'user.name'], environment: {
-          'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
-        });
-        if (result.exitCode == 0 && result.stdout.toString().trim().isNotEmpty) {
+        final result = await Process.run('git', [
+          'config',
+          'user.name',
+        ], environment: macosPathEnv);
+        if (result.exitCode == 0 &&
+            result.stdout.toString().trim().isNotEmpty) {
           actorName = result.stdout.toString().trim();
         }
       } catch (_) {
@@ -234,7 +246,7 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('heartbeat_interval_seconds', seconds);
     notifyListeners();
-    
+
     // Restart heartbeat with new duration
     _startHeartbeat();
   }
@@ -311,12 +323,12 @@ class AppState extends ChangeNotifier {
     geminiModel = model;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('gemini_model', model);
-    
+
     // Automatically switch to global for preview models
     if (model.contains('-preview') && vertexLocation != 'global') {
       await setVertexLocation('global');
     }
-    
+
     notifyListeners();
   }
 
@@ -325,7 +337,7 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('sync_interval_minutes', minutes);
     notifyListeners();
-    
+
     // Restart the timer immediately with the new interval if we are on a federated project
     if (selectedProject != null && currentPeers.isNotEmpty) {
       _startSyncTimer();
@@ -394,7 +406,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadProjects() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Try to load from new JSON format first
     final projectDataList = prefs.getStringList('project_data');
     if (projectDataList != null) {
@@ -422,13 +434,20 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveProjects() async {
     final prefs = await SharedPreferences.getInstance();
-    final projectDataList = projects.map((p) => jsonEncode({
-      'path': p.path,
-      'tmuxSessionName': p.tmuxSessionName,
-    })).toList();
+    final projectDataList = projects
+        .map(
+          (p) => jsonEncode({
+            'path': p.path,
+            'tmuxSessionName': p.tmuxSessionName,
+          }),
+        )
+        .toList();
     await prefs.setStringList('project_data', projectDataList);
     // Also save simple paths for backwards compatibility / safety
-    await prefs.setStringList('project_paths', projects.map((p) => p.path).toList());
+    await prefs.setStringList(
+      'project_paths',
+      projects.map((p) => p.path).toList(),
+    );
   }
 
   void _setupGlobalWatchers() {
@@ -440,7 +459,8 @@ class AppState extends ChangeNotifier {
     for (final project in projects) {
       final backupDir = Directory('${project.path}/.beads/backup');
       if (backupDir.existsSync()) {
-        _globalWatchers[project.path] = backupDir.watch(recursive: true).listen((event) {
+        _globalWatchers[project
+            .path] = backupDir.watch(recursive: true).listen((event) {
           // If this is NOT the currently selected project, notify listeners
           // so the sidebar can re-render and check the lastModified timestamps for the blue dot.
           if (selectedProject?.path != project.path) {
@@ -464,7 +484,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> reorderProjects(int oldIndex, int newIndex, {bool isAdjusted = false}) async {
+  Future<void> reorderProjects(
+    int oldIndex,
+    int newIndex, {
+    bool isAdjusted = false,
+  }) async {
     if (oldIndex < 0 ||
         oldIndex >= projects.length ||
         newIndex < 0 ||
@@ -516,63 +540,63 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> removeProject(Project project) async {
-  projects.remove(project);
-  projectErrors.remove(project.path);
-  await _saveProjects();
+    projects.remove(project);
+    projectErrors.remove(project.path);
+    await _saveProjects();
 
-  _globalWatchers[project.path]?.cancel();
-  _globalWatchers.remove(project.path);
+    _globalWatchers[project.path]?.cancel();
+    _globalWatchers.remove(project.path);
 
-  if (selectedProject == project) {
-    if (projects.isNotEmpty) {
-      selectProject(projects.first);
+    if (selectedProject == project) {
+      if (projects.isNotEmpty) {
+        selectProject(projects.first);
+      } else {
+        selectedProject = null;
+        currentIssues = [];
+        currentGraph = [];
+        currentInteractions = [];
+        currentPeers = [];
+        _currentService?.dispose();
+        _currentService = null;
+        notifyListeners();
+      }
     } else {
-      selectedProject = null;
-      currentIssues = [];
-      currentGraph = [];
-      currentInteractions = [];
-      currentPeers = [];
-      _currentService?.dispose();
-      _currentService = null;
       notifyListeners();
     }
-  } else {
-    notifyListeners();
   }
-}
 
-bool hasUnreadActivity(Project project) {
-  if (selectedProject?.path == project.path) return false;
+  bool hasUnreadActivity(Project project) {
+    if (selectedProject?.path == project.path) return false;
 
-  final lastViewed = projectLastViewed[project.path];
-  if (lastViewed == null) return false;
+    final lastViewed = projectLastViewed[project.path];
+    if (lastViewed == null) return false;
 
-  final file = File('${project.path}/.beads/backup/events.jsonl');
-  if (file.existsSync()) {
+    final file = File('${project.path}/.beads/backup/events.jsonl');
+    if (file.existsSync()) {
+      final lastModified = file.lastModifiedSync();
+      return lastModified.isAfter(lastViewed);
+    }
+    return false;
+  }
+
+  String? getProjectLastActivity(Project project) {
+    final file = File('${project.path}/.beads/backup/events.jsonl');
+    if (!file.existsSync()) return null;
+
     final lastModified = file.lastModifiedSync();
-    return lastModified.isAfter(lastViewed);
+    final difference = DateTime.now().difference(lastModified);
+
+    if (difference.inMinutes < 1) {
+      return 'now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h';
+    } else if (difference.inDays < 30) {
+      return '${difference.inDays}d';
+    }
+    return null; // Don't show anything for very old projects
   }
-  return false;
-}
-
-String? getProjectLastActivity(Project project) {
-  final file = File('${project.path}/.beads/backup/events.jsonl');
-  if (!file.existsSync()) return null;
-
-  final lastModified = file.lastModifiedSync();
-  final difference = DateTime.now().difference(lastModified);
-
-  if (difference.inMinutes < 1) {
-    return 'now';
-  } else if (difference.inHours < 1) {
-    return '${difference.inMinutes}m';
-  } else if (difference.inDays < 1) {
-    return '${difference.inHours}h';
-  } else if (difference.inDays < 30) {
-    return '${difference.inDays}d';
-  }
-  return null; // Don't show anything for very old projects
-}
 
   List<Project> get sortedProjects {
     final list = List<Project>.from(projects);
@@ -582,8 +606,12 @@ String? getProjectLastActivity(Project project) {
       list.sort((a, b) {
         final fileA = File('${a.path}/.beads/backup/events.jsonl');
         final fileB = File('${b.path}/.beads/backup/events.jsonl');
-        final timeA = fileA.existsSync() ? fileA.lastModifiedSync() : DateTime(1970);
-        final timeB = fileB.existsSync() ? fileB.lastModifiedSync() : DateTime(1970);
+        final timeA = fileA.existsSync()
+            ? fileA.lastModifiedSync()
+            : DateTime(1970);
+        final timeB = fileB.existsSync()
+            ? fileB.lastModifiedSync()
+            : DateTime(1970);
         return timeB.compareTo(timeA); // Newest first
       });
     }
@@ -597,7 +625,10 @@ String? getProjectLastActivity(Project project) {
     notifyListeners();
   }
 
-  Future<void> setProjectTmuxSessionName(Project project, String? sessionName) async {
+  Future<void> setProjectTmuxSessionName(
+    Project project,
+    String? sessionName,
+  ) async {
     project.tmuxSessionName = sessionName;
     await _saveProjects();
     notifyListeners();
@@ -607,7 +638,7 @@ String? getProjectLastActivity(Project project) {
     _currentService?.dispose();
     _currentService = null;
     _syncTimer?.cancel();
-    
+
     selectedProject = project;
     isLoading = true;
     currentConnectionMode = null;
@@ -629,11 +660,12 @@ String? getProjectLastActivity(Project project) {
           notifyListeners();
         },
       );
-      
+
       // Fetch daemon and CLI versions explicitly on first load
       daemonVersion = await _currentService!.getVersion();
       cliVersion = await _currentService!.getCliVersion();
-      projectRequiredVersion = await _currentService!.getProjectRequiredVersion();
+      projectRequiredVersion = await _currentService!
+          .getProjectRequiredVersion();
       _checkUpstreamVersion();
 
       currentIssues = await _currentService!.getIssues();
@@ -658,7 +690,9 @@ String? getProjectLastActivity(Project project) {
 
   Future<void> _saveLastViewed() async {
     final prefs = await SharedPreferences.getInstance();
-    final list = projectLastViewed.entries.map((e) => '${e.key}|||${e.value.toIso8601String()}').toList();
+    final list = projectLastViewed.entries
+        .map((e) => '${e.key}|||${e.value.toIso8601String()}')
+        .toList();
     await prefs.setStringList('project_last_viewed', list);
   }
 
@@ -699,7 +733,14 @@ String? getProjectLastActivity(Project project) {
     }
   }
 
-  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee, String? parent}) async {
+  Future<void> updateIssue(
+    String id, {
+    String? status,
+    int? priority,
+    String? owner,
+    String? assignee,
+    String? parent,
+  }) async {
     if (selectedProject == null) return;
 
     // Optimistically update the selected issue if it matches
@@ -714,7 +755,7 @@ String? getProjectLastActivity(Project project) {
     try {
       if (_currentService != null) {
         await _currentService!.updateIssue(
-          id, 
+          id,
           status: status,
           priority: priority,
           owner: owner,
@@ -754,7 +795,13 @@ String? getProjectLastActivity(Project project) {
     }
   }
 
-  Future<void> createIssue(String title, String description, String type, {String? parent, int? priority}) async {
+  Future<void> createIssue(
+    String title,
+    String description,
+    String type, {
+    String? parent,
+    int? priority,
+  }) async {
     if (_currentService == null || selectedProject == null) return;
     try {
       await _currentService!.createIssue(
@@ -796,7 +843,6 @@ String? getProjectLastActivity(Project project) {
 
       projectLastViewed[projectPath] = DateTime.now();
       _saveLastViewed();
-
     } catch (e) {
       projectErrors[projectPath] = e.toString();
     } finally {
@@ -837,7 +883,7 @@ String? getProjectLastActivity(Project project) {
 
   Future<void> launchDoltServer() async {
     if (selectedProject == null) return;
-    
+
     final sessionName = "${selectedProject!.effectiveTmuxSessionName}_server";
     try {
       await TmuxService.ensureSession(sessionName, selectedProject!.path);
@@ -870,7 +916,11 @@ String? getProjectLastActivity(Project project) {
 
   Future<void> _checkUpstreamVersion() async {
     try {
-      final response = await http.get(Uri.parse('https://api.github.com/repos/steveyegge/beads/releases/latest'));
+      final response = await http.get(
+        Uri.parse(
+          'https://api.github.com/repos/steveyegge/beads/releases/latest',
+        ),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         upstreamVersion = data['tag_name'] as String?;

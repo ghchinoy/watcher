@@ -15,17 +15,20 @@ class ProjectDashboard extends StatelessWidget {
   void _showHealthCheck(BuildContext context) {
     showMacosSheet(
       context: context,
-      builder: (context) => MacosSheet(
-        child: HealthCheckModal(appState: appState),
-      ),
+      builder: (context) =>
+          MacosSheet(child: HealthCheckModal(appState: appState)),
     );
   }
 
   void _showPlanner(BuildContext context) {
     showMacosSheet(
       context: context,
-      builder: (context) =>
-          MacosSheet(child: PlannerModal(project: appState.selectedProject!, appState: appState)),
+      builder: (context) => MacosSheet(
+        child: PlannerModal(
+          project: appState.selectedProject!,
+          appState: appState,
+        ),
+      ),
     );
   }
 
@@ -33,7 +36,10 @@ class ProjectDashboard extends StatelessWidget {
     showMacosSheet(
       context: context,
       builder: (context) => MacosSheet(
-        child: AssessmentModal(project: appState.selectedProject!, appState: appState),
+        child: AssessmentModal(
+          project: appState.selectedProject!,
+          appState: appState,
+        ),
       ),
     );
   }
@@ -41,9 +47,8 @@ class ProjectDashboard extends StatelessWidget {
   void _showCreateIssue(BuildContext context) {
     showMacosSheet(
       context: context,
-      builder: (context) => MacosSheet(
-        child: CreateIssueModal(appState: appState),
-      ),
+      builder: (context) =>
+          MacosSheet(child: CreateIssueModal(appState: appState)),
     );
   }
 
@@ -254,24 +259,34 @@ class ProjectDashboard extends StatelessWidget {
                       const SizedBox(height: 20),
                       if (appState.projectRequiredVersion != null &&
                           appState.daemonVersion != null &&
-                          appState.projectRequiredVersion != appState.daemonVersion)
+                          appState.projectRequiredVersion !=
+                              appState.daemonVersion)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 20.0),
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: MacosColors.systemRedColor.withValues(alpha: 0.1),
-                              border: Border.all(color: MacosColors.systemRedColor),
+                              color: MacosColors.systemRedColor.withValues(
+                                alpha: 0.1,
+                              ),
+                              border: Border.all(
+                                color: MacosColors.systemRedColor,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               children: [
-                                const MacosIcon(CupertinoIcons.exclamationmark_octagon_fill, color: MacosColors.systemRedColor),
+                                const MacosIcon(
+                                  CupertinoIcons.exclamationmark_octagon_fill,
+                                  color: MacosColors.systemRedColor,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     'Incompatible Version: This project requires beads version ${appState.projectRequiredVersion}, but your Watcher daemon is running ${appState.daemonVersion}. Some features may be broken or unreadable.',
-                                    style: MacosTheme.of(context).typography.body,
+                                    style: MacosTheme.of(
+                                      context,
+                                    ).typography.body,
                                   ),
                                 ),
                               ],
@@ -284,18 +299,27 @@ class ProjectDashboard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: MacosColors.systemOrangeColor.withValues(alpha: 0.1),
-                              border: Border.all(color: MacosColors.systemOrangeColor),
+                              color: MacosColors.systemOrangeColor.withValues(
+                                alpha: 0.1,
+                              ),
+                              border: Border.all(
+                                color: MacosColors.systemOrangeColor,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               children: [
-                                const MacosIcon(CupertinoIcons.info_circle_fill, color: MacosColors.systemOrangeColor),
+                                const MacosIcon(
+                                  CupertinoIcons.info_circle_fill,
+                                  color: MacosColors.systemOrangeColor,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     'Dolt Embedded Mode: This project is running in single-writer mode. To avoid lock contention with background AI agents, we recommended running "bd dolt server" in your terminal.',
-                                    style: MacosTheme.of(context).typography.body,
+                                    style: MacosTheme.of(
+                                      context,
+                                    ).typography.body,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -309,7 +333,8 @@ class ProjectDashboard extends StatelessWidget {
                                 PushButton(
                                   controlSize: ControlSize.small,
                                   secondary: true,
-                                  onPressed: () => appState.reconnectActiveProject(),
+                                  onPressed: () =>
+                                      appState.reconnectActiveProject(),
                                   child: const Text('Reconnect'),
                                 ),
                               ],
@@ -361,14 +386,17 @@ class ProjectDashboard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: MacosDynamicColor.resolve(
                               MacosTheme.of(context).brightness.isDark
-                                  ? MacosColors.alternatingContentBackgroundColor
+                                  ? MacosColors
+                                        .alternatingContentBackgroundColor
                                   : MacosColors.controlBackgroundColor,
                               context,
                             ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: MacosColors.systemGrayColor.withValues(
-                                alpha: MacosTheme.of(context).brightness.isDark ? 0.1 : 0.2,
+                                alpha: MacosTheme.of(context).brightness.isDark
+                                    ? 0.1
+                                    : 0.2,
                               ),
                             ),
                           ),
@@ -407,14 +435,17 @@ class ProjectDashboard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: MacosDynamicColor.resolve(
                               MacosTheme.of(context).brightness.isDark
-                                  ? MacosColors.alternatingContentBackgroundColor
+                                  ? MacosColors
+                                        .alternatingContentBackgroundColor
                                   : MacosColors.controlBackgroundColor,
                               context,
                             ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: MacosColors.systemGrayColor.withValues(
-                                alpha: MacosTheme.of(context).brightness.isDark ? 0.1 : 0.2,
+                                alpha: MacosTheme.of(context).brightness.isDark
+                                    ? 0.1
+                                    : 0.2,
                               ),
                             ),
                           ),
@@ -457,7 +488,9 @@ class ProjectDashboard extends StatelessWidget {
                                         const SizedBox(width: 8),
                                         Text(
                                           peer['name'] ?? '',
-                                          style: MacosTheme.of(context).typography.headline,
+                                          style: MacosTheme.of(
+                                            context,
+                                          ).typography.headline,
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
@@ -518,14 +551,16 @@ class StatCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MacosDynamicColor.resolve(
-          isDark 
-            ? MacosColors.alternatingContentBackgroundColor 
-            : MacosColors.controlBackgroundColor,
+          isDark
+              ? MacosColors.alternatingContentBackgroundColor
+              : MacosColors.controlBackgroundColor,
           context,
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: MacosColors.systemGrayColor.withValues(alpha: isDark ? 0.1 : 0.2),
+          color: MacosColors.systemGrayColor.withValues(
+            alpha: isDark ? 0.1 : 0.2,
+          ),
         ),
       ),
       child: Column(
@@ -557,9 +592,9 @@ class SimpleStatCard extends StatelessWidget {
       title: title,
       child: Text(
         value,
-        style: MacosTheme.of(context).typography.title1.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+        style: MacosTheme.of(
+          context,
+        ).typography.title1.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -579,7 +614,12 @@ class PriorityStatCard extends StatelessWidget {
     required this.p3Count,
   });
 
-  Widget _buildBadge(BuildContext context, String label, int count, Color color) {
+  Widget _buildBadge(
+    BuildContext context,
+    String label,
+    int count,
+    Color color,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -602,9 +642,9 @@ class PriorityStatCard extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           count.toString(),
-          style: MacosTheme.of(context).typography.title2.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: MacosTheme.of(
+            context,
+          ).typography.title2.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );

@@ -81,10 +81,7 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
               message: 'Back to Dashboard',
               useMousePosition: false,
               child: MacosIconButton(
-                icon: const MacosIcon(
-                  CupertinoIcons.back,
-                  size: 20,
-                ),
+                icon: const MacosIcon(CupertinoIcons.back, size: 20),
                 boxConstraints: const BoxConstraints(
                   minHeight: 20,
                   minWidth: 20,
@@ -113,9 +110,8 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Detailed status information about the local beads database connection.',
-                        style: MacosTheme.of(context).typography.footnote.copyWith(
-                              color: MacosColors.systemGrayColor,
-                            ),
+                        style: MacosTheme.of(context).typography.footnote
+                            .copyWith(color: MacosColors.systemGrayColor),
                       ),
                       const SizedBox(height: 24),
                       const Text(
@@ -124,15 +120,15 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        appState.currentConnectionMode == 'server' 
-                          ? 'Server (Multi-Writer) - Recommended' 
-                          : appState.currentConnectionMode == 'embedded'
+                        appState.currentConnectionMode == 'server'
+                            ? 'Server (Multi-Writer) - Recommended'
+                            : appState.currentConnectionMode == 'embedded'
                             ? 'Embedded (Single-Writer) - Potential for lock contention'
                             : 'Detecting...',
                         style: MacosTheme.of(context).typography.body.copyWith(
-                          color: appState.currentConnectionMode == 'server' 
-                            ? MacosColors.systemGreenColor 
-                            : MacosColors.systemOrangeColor,
+                          color: appState.currentConnectionMode == 'server'
+                              ? MacosColors.systemGreenColor
+                              : MacosColors.systemOrangeColor,
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -144,9 +140,8 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Configure how Watcher interacts with your terminal and tmux.',
-                        style: MacosTheme.of(context).typography.footnote.copyWith(
-                              color: MacosColors.systemGrayColor,
-                            ),
+                        style: MacosTheme.of(context).typography.footnote
+                            .copyWith(color: MacosColors.systemGrayColor),
                       ),
                       const SizedBox(height: 24),
                       const Text(
@@ -156,9 +151,8 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Leave blank to auto-generate a deterministic name (e.g. watcher_projectname).',
-                        style: MacosTheme.of(context).typography.footnote.copyWith(
-                              color: MacosColors.systemGrayColor,
-                            ),
+                        style: MacosTheme.of(context).typography.footnote
+                            .copyWith(color: MacosColors.systemGrayColor),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
@@ -183,12 +177,11 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Connect this project to a remote Beads database.',
-                        style: MacosTheme.of(context).typography.footnote.copyWith(
-                              color: MacosColors.systemGrayColor,
-                            ),
+                        style: MacosTheme.of(context).typography.footnote
+                            .copyWith(color: MacosColors.systemGrayColor),
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Add new peer form
                       Container(
                         constraints: const BoxConstraints(maxWidth: 500),
@@ -200,7 +193,9 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                           ),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: MacosColors.systemGrayColor.withValues(alpha: 0.2),
+                            color: MacosColors.systemGrayColor.withValues(
+                              alpha: 0.2,
+                            ),
                           ),
                         ),
                         child: Column(
@@ -212,30 +207,41 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Add New Peer',
-                                  style: MacosTheme.of(context).typography.headline,
+                                  style: MacosTheme.of(
+                                    context,
+                                  ).typography.headline,
                                 ),
                               ],
                             ),
                             const SizedBox(height: 24),
-                            const Text('Peer Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Peer Name',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             const SizedBox(height: 4),
                             MacosTextField(
                               controller: _nameController,
                               placeholder: 'e.g., origin, bazaar, central',
                             ),
                             const SizedBox(height: 16),
-                            const Text('Endpoint URL', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Endpoint URL',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             const SizedBox(height: 4),
                             MacosTextField(
                               controller: _urlController,
-                              placeholder: 'e.g., gs://generative-bazaar-001-beads/project',
+                              placeholder:
+                                  'e.g., gs://generative-bazaar-001-beads/project',
                             ),
                             if (_error != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 16.0),
                                 child: Text(
                                   _error!,
-                                  style: const TextStyle(color: MacosColors.systemRedColor),
+                                  style: const TextStyle(
+                                    color: MacosColors.systemRedColor,
+                                  ),
                                 ),
                               ),
                             const SizedBox(height: 24),

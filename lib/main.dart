@@ -18,7 +18,7 @@ Future<void> _configureMacosWindowUtils() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _configureMacosWindowUtils();
-  
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -62,7 +62,10 @@ class WatcherApp extends StatelessWidget {
                         meta: true,
                       ),
                       onSelected: () {
-                        final context = appRouter.routerDelegate.navigatorKey.currentContext;
+                        final context = appRouter
+                            .routerDelegate
+                            .navigatorKey
+                            .currentContext;
                         if (context != null) SettingsModal.show(context);
                       },
                     ),
@@ -90,7 +93,8 @@ class WatcherApp extends StatelessWidget {
                       PlatformProvidedMenuItemType.hideOtherApplications,
                     ))
                       const PlatformProvidedMenuItem(
-                        type: PlatformProvidedMenuItemType.hideOtherApplications,
+                        type:
+                            PlatformProvidedMenuItemType.hideOtherApplications,
                       ),
                     if (PlatformProvidedMenuItem.hasMenu(
                       PlatformProvidedMenuItemType.showAllApplications,
@@ -119,8 +123,10 @@ class WatcherApp extends StatelessWidget {
                   members: [
                     PlatformMenuItem(
                       label: 'Undo',
-                      shortcut:
-                          SingleActivator(LogicalKeyboardKey.keyZ, meta: true),
+                      shortcut: SingleActivator(
+                        LogicalKeyboardKey.keyZ,
+                        meta: true,
+                      ),
                       onSelected: null, // OS handles shortcut
                     ),
                     PlatformMenuItem(
@@ -138,26 +144,34 @@ class WatcherApp extends StatelessWidget {
                   members: [
                     PlatformMenuItem(
                       label: 'Cut',
-                      shortcut:
-                          SingleActivator(LogicalKeyboardKey.keyX, meta: true),
+                      shortcut: SingleActivator(
+                        LogicalKeyboardKey.keyX,
+                        meta: true,
+                      ),
                       onSelected: null,
                     ),
                     PlatformMenuItem(
                       label: 'Copy',
-                      shortcut:
-                          SingleActivator(LogicalKeyboardKey.keyC, meta: true),
+                      shortcut: SingleActivator(
+                        LogicalKeyboardKey.keyC,
+                        meta: true,
+                      ),
                       onSelected: null,
                     ),
                     PlatformMenuItem(
                       label: 'Paste',
-                      shortcut:
-                          SingleActivator(LogicalKeyboardKey.keyV, meta: true),
+                      shortcut: SingleActivator(
+                        LogicalKeyboardKey.keyV,
+                        meta: true,
+                      ),
                       onSelected: null,
                     ),
                     PlatformMenuItem(
                       label: 'Select All',
-                      shortcut:
-                          SingleActivator(LogicalKeyboardKey.keyA, meta: true),
+                      shortcut: SingleActivator(
+                        LogicalKeyboardKey.keyA,
+                        meta: true,
+                      ),
                       onSelected: null,
                     ),
                   ],
@@ -202,7 +216,8 @@ class WatcherApp extends StatelessWidget {
               actions: <Type, Action<Intent>>{
                 _OpenSettingsIntent: CallbackAction<_OpenSettingsIntent>(
                   onInvoke: (intent) {
-                    final context = appRouter.routerDelegate.navigatorKey.currentContext;
+                    final context =
+                        appRouter.routerDelegate.navigatorKey.currentContext;
                     if (context != null) SettingsModal.show(context);
                     return null;
                   },

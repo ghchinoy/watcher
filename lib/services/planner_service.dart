@@ -14,7 +14,8 @@ class PlannerService {
     String? ghosttyTheme,
     String? ghosttyFontFamily,
   }) async {
-    final prompt = '''
+    final prompt =
+        '''
 You are an expert AI Project Manager and Planner.
 The user wants to accomplish the following goal in the current workspace: "$goal"
 
@@ -43,8 +44,9 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
 
     // 4. Construct the shell pipeline to run inside tmux
     // It reads the prompt file, runs gemini, tees the output, and writes the lockfile when done
-    final command = 'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
-    
+    final command =
+        'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
+
     // 5. Send keys to the tmux session
     await TmuxService.sendKeys(sessionName, command);
 
@@ -60,7 +62,7 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
   static Future<String> pollForCompletion(String workspacePath) async {
     final doneFile = File('$workspacePath/.beads/ai_done');
     final outFile = File('$workspacePath/.beads/ai_out.md');
-    
+
     // Poll every second until ai_done exists
     while (!doneFile.existsSync()) {
       await Future.delayed(const Duration(seconds: 1));
@@ -98,17 +100,18 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     final tempFile = File('$workspacePath/.beads/temp_plan.sh');
     await tempFile.writeAsString(bashCommands);
 
-    String basePath = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
+    String basePath = macosDefaultPath;
     if (appState.customBdPath.isNotEmpty) {
       final customDir = File(appState.customBdPath).parent.path;
       basePath = '$customDir:$basePath';
     }
 
-    final result = await Process.run('bash', [
-      '.beads/temp_plan.sh',
-    ], workingDirectory: workspacePath, environment: {
-      'PATH': basePath,
-    });
+    final result = await Process.run(
+      'bash',
+      ['.beads/temp_plan.sh'],
+      workingDirectory: workspacePath,
+      environment: {'PATH': basePath},
+    );
 
     // Clean up
     if (await tempFile.exists()) {
@@ -139,7 +142,8 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     // Convert issues back to JSONL for the prompt
     final exportData = issues.map((i) => jsonEncode(i.toJson())).join('\n');
 
-    final prompt = '''
+    final prompt =
+        '''
 You are an expert Agile Scrum Master and Project Manager.
 Analyze the following JSONL output from the `bd` issue tracker for a software project.
 
@@ -169,8 +173,9 @@ $exportData
     await TmuxService.ensureSession(sessionName, workspacePath);
 
     // 4. Command
-    final command = 'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
-    
+    final command =
+        'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
+
     // 5. Run & Attach
     await TmuxService.sendKeys(sessionName, command);
     await TmuxService.attachInTerminal(
@@ -191,7 +196,8 @@ $exportData
     String? ghosttyTheme,
     String? ghosttyFontFamily,
   }) async {
-    final prompt = '''
+    final prompt =
+        '''
   You are an expert Agile Scrum Master. Below is an AI Health Assessment of a project's issue tracker.
 
   Your task is to write a bash script containing EXCLUSIVELY `bd update` commands to fix the issues identified in the assessment (e.g., fixing priority inversions by changing priorities, or reparenting orphaned tasks). 
@@ -217,8 +223,9 @@ $exportData
     await TmuxService.ensureSession(sessionName, workspacePath);
 
     // 4. Command
-    final command = 'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
-    
+    final command =
+        'gemini -p "\$(cat .beads/ai_prompt.txt)" --approval-mode plan | tee .beads/ai_out.md; touch .beads/ai_done';
+
     // 5. Run & Attach
     await TmuxService.sendKeys(sessionName, command);
     await TmuxService.attachInTerminal(

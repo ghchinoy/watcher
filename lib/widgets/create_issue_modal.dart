@@ -6,11 +6,7 @@ class CreateIssueModal extends StatefulWidget {
   final AppState appState;
   final String? initialType; // 'task' or 'epic'
 
-  const CreateIssueModal({
-    super.key,
-    required this.appState,
-    this.initialType,
-  });
+  const CreateIssueModal({super.key, required this.appState, this.initialType});
 
   @override
   State<CreateIssueModal> createState() => _CreateIssueModalState();
@@ -61,7 +57,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         title,
         description,
         _selectedType,
-        parent: _selectedType == 'task' || _selectedType == 'bug' ? _selectedEpicId : null,
+        parent: _selectedType == 'task' || _selectedType == 'bug'
+            ? _selectedEpicId
+            : null,
         priority: _selectedPriority,
       );
       if (mounted) {
@@ -79,13 +77,13 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
   @override
   Widget build(BuildContext context) {
-    final epics = widget.appState.currentIssues.where((i) => i.issueType == 'epic').toList();
+    final epics = widget.appState.currentIssues
+        .where((i) => i.issueType == 'epic')
+        .toList();
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
-      decoration: BoxDecoration(
-        color: MacosTheme.of(context).canvasColor,
-      ),
+      decoration: BoxDecoration(color: MacosTheme.of(context).canvasColor),
       padding: const EdgeInsets.all(20.0),
       child: SingleChildScrollView(
         child: Column(
@@ -106,11 +104,11 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             Text(
               'Add a new item to your local beads project.',
               style: MacosTheme.of(context).typography.footnote.copyWith(
-                    color: MacosColors.systemGrayColor,
-                  ),
+                color: MacosColors.systemGrayColor,
+              ),
             ),
             const SizedBox(height: 24),
-            
+
             const Text('Type', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             MacosPopupButton<String>(
@@ -133,7 +131,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 16),
 
-            const Text('Priority', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Priority',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             MacosPopupButton<int>(
               value: _selectedPriority,
@@ -163,7 +164,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 16),
 
-            const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Description',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             MacosTextField(
               controller: _descriptionController,
@@ -171,19 +175,28 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               maxLines: 5,
             ),
 
-            if ((_selectedType == 'task' || _selectedType == 'bug') && epics.isNotEmpty) ...[
+            if ((_selectedType == 'task' || _selectedType == 'bug') &&
+                epics.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text('Parent Epic', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Parent Epic',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
               MacosPopupButton<String?>(
                 value: _selectedEpicId,
                 hint: const Text('None'),
                 items: [
-                  const MacosPopupMenuItem<String?>(value: null, child: Text('None')),
-                  ...epics.map((epic) => MacosPopupMenuItem<String?>(
-                        value: epic.id,
-                        child: Text('${epic.title} (${epic.id})'),
-                      )),
+                  const MacosPopupMenuItem<String?>(
+                    value: null,
+                    child: Text('None'),
+                  ),
+                  ...epics.map(
+                    (epic) => MacosPopupMenuItem<String?>(
+                      value: epic.id,
+                      child: Text('${epic.title} (${epic.id})'),
+                    ),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() {

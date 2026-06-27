@@ -95,7 +95,9 @@ class _TreeNodeState extends State<TreeNode> {
                     // Cannot drop epic onto another issue (to avoid epic hierarchy)
                     if (dragged.issueType == 'epic') return false;
                     // Prevent circular dependencies (dragged is an ancestor of target)
-                    if (widget.issue.isDescendantOf(dragged, widget.allIssues)) return false;
+                    if (widget.issue.isDescendantOf(dragged, widget.allIssues)) {
+                      return false;
+                    }
                     return true;
                   },
                   onAcceptWithDetails: (details) {
@@ -106,7 +108,11 @@ class _TreeNodeState extends State<TreeNode> {
                     final isHovered = candidateData.isNotEmpty;
                     return Container(
                       decoration: BoxDecoration(
-                        color: isHovered ? MacosTheme.of(context).primaryColor.withValues(alpha: 0.1) : null,
+                        color: isHovered
+                            ? MacosTheme.of(
+                                context,
+                              ).primaryColor.withValues(alpha: 0.1)
+                            : null,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Draggable<Issue>(
@@ -120,7 +126,9 @@ class _TreeNodeState extends State<TreeNode> {
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0x33000000), // black with 0.2 alpha
+                                  color: const Color(
+                                    0x33000000,
+                                  ), // black with 0.2 alpha
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -128,7 +136,9 @@ class _TreeNodeState extends State<TreeNode> {
                             ),
                             child: DefaultTextStyle(
                               style: MacosTheme.of(context).typography.body,
-                              child: Text('${widget.issue.id} - ${widget.issue.title}'),
+                              child: Text(
+                                '${widget.issue.id} - ${widget.issue.title}',
+                              ),
                             ),
                           ),
                         ),
