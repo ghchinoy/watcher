@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.8.0](https://github.com/ghchinoy/watcher/compare/agent_watcher-v0.7.0...agent_watcher-v0.8.0) (2026-06-27)
+
+
+### Features
+
+* introduce configurable safety heartbeat and fix daemon subprocess executable PATH resolution ([4c916bc](https://github.com/ghchinoy/watcher/commit/4c916bcedc0900c2782177b89d490d232af45527))
+* **tree_view:** add drag and drop reparenting ([0d3affb](https://github.com/ghchinoy/watcher/commit/0d3affb879af0fc4fc22589c6c72a96cdac2fcd1))
+* trigger minor release for recent daemon and UI updates ([322afa6](https://github.com/ghchinoy/watcher/commit/322afa6d313ef1921fe5cf865f709b8e8c99ff3c))
+* update default AI model to gemini-3.5-flash with versioned migration ([93ca822](https://github.com/ghchinoy/watcher/commit/93ca82201eaf0d918522c717d3b5f6d54de7b335))
+
+
+### Bug Fixes
+
+* **build:** disable SPM and update pods ([f68dd29](https://github.com/ghchinoy/watcher/commit/f68dd29939b40c738992ef58bf6b0c1677329700))
+* correct relative path for zip artifact in release workflow ([f67b97b](https://github.com/ghchinoy/watcher/commit/f67b97b7390b3c3e669a9b692cd5714bce3a8ceb))
+* **daemon:** Use dolt remotes for get_peers ([1b15c2b](https://github.com/ghchinoy/watcher/commit/1b15c2badb528af7231205b3f6aea4653c884833))
+* ensure health check diagnostics marshals to empty array instead of null ([2060418](https://github.com/ghchinoy/watcher/commit/20604185df5f5623839928dab0bb17eb6a1d2d9b))
+* preserve hierarchy for open subtasks of closed parents in tree view ([e6f011c](https://github.com/ghchinoy/watcher/commit/e6f011c6131dc86b1d8fc66d6c7468c7365d1eaf))
+* remove nested MacosSheet from HealthCheckModal to fix layout and close button ([424dfc6](https://github.com/ghchinoy/watcher/commit/424dfc61257ff9e65a1c042e22cd3e53fc71e242))
+* **ui:** Update interaction parsing to support new beads schema ([e3a9471](https://github.com/ghchinoy/watcher/commit/e3a9471bcc86bb99d8b4d48128525426bc086e84))
+* update beads daemon interactions path ([0c5a7d5](https://github.com/ghchinoy/watcher/commit/0c5a7d5f939f6690931a762120aaeaf2ca9a400c))
+* update ghostty applescript to use input text command ([8fe260a](https://github.com/ghchinoy/watcher/commit/8fe260aa63cad1d8d039b437fbd5a971c5e7865e))
+
 ## [0.7.0](https://github.com/ghchinoy/watcher/compare/agent_watcher-v0.6.1...agent_watcher-v0.7.0) (2026-04-28)
 
 
