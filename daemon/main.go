@@ -14,6 +14,8 @@ import (
 	"github.com/steveyegge/beads"
 )
 
+const macosDeveloperPath = "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
 var outputWriter io.Writer = os.Stdout
 
 type Request struct {
@@ -162,7 +164,7 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
 	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	cmd.Env = append(os.Environ(), macosDeveloperPath)
 	_ = cmd.Run()
 
 	sendResponse(Response{
@@ -193,7 +195,7 @@ func handleCloseIssue(ctx context.Context, storage beads.Storage, req Request) {
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
 	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	cmd.Env = append(os.Environ(), macosDeveloperPath)
 	_ = cmd.Run()
 
 	sendResponse(Response{
@@ -214,7 +216,7 @@ func handleGetComments(ctx context.Context, storage beads.Storage, req Request) 
 
         // Because beads/internal/types is internal, we shell out to bd comments --json
         cmd := exec.Command("bd", "comments", params.ID, "--json")
-        cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	cmd.Env = append(os.Environ(), macosDeveloperPath)
         out, err := cmd.Output()
         if err != nil {
                 sendError(req.ID, -32000, fmt.Sprintf("failed to get comments: %v", string(out)))
@@ -251,7 +253,7 @@ func handleAddComment(ctx context.Context, storage beads.Storage, req Request) {
         // Pass actor and path down to the command
         cmd.Env = append(os.Environ(), 
             fmt.Sprintf("BD_ACTOR=%s", params.Actor),
-            "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+            macosDeveloperPath,
         )
         
         if out, err := cmd.CombinedOutput(); err != nil {
@@ -286,7 +288,7 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	// Trigger a background export so .beads/backup/events.jsonl updates, 
 	// which notifies the UI file watcher that changes occurred.
 	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	cmd.Env = append(os.Environ(), macosDeveloperPath)
 	_ = cmd.Run()
 
 	sendResponse(Response{
@@ -424,7 +426,7 @@ func main() {
 	// that might be holding a dead port or a dead file lock before we attempt to connect.
 	// We shell out to 'bd dolt killall' since doltserver is an internal package.
 	killCmd := exec.Command("bd", "dolt", "killall")
-	killCmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	killCmd.Env = append(os.Environ(), macosDeveloperPath)
 	killCmd.Dir = repoPath
 	if out, err := killCmd.CombinedOutput(); err == nil {
 		// Just log it internally; it's a helpful sanity check

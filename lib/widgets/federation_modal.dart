@@ -58,7 +58,10 @@ class _FederationModalState extends State<FederationModal> {
   @override
   Widget build(BuildContext context) {
     return MacosScaffold(
-      backgroundColor: MacosDynamicColor.resolve(MacosColors.windowBackgroundColor, context),
+      backgroundColor: MacosDynamicColor.resolve(
+        MacosColors.windowBackgroundColor,
+        context,
+      ),
       children: [
         ContentArea(
           builder: (context, scrollController) {
@@ -83,29 +86,38 @@ class _FederationModalState extends State<FederationModal> {
                   Text(
                     'Connect this project to a remote Beads database.',
                     style: MacosTheme.of(context).typography.footnote.copyWith(
-                          color: MacosColors.systemGrayColor,
-                        ),
+                      color: MacosColors.systemGrayColor,
+                    ),
                   ),
                   const SizedBox(height: 24),
-                  const Text('Peer Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Peer Name',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   MacosTextField(
                     controller: _nameController,
                     placeholder: 'e.g., origin, bazaar, central',
                   ),
                   const SizedBox(height: 16),
-                  const Text('Endpoint URL', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Endpoint URL',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   MacosTextField(
                     controller: _urlController,
-                    placeholder: 'e.g., gs://generative-bazaar-001-beads/project',
+                    placeholder:
+                        'e.g., gs://generative-bazaar-001-beads/project',
                   ),
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 16.0),
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: MacosColors.systemRedColor),
+                        style: const TextStyle(
+                          color: MacosColors.systemRedColor,
+                        ),
                       ),
                     ),
                   const SizedBox(height: 24),

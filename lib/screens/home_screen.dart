@@ -68,9 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ), // Transparent to allow vibrancy
           sidebar: Sidebar(
             minWidth: 200,
-            decoration: const BoxDecoration(
-              color: MacosColors.transparent,
-            ),
+            decoration: const BoxDecoration(color: MacosColors.transparent),
             builder: (context, scrollController) {
               return SidebarItems(
                 currentIndex: _currentIndex,
@@ -119,7 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   ...appState.sortedProjects.map((p) {
-                    final isSelected = appState.selectedProject == p && _currentIndex != -1;
+                    final isSelected =
+                        appState.selectedProject == p && _currentIndex != -1;
                     final isRefreshing = isSelected && appState.isRefreshing;
                     final hasError = appState.projectErrors.containsKey(p.path);
 
@@ -134,13 +133,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     } else {
                       final timeStr = appState.getProjectLastActivity(p);
                       // Only show activity timestamp if sorting by activity
-                      if (timeStr != null && appState.sidebarSortOrder == SidebarSortOrder.activity) {
+                      if (timeStr != null &&
+                          appState.sidebarSortOrder ==
+                              SidebarSortOrder.activity) {
                         leadingIcon = SizedBox(
                           width: 24,
                           child: Text(
                             timeStr,
                             textAlign: TextAlign.center,
-                            style: MacosTheme.of(context).typography.footnote.copyWith(
+                            style: MacosTheme.of(context).typography.footnote
+                                .copyWith(
                                   color: isSelected
                                       ? MacosTheme.of(context).primaryColor
                                       : MacosColors.systemGrayColor,
@@ -150,9 +152,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         );
                       } else {
-                        final hasPeers = isSelected && appState.currentPeers.isNotEmpty;
+                        final hasPeers =
+                            isSelected && appState.currentPeers.isNotEmpty;
                         leadingIcon = MacosIcon(
-                          hasPeers ? CupertinoIcons.cloud : CupertinoIcons.folder,
+                          hasPeers
+                              ? CupertinoIcons.cloud
+                              : CupertinoIcons.folder,
                           size: 16,
                           color: isSelected
                               ? null
@@ -163,35 +168,35 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                     }
 
-                      Widget? trailingWidget;
-                      if (isSelected) {
-                        trailingWidget = MacosIconButton(
-                          icon: const MacosIcon(
-                            CupertinoIcons.clear_circled,
-                            size: 14,
-                          ),
-                          onPressed: () {
-                            appState.removeProject(p);
-                            if (appState.projects.isEmpty) {
-                              context.go('/settings');
-                            }
-                          },
-                          boxConstraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          padding: EdgeInsets.zero,
-                        );
-                      } else if (appState.hasUnreadActivity(p)) {
-                        trailingWidget = Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: MacosColors.systemBlueColor,
-                            shape: BoxShape.circle,
-                          ),
-                        );
-                      }
+                    Widget? trailingWidget;
+                    if (isSelected) {
+                      trailingWidget = MacosIconButton(
+                        icon: const MacosIcon(
+                          CupertinoIcons.clear_circled,
+                          size: 14,
+                        ),
+                        onPressed: () {
+                          appState.removeProject(p);
+                          if (appState.projects.isEmpty) {
+                            context.go('/settings');
+                          }
+                        },
+                        boxConstraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        padding: EdgeInsets.zero,
+                      );
+                    } else if (appState.hasUnreadActivity(p)) {
+                      trailingWidget = Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: MacosColors.systemBlueColor,
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    }
 
                     return SidebarItem(
                       leading: leadingIcon,
@@ -212,12 +217,8 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             bottom: MacosListTile(
-              leading: const MacosIcon(
-                CupertinoIcons.settings,
-              ),
-              title: const Text(
-                'Settings',
-              ),
+              leading: const MacosIcon(CupertinoIcons.settings),
+              title: const Text('Settings'),
               onClick: () {
                 SettingsModal.show(context);
               },
@@ -286,7 +287,8 @@ class _InspectorControllerState extends State<_InspectorController> {
     }
 
     final currentSelectedIssueId = appState.selectedIssue?.id;
-    if (currentSelectedIssueId != null && currentSelectedIssueId != _previousSelectedIssueId) {
+    if (currentSelectedIssueId != null &&
+        currentSelectedIssueId != _previousSelectedIssueId) {
       if (!scope.isEndSidebarShown) {
         scope.toggleEndSidebar();
       }

@@ -98,9 +98,12 @@ class ActivityTicker extends StatelessWidget {
     );
   }
 
-  Widget _buildActionSemanticText(Interaction interaction, BuildContext context) {
+  Widget _buildActionSemanticText(
+    Interaction interaction,
+    BuildContext context,
+  ) {
     String text = interaction.action;
-    
+
     if (interaction.action == 'field_change') {
       final field = interaction.field;
       if (field == 'status') {
@@ -118,13 +121,17 @@ class ActivityTicker extends StatelessWidget {
       } else {
         text = 'updated';
       }
-    } else if (interaction.action == 'updated' && interaction.newValue != null) {
+    } else if (interaction.action == 'updated' &&
+        interaction.newValue != null) {
       // Legacy support
       try {
-        final Map<String, dynamic> changes = dart_json.jsonDecode(interaction.newValue!);
+        final Map<String, dynamic> changes = dart_json.jsonDecode(
+          interaction.newValue!,
+        );
         if (changes.containsKey('priority')) {
           text = 'escalated priority to P${changes['priority']} on';
-        } else if (changes.containsKey('owner') || changes.containsKey('assignee')) {
+        } else if (changes.containsKey('owner') ||
+            changes.containsKey('assignee')) {
           text = 'reassigned';
         } else if (changes.containsKey('title')) {
           text = 'renamed';
@@ -136,7 +143,8 @@ class ActivityTicker extends StatelessWidget {
       }
     } else if (interaction.action == 'claimed') {
       text = 'claimed';
-    } else if (interaction.action == 'closed') { // Legacy
+    } else if (interaction.action == 'closed') {
+      // Legacy
       text = 'completed';
     } else if (interaction.action == 'created') {
       text = 'created';
@@ -151,7 +159,9 @@ class ActivityTicker extends StatelessWidget {
   }
 
   Widget _buildIssueLink(String issueId, BuildContext context) {
-    final issue = appState.currentIssues.where((i) => i.id == issueId).firstOrNull;
+    final issue = appState.currentIssues
+        .where((i) => i.id == issueId)
+        .firstOrNull;
     final displayText = issue != null ? issue.title : issueId;
 
     return GestureDetector(
@@ -175,10 +185,13 @@ class ActivityTicker extends StatelessWidget {
   }
 
   Widget _buildUnblockedBadge(String issueId, BuildContext context) {
-    final issue = appState.currentIssues.where((i) => i.id == issueId).firstOrNull;
+    final issue = appState.currentIssues
+        .where((i) => i.id == issueId)
+        .firstOrNull;
     if (issue == null) return const SizedBox.shrink();
 
-    final blocksCount = issue.dependencies?.where((d) => d.type == 'blocks').length ?? 0;
+    final blocksCount =
+        issue.dependencies?.where((d) => d.type == 'blocks').length ?? 0;
     if (blocksCount == 0) return const SizedBox.shrink();
 
     return Container(
@@ -187,7 +200,9 @@ class ActivityTicker extends StatelessWidget {
       decoration: BoxDecoration(
         color: MacosColors.systemGreenColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: MacosColors.systemGreenColor.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: MacosColors.systemGreenColor.withValues(alpha: 0.5),
+        ),
       ),
       child: Text(
         'Unblocked $blocksCount task${blocksCount == 1 ? '' : 's'}!',

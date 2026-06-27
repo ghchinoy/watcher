@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show ReorderableListView, ReorderableDragStartListener, ListTile, Material;
+import 'package:flutter/material.dart'
+    show ReorderableListView, ReorderableDragStartListener, ListTile, Material;
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../state/app_state.dart';
@@ -39,11 +40,21 @@ class _SettingsModalState extends State<SettingsModal> {
   void initState() {
     super.initState();
     _actorController = TextEditingController(text: appState.actorName);
-    _ghosttyThemeController = TextEditingController(text: appState.ghosttyTheme);
-    _ghosttyFontFamilyController = TextEditingController(text: appState.ghosttyFontFamily);
-    _gcpProjectIdController = TextEditingController(text: appState.gcpProjectId);
-    _vertexLocationController = TextEditingController(text: appState.vertexLocation);
-    _customBdPathController = TextEditingController(text: appState.customBdPath);
+    _ghosttyThemeController = TextEditingController(
+      text: appState.ghosttyTheme,
+    );
+    _ghosttyFontFamilyController = TextEditingController(
+      text: appState.ghosttyFontFamily,
+    );
+    _gcpProjectIdController = TextEditingController(
+      text: appState.gcpProjectId,
+    );
+    _vertexLocationController = TextEditingController(
+      text: appState.vertexLocation,
+    );
+    _customBdPathController = TextEditingController(
+      text: appState.customBdPath,
+    );
   }
 
   @override
@@ -96,9 +107,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'How your actions appear in the Activity Ticker and the database.',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 8),
                         SizedBox(
@@ -119,9 +129,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'Optional. Absolute path to the bd executable if it is not in your normal PATH.',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 8),
                         SizedBox(
@@ -142,9 +151,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'How often should federated projects check the cloud for updates?',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -188,9 +196,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'How often should Watcher refresh the active project to ensure synchronization?',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -234,9 +241,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'Which terminal app should open when executing AI tasks?',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -279,7 +285,10 @@ class _SettingsModalState extends State<SettingsModal> {
                                   children: [
                                     Text(
                                       'Theme',
-                                      style: MacosTheme.of(context).typography.footnote.copyWith(
+                                      style: MacosTheme.of(context)
+                                          .typography
+                                          .footnote
+                                          .copyWith(
                                             color: MacosColors.systemGrayColor,
                                           ),
                                     ),
@@ -299,7 +308,10 @@ class _SettingsModalState extends State<SettingsModal> {
                                   children: [
                                     Text(
                                       'Font Family',
-                                      style: MacosTheme.of(context).typography.footnote.copyWith(
+                                      style: MacosTheme.of(context)
+                                          .typography
+                                          .footnote
+                                          .copyWith(
                                             color: MacosColors.systemGrayColor,
                                           ),
                                     ),
@@ -334,9 +346,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 8),
                         Text(
                           'Configure which Gemini models are available for task summarization and planning.',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 16),
                         SizedBox(
@@ -347,12 +358,17 @@ class _SettingsModalState extends State<SettingsModal> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'GCP Project ID',
-                                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                                color: MacosColors.systemGrayColor,
+                                          style: MacosTheme.of(context)
+                                              .typography
+                                              .footnote
+                                              .copyWith(
+                                                color:
+                                                    MacosColors.systemGrayColor,
                                               ),
                                         ),
                                         const SizedBox(height: 4),
@@ -375,39 +391,53 @@ class _SettingsModalState extends State<SettingsModal> {
                                   ),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: MacosColors.systemGrayColor.withValues(alpha: 0.2),
+                                    color: MacosColors.systemGrayColor
+                                        .withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: Column(
                                   children: appState.aiModels.map((model) {
-                                    final isDefault = appState.defaultAiModelId == model.id;
+                                    final isDefault =
+                                        appState.defaultAiModelId == model.id;
                                     return Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         border: model != appState.aiModels.last
                                             ? Border(
                                                 bottom: BorderSide(
-                                                  color: MacosColors.systemGrayColor.withValues(alpha: 0.1),
+                                                  color: MacosColors
+                                                      .systemGrayColor
+                                                      .withValues(alpha: 0.1),
                                                 ),
                                               )
                                             : null,
                                       ),
                                       child: Row(
                                         children: [
-                                          const MacosIcon(CupertinoIcons.sparkles, size: 16),
+                                          const MacosIcon(
+                                            CupertinoIcons.sparkles,
+                                            size: 16,
+                                          ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   model.displayName,
-                                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                                 Text(
                                                   '${model.identifier} (${model.region})',
-                                                  style: MacosTheme.of(context).typography.caption1.copyWith(
-                                                        color: MacosColors.systemGrayColor,
+                                                  style: MacosTheme.of(context)
+                                                      .typography
+                                                      .caption1
+                                                      .copyWith(
+                                                        color: MacosColors
+                                                            .systemGrayColor,
                                                       ),
                                                 ),
                                               ],
@@ -415,19 +445,23 @@ class _SettingsModalState extends State<SettingsModal> {
                                           ),
                                           if (isDefault)
                                             const Padding(
-                                              padding: EdgeInsets.only(right: 8.0),
+                                              padding: EdgeInsets.only(
+                                                right: 8.0,
+                                              ),
                                               child: MacosIcon(
-                                                CupertinoIcons.checkmark_circle_fill,
-                                                color: MacosColors.systemGreenColor,
+                                                CupertinoIcons
+                                                    .checkmark_circle_fill,
+                                                color: MacosColors
+                                                    .systemGreenColor,
                                                 size: 16,
                                               ),
-
                                             )
                                           else
                                             PushButton(
                                               controlSize: ControlSize.small,
                                               secondary: true,
-                                              onPressed: () => appState.setDefaultAiModel(model.id),
+                                              onPressed: () => appState
+                                                  .setDefaultAiModel(model.id),
                                               child: const Text('Set Default'),
                                             ),
                                           const SizedBox(width: 8),
@@ -437,7 +471,8 @@ class _SettingsModalState extends State<SettingsModal> {
                                               size: 14,
                                               color: MacosColors.systemRedColor,
                                             ),
-                                            onPressed: () => appState.removeAiModel(model.id),
+                                            onPressed: () => appState
+                                                .removeAiModel(model.id),
                                           ),
                                         ],
                                       ),
@@ -456,9 +491,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'Drag to reorder your projects in the sidebar.',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -471,23 +505,36 @@ class _SettingsModalState extends State<SettingsModal> {
                             ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: MacosColors.systemGrayColor.withValues(alpha: 0.2),
+                              color: MacosColors.systemGrayColor.withValues(
+                                alpha: 0.2,
+                              ),
                             ),
                           ),
                           child: ReorderableListView(
                             shrinkWrap: true,
                             buildDefaultDragHandles: false,
-                            proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                              return Material(
-                                color: MacosColors.transparent,
-                                elevation: 0.0,
-                                child: child,
+                            proxyDecorator:
+                                (
+                                  Widget child,
+                                  int index,
+                                  Animation<double> animation,
+                                ) {
+                                  return Material(
+                                    color: MacosColors.transparent,
+                                    elevation: 0.0,
+                                    child: child,
+                                  );
+                                },
+                            onReorderItem: (oldIndex, newIndex) {
+                              appState.reorderProjects(
+                                oldIndex,
+                                newIndex,
+                                isAdjusted: true,
                               );
                             },
-                            onReorderItem: (oldIndex, newIndex) {
-                              appState.reorderProjects(oldIndex, newIndex, isAdjusted: true);
-                            },
-                            children: appState.projects.asMap().entries.map((entry) {
+                            children: appState.projects.asMap().entries.map((
+                              entry,
+                            ) {
                               final index = entry.key;
                               final project = entry.value;
                               return Material(
@@ -500,7 +547,9 @@ class _SettingsModalState extends State<SettingsModal> {
                                   dense: true,
                                   title: Text(
                                     project.name,
-                                    style: MacosTheme.of(context).typography.body,
+                                    style: MacosTheme.of(
+                                      context,
+                                    ).typography.body,
                                   ),
                                   trailing: ReorderableDragStartListener(
                                     index: index,
@@ -522,9 +571,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         const SizedBox(height: 4),
                         Text(
                           'Control how projects are displayed in the sidebar.',
-                          style: MacosTheme.of(context).typography.footnote.copyWith(
-                                color: MacosColors.systemGrayColor,
-                              ),
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(

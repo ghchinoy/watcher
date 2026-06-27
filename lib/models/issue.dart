@@ -108,10 +108,7 @@ class HealthCheckResult {
   final String status;
   final List<Diagnostic> diagnostics;
 
-  HealthCheckResult({
-    required this.status,
-    required this.diagnostics,
-  });
+  HealthCheckResult({required this.status, required this.diagnostics});
 
   factory HealthCheckResult.fromJson(Map<String, dynamic> json) =>
       _$HealthCheckResultFromJson(json);
@@ -120,7 +117,8 @@ class HealthCheckResult {
 
 extension IssueHierarchy on Issue {
   bool isDirectChildOf(Issue parent) {
-    final explicit = dependencies?.any(
+    final explicit =
+        dependencies?.any(
           (d) => d.type == 'parent-child' && d.dependsOnId == parent.id,
         ) ??
         false;
@@ -156,23 +154,26 @@ extension IssueHierarchy on Issue {
   bool isDescendantOf(Issue ancestor, List<Issue> allIssues) {
     Issue? current = this;
     Set<String> visited = {id};
-    
+
     while (current != null) {
       if (current.isDirectChildOf(ancestor)) return true;
-      
+
       String? parentId;
-      final hasExplicit = current.dependencies?.any((d) => d.type == 'parent-child') ?? false;
+      final hasExplicit =
+          current.dependencies?.any((d) => d.type == 'parent-child') ?? false;
       if (hasExplicit) {
-        parentId = current.dependencies!.firstWhere((d) => d.type == 'parent-child').dependsOnId;
+        parentId = current.dependencies!
+            .firstWhere((d) => d.type == 'parent-child')
+            .dependsOnId;
       } else {
         final lastDotIndex = current.id.lastIndexOf('.');
         if (lastDotIndex != -1) {
           parentId = current.id.substring(0, lastDotIndex);
         }
       }
-      
+
       if (parentId == null || visited.contains(parentId)) return false;
-      
+
       visited.add(parentId);
       final parentIdx = allIssues.indexWhere((i) => i.id == parentId);
       current = parentIdx != -1 ? allIssues[parentIdx] : null;

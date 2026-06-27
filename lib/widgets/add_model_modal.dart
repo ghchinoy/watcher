@@ -36,12 +36,14 @@ class _AddModelModalState extends State<AddModelModal> {
       return;
     }
 
-    widget.appState.addAiModel(GenerativeModelConfig(
-      id: const Uuid().v4(),
-      displayName: name,
-      identifier: id,
-      region: region,
-    ));
+    widget.appState.addAiModel(
+      GenerativeModelConfig(
+        id: const Uuid().v4(),
+        displayName: name,
+        identifier: id,
+        region: region,
+      ),
+    );
 
     Navigator.of(context).pop();
   }
@@ -61,14 +63,20 @@ class _AddModelModalState extends State<AddModelModal> {
             const SizedBox(height: 8),
             const Text('Configure a new Gemini model from Vertex AI.'),
             const SizedBox(height: 24),
-            const Text('Display Name', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Display Name',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             MacosTextField(
               controller: _displayNameController,
               placeholder: 'e.g. Gemini 2.0 Flash',
             ),
             const SizedBox(height: 16),
-            const Text('Model Identifier', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Model Identifier',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             MacosTextField(
               controller: _identifierController,

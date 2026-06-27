@@ -58,7 +58,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '187783458251',
     projectId: 'generative-bazaar-001',
     storageBucket: 'generative-bazaar-001.firebasestorage.app',
-    iosClientId: '187783458251-n1jd7jnuu445q0t4fi7vsujfqrm4vu2c.apps.googleusercontent.com',
+    iosClientId:
+        '187783458251-n1jd7jnuu445q0t4fi7vsujfqrm4vu2c.apps.googleusercontent.com',
     iosBundleId: 'wtf.ghc.watcher',
   );
 }

@@ -7,14 +7,14 @@ class Interaction {
   @JsonKey(name: 'created_at')
   final DateTime timestamp;
   final String actor;
-  
+
   // Beads uses 'kind', previously 'event_type'
   @JsonKey(name: 'kind', readValue: _readKindOrEventType)
   final String action;
-  
+
   @JsonKey(name: 'issue_id')
   final String? issueId;
-  
+
   // New properties are inside extra
   final Map<String, dynamic>? extra;
 
@@ -33,7 +33,9 @@ class Interaction {
   });
 
   static String _readKindOrEventType(Map<dynamic, dynamic> json, String key) {
-    return json['kind'] as String? ?? json['event_type'] as String? ?? 'unknown';
+    return json['kind'] as String? ??
+        json['event_type'] as String? ??
+        'unknown';
   }
 
   factory Interaction.fromJson(Map<String, dynamic> json) =>

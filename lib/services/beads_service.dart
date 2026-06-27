@@ -6,10 +6,15 @@ import '../models/interaction.dart';
 import 'package:flutter/foundation.dart';
 import '../main.dart';
 
+const macosDefaultPath =
+    '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
+const macosPathEnv = {'PATH': macosDefaultPath};
+
 class BeadsService {
   final String workingDirectory;
 
-  String get _bdExecutable => appState.customBdPath.isNotEmpty ? appState.customBdPath : 'bd';
+  String get _bdExecutable =>
+      appState.customBdPath.isNotEmpty ? appState.customBdPath : 'bd';
 
   Process? _daemonProcess;
   int _requestId = 1;
@@ -29,12 +34,12 @@ class BeadsService {
       await Future.delayed(const Duration(milliseconds: 100));
       return _ensureDaemonRunning();
     }
-    
+
     _isInitializing = true;
     try {
       // Find the bundled daemon binary.
       String daemonPath = 'daemon/watcher-daemon';
-      
+
       if (File(daemonPath).existsSync()) {
         // We are in dev mode, running from the project root. Make it absolute
         // so it works when Process.start changes the working directory.
@@ -43,7 +48,9 @@ class BeadsService {
         // If we are running from a built app bundle on macOS, the executable is in Contents/MacOS
         final execPath = Platform.resolvedExecutable;
         final bundleDir = File(execPath).parent.parent;
-        final bundledDaemon = File('${bundleDir.path}/Resources/watcher-daemon');
+        final bundledDaemon = File(
+          '${bundleDir.path}/Resources/watcher-daemon',
+        );
         if (bundledDaemon.existsSync()) {
           daemonPath = bundledDaemon.path;
         }
@@ -53,7 +60,7 @@ class BeadsService {
         daemonPath,
         [workingDirectory],
         workingDirectory: workingDirectory,
-        environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'},
+        environment: macosPathEnv,
       );
 
       // Prevent unhandled async exceptions if the process crashes and the pipe breaks
@@ -64,34 +71,35 @@ class BeadsService {
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen((line) {
-        if (line.trim().isEmpty) return;
-        try {
-          final response = jsonDecode(line);
-          
-          // Handle server-initiated notifications
-          if (response['method'] == 'boot_status') {
-             final params = response['params'] as Map<String, dynamic>;
-             debugPrint('Daemon Notification: $params');
-             if (params.containsKey('mode') && onModeChanged != null) {
-               onModeChanged!(params['mode'] as String);
-             }
-             return;
-          }
-          
-          final id = response['id'] as int?;
-          if (id != null && _pendingRequests.containsKey(id)) {
-            if (response['error'] != null) {
-              _pendingRequests[id]!.completeError(
-                  Exception(response['error']['message']));
-            } else {
-              _pendingRequests[id]!.complete(response['result']);
+            if (line.trim().isEmpty) return;
+            try {
+              final response = jsonDecode(line);
+
+              // Handle server-initiated notifications
+              if (response['method'] == 'boot_status') {
+                final params = response['params'] as Map<String, dynamic>;
+                debugPrint('Daemon Notification: $params');
+                if (params.containsKey('mode') && onModeChanged != null) {
+                  onModeChanged!(params['mode'] as String);
+                }
+                return;
+              }
+
+              final id = response['id'] as int?;
+              if (id != null && _pendingRequests.containsKey(id)) {
+                if (response['error'] != null) {
+                  _pendingRequests[id]!.completeError(
+                    Exception(response['error']['message']),
+                  );
+                } else {
+                  _pendingRequests[id]!.complete(response['result']);
+                }
+                _pendingRequests.remove(id);
+              }
+            } catch (e) {
+              debugPrint('Failed to process daemon output object: $e');
             }
-            _pendingRequests.remove(id);
-          }
-        } catch (e) {
-          debugPrint('Failed to process daemon output object: $e');
-        }
-      });
+          });
 
       _daemonProcess!.stderr.transform(utf8.decoder).listen((line) {
         debugPrint('Daemon STDERR: $line');
@@ -103,13 +111,14 @@ class BeadsService {
         if (!_isDisposed) {
           for (var completer in _pendingRequests.values) {
             if (!completer.isCompleted) {
-              completer.completeError(Exception('Daemon crashed (exit code $code)'));
+              completer.completeError(
+                Exception('Daemon crashed (exit code $code)'),
+              );
             }
           }
         }
         _pendingRequests.clear();
       });
-      
     } finally {
       _isInitializing = false;
     }
@@ -117,7 +126,7 @@ class BeadsService {
 
   Future<dynamic> _sendRpcRequest(String method, [dynamic params]) async {
     await _ensureDaemonRunning();
-    
+
     if (_daemonProcess == null) {
       throw Exception('Daemon process failed to start or died');
     }
@@ -139,12 +148,14 @@ class BeadsService {
       _pendingRequests.remove(id);
       rethrow;
     }
-    
+
     return completer.future.timeout(
       const Duration(seconds: 15),
       onTimeout: () {
         _pendingRequests.remove(id);
-        throw Exception('Daemon timed out after 15s waiting for Dolt server to boot. Try selecting the project again.');
+        throw Exception(
+          'Daemon timed out after 15s waiting for Dolt server to boot. Try selecting the project again.',
+        );
       },
     );
   }
@@ -172,13 +183,13 @@ class BeadsService {
 
   Future<List<Issue>> getIssues() async {
     final result = await _sendRpcRequest('graph');
-    
+
     if (result == null) return [];
-    
+
     final List<Issue> issues = [];
     final list = result as List<dynamic>;
     for (var item in list) {
-       issues.add(Issue.fromJson(item as Map<String, dynamic>));
+      issues.add(Issue.fromJson(item as Map<String, dynamic>));
     }
     return issues;
   }
@@ -186,13 +197,21 @@ class BeadsService {
   // Kept for backward compatibility but currently delegates to getIssues
   Future<List<GraphNode>> getGraph() async {
     final issues = await getIssues();
-    // Wrap them in GraphNodes if that's what the UI expects, 
-    // or just return dummy wrappers. Currently TreeView doesn't even use getGraph, 
+    // Wrap them in GraphNodes if that's what the UI expects,
+    // or just return dummy wrappers. Currently TreeView doesn't even use getGraph,
     // it uses getIssues via AppState.
     return issues.map((i) => GraphNode(root: i)).toList();
   }
 
-  Future<void> updateIssue(String id, {String? status, int? priority, String? owner, String? assignee, String? parent, required String actor}) async {
+  Future<void> updateIssue(
+    String id, {
+    String? status,
+    int? priority,
+    String? owner,
+    String? assignee,
+    String? parent,
+    required String actor,
+  }) async {
     final Map<String, dynamic> updates = {};
     if (status != null) updates['status'] = status;
     if (priority != null) updates['priority'] = priority;
@@ -209,7 +228,14 @@ class BeadsService {
     });
   }
 
-  Future<String> createIssue(String title, String description, String type, {String? parent, int? priority, required String actor}) async {
+  Future<String> createIssue(
+    String title,
+    String description,
+    String type, {
+    String? parent,
+    int? priority,
+    required String actor,
+  }) async {
     final args = ['create', title, '--description', description, '-t', type];
     if (parent != null && parent.isNotEmpty) {
       args.addAll(['--parent', parent]);
@@ -218,23 +244,28 @@ class BeadsService {
       args.addAll(['-p', priority.toString()]);
     }
 
-    final result = await Process.run(_bdExecutable, args, workingDirectory: workingDirectory, environment: {
-      'BD_ACTOR': actor,
-      'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
-    });
+    final result = await Process.run(
+      _bdExecutable,
+      args,
+      workingDirectory: workingDirectory,
+      environment: {'BD_ACTOR': actor, 'PATH': macosDefaultPath},
+    );
 
     if (result.exitCode != 0) {
       throw Exception('Failed to create issue: ${result.stderr}');
     }
 
     // Trigger an export to update the JSONL files so the UI file watcher picks it up
-    await Process.run(_bdExecutable, ['export'], workingDirectory: workingDirectory, environment: {
-      'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
-    });
+    await Process.run(
+      _bdExecutable,
+      ['export'],
+      workingDirectory: workingDirectory,
+      environment: macosPathEnv,
+    );
 
     return result.stdout.toString().trim();
   }
-  
+
   Future<HealthCheckResult> checkHealth() async {
     final result = await _sendRpcRequest('check_health', {});
     return HealthCheckResult.fromJson(result as Map<String, dynamic>);
@@ -250,7 +281,12 @@ class BeadsService {
 
   Future<String?> getCliVersion() async {
     try {
-      final result = await Process.run(_bdExecutable, ['version'], workingDirectory: workingDirectory, environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'});
+      final result = await Process.run(
+        _bdExecutable,
+        ['version'],
+        workingDirectory: workingDirectory,
+        environment: macosPathEnv,
+      );
       if (result.exitCode == 0) {
         return result.stdout.toString().trim();
       }
@@ -282,7 +318,11 @@ class BeadsService {
     return [];
   }
 
-  Future<void> addComment(String issueId, String comment, {required String actor}) async {
+  Future<void> addComment(
+    String issueId,
+    String comment, {
+    required String actor,
+  }) async {
     await _sendRpcRequest('add_comment', {
       'id': issueId,
       'comment': comment,
@@ -293,7 +333,7 @@ class BeadsService {
   Future<List<Map<String, String>>> getPeers() async {
     final result = await _sendRpcRequest('get_peers');
     if (result == null) return [];
-    
+
     final List<Map<String, String>> peers = [];
     final list = result as List<dynamic>;
     for (var item in list) {
@@ -307,10 +347,7 @@ class BeadsService {
   }
 
   Future<void> addPeer(String name, String url) async {
-    await _sendRpcRequest('add_peer', {
-      'name': name,
-      'url': url,
-    });
+    await _sendRpcRequest('add_peer', {'name': name, 'url': url});
   }
 
   Future<void> syncPeer([String? peer]) async {
