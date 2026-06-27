@@ -124,8 +124,6 @@ class AppState extends ChangeNotifier {
 
   // Vertex AI Settings
   String? gcpProjectId;
-  String vertexLocation = 'us-central1';
-  String geminiModel = 'gemini-3-flash-preview';
 
   AppState() {
     _loadSettings();
@@ -178,8 +176,6 @@ class AppState extends ChangeNotifier {
 
     // Load Vertex AI Settings
     gcpProjectId = prefs.getString('gcp_project_id');
-    vertexLocation = prefs.getString('vertex_location') ?? 'us-central1';
-    geminiModel = prefs.getString('gemini_model') ?? 'gemini-3-flash-preview';
 
     final modelData = prefs.getStringList('ai_models') ?? [];
     aiModels = modelData
@@ -309,26 +305,6 @@ class AppState extends ChangeNotifier {
     } else {
       await prefs.remove('gcp_project_id');
     }
-    notifyListeners();
-  }
-
-  Future<void> setVertexLocation(String location) async {
-    vertexLocation = location;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('vertex_location', location);
-    notifyListeners();
-  }
-
-  Future<void> setGeminiModel(String model) async {
-    geminiModel = model;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('gemini_model', model);
-
-    // Automatically switch to global for preview models
-    if (model.contains('-preview') && vertexLocation != 'global') {
-      await setVertexLocation('global');
-    }
-
     notifyListeners();
   }
 
