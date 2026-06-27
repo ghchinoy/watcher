@@ -26,7 +26,6 @@ class _SettingsModalState extends State<SettingsModal> {
   late TextEditingController _ghosttyThemeController;
   late TextEditingController _ghosttyFontFamilyController;
   late TextEditingController _gcpProjectIdController;
-  late TextEditingController _vertexLocationController;
   late TextEditingController _customBdPathController;
 
   void _addModel() {
@@ -49,9 +48,6 @@ class _SettingsModalState extends State<SettingsModal> {
     _gcpProjectIdController = TextEditingController(
       text: appState.gcpProjectId,
     );
-    _vertexLocationController = TextEditingController(
-      text: appState.vertexLocation,
-    );
     _customBdPathController = TextEditingController(
       text: appState.customBdPath,
     );
@@ -63,7 +59,6 @@ class _SettingsModalState extends State<SettingsModal> {
     _ghosttyThemeController.dispose();
     _ghosttyFontFamilyController.dispose();
     _gcpProjectIdController.dispose();
-    _vertexLocationController.dispose();
     _customBdPathController.dispose();
     super.dispose();
   }
