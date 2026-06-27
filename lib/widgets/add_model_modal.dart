@@ -70,7 +70,7 @@ class _AddModelModalState extends State<AddModelModal> {
             const SizedBox(height: 4),
             MacosTextField(
               controller: _displayNameController,
-              placeholder: 'e.g. Gemini 2.0 Flash',
+              placeholder: 'e.g. Gemini 3.5 Flash',
             ),
             const SizedBox(height: 16),
             const Text(
@@ -80,7 +80,7 @@ class _AddModelModalState extends State<AddModelModal> {
             const SizedBox(height: 4),
             MacosTextField(
               controller: _identifierController,
-              placeholder: 'e.g. gemini-2.0-flash-001',
+              placeholder: 'e.g. gemini-3.5-flash',
             ),
             const SizedBox(height: 16),
             const Text('Region', style: TextStyle(fontWeight: FontWeight.bold)),

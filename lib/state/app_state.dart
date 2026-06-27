@@ -125,6 +125,10 @@ class AppState extends ChangeNotifier {
   // Vertex AI Settings
   String? gcpProjectId;
 
+  /// Increment this whenever the default model seed list changes so existing
+  /// installs receive a migration pass on the next launch.
+  static const int _currentModelSeedVersion = 2;
+
   AppState() {
     _loadSettings();
     _loadProjects();
@@ -183,13 +187,13 @@ class AppState extends ChangeNotifier {
         .toList();
     defaultAiModelId = prefs.getString('default_ai_model_id');
 
-    // Migration: If no models exist, add the legacy defaults
+    // Seed: first-run install gets current defaults.
     if (aiModels.isEmpty) {
       aiModels = [
         GenerativeModelConfig(
-          id: 'default-flash-3',
-          displayName: 'Gemini 3 Flash (Preview)',
-          identifier: 'gemini-3-flash-preview',
+          id: 'default-flash-3.5',
+          displayName: 'Gemini 3.5 Flash',
+          identifier: 'gemini-3.5-flash',
           region: 'global',
         ),
         GenerativeModelConfig(
@@ -199,8 +203,30 @@ class AppState extends ChangeNotifier {
           region: 'us-central1',
         ),
       ];
-      defaultAiModelId = 'default-flash-3';
+      defaultAiModelId = 'default-flash-3.5';
+      await prefs.setInt('model_seed_version', _currentModelSeedVersion);
       _saveAiModels();
+    } else {
+      // Versioned migration for existing installs.
+      final seedVersion = prefs.getInt('model_seed_version') ?? 1;
+      if (seedVersion < _currentModelSeedVersion) {
+        // v2: replace the retired gemini-3-flash-preview identifier in-place,
+        // preserving the entry's `id` so defaultAiModelId keeps pointing at it.
+        bool migrated = false;
+        for (int i = 0; i < aiModels.length; i++) {
+          if (aiModels[i].identifier == 'gemini-3-flash-preview') {
+            aiModels[i] = GenerativeModelConfig(
+              id: aiModels[i].id,
+              displayName: 'Gemini 3.5 Flash',
+              identifier: 'gemini-3.5-flash',
+              region: 'global',
+            );
+            migrated = true;
+          }
+        }
+        if (migrated) _saveAiModels();
+        await prefs.setInt('model_seed_version', _currentModelSeedVersion);
+      }
     }
 
     // Load last viewed timestamps
