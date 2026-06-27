@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,5 +80,69 @@ void main() {
         expect(state.projects.first.path, '/some/path2');
       },
     );
+
+    test('first-run seed uses gemini-3.5-flash as default', () async {
+      // Empty prefs → seed path
+      final state = AppState();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      expect(state.aiModels, isNotEmpty);
+      final defaultModel = state.defaultAiModel;
+      expect(defaultModel, isNotNull);
+      expect(defaultModel!.identifier, 'gemini-3.5-flash');
+      expect(defaultModel.region, 'global');
+    });
+
+    test('v2 migration replaces gemini-3-flash-preview in existing installs',
+        () async {
+      // Simulate an existing install: saved ai_models list with the old
+      // preview identifier, seed version absent (defaults to 1).
+      final oldModel = GenerativeModelConfig(
+        id: 'default-flash-3',
+        displayName: 'Gemini 3 Flash (Preview)',
+        identifier: 'gemini-3-flash-preview',
+        region: 'global',
+      );
+      SharedPreferences.setMockInitialValues({
+        'ai_models': [jsonEncode(oldModel.toJson())],
+        'default_ai_model_id': 'default-flash-3',
+        // model_seed_version intentionally absent → defaults to 1
+      });
+
+      final state = AppState();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // The old entry should have been migrated in-place
+      expect(state.aiModels.length, 1);
+      expect(state.aiModels.first.id, 'default-flash-3'); // id preserved
+      expect(state.aiModels.first.identifier, 'gemini-3.5-flash');
+      expect(state.aiModels.first.region, 'global');
+
+      // defaultAiModelId still resolves correctly
+      expect(state.defaultAiModel?.identifier, 'gemini-3.5-flash');
+    });
+
+    test('v2 migration is idempotent for installs already on current seed',
+        () async {
+      // Simulate an install already on v2
+      final currentModel = GenerativeModelConfig(
+        id: 'default-flash-3.5',
+        displayName: 'Gemini 3.5 Flash',
+        identifier: 'gemini-3.5-flash',
+        region: 'global',
+      );
+      SharedPreferences.setMockInitialValues({
+        'ai_models': [jsonEncode(currentModel.toJson())],
+        'default_ai_model_id': 'default-flash-3.5',
+        'model_seed_version': 2,
+      });
+
+      final state = AppState();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // Nothing changed
+      expect(state.aiModels.first.identifier, 'gemini-3.5-flash');
+      expect(state.defaultAiModel?.identifier, 'gemini-3.5-flash');
+    });
   });
 }
