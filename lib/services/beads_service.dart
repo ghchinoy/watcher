@@ -236,34 +236,28 @@ class BeadsService {
     int? priority,
     required String actor,
   }) async {
-    final args = ['create', title, '--description', description, '-t', type];
-    if (parent != null && parent.isNotEmpty) {
-      args.addAll(['--parent', parent]);
+    final response = await _sendRpcRequest('create_issue', {
+      'issue': {
+        'title': title,
+        'description': description,
+        'issue_type': type,
+        'priority': priority ?? 2,
+        if (parent != null && parent.isNotEmpty)
+          'dependencies': [
+            {
+              'depends_on_id': parent,
+              'type': 'parent-child',
+            }
+          ],
+      },
+      'actor': actor,
+    });
+
+    if (response == null) {
+      throw Exception('Failed to create issue: empty response from daemon');
     }
-    if (priority != null) {
-      args.addAll(['-p', priority.toString()]);
-    }
 
-    final result = await Process.run(
-      _bdExecutable,
-      args,
-      workingDirectory: workingDirectory,
-      environment: {'BD_ACTOR': actor, 'PATH': macosDefaultPath},
-    );
-
-    if (result.exitCode != 0) {
-      throw Exception('Failed to create issue: ${result.stderr}');
-    }
-
-    // Trigger an export to update the JSONL files so the UI file watcher picks it up
-    await Process.run(
-      _bdExecutable,
-      ['export'],
-      workingDirectory: workingDirectory,
-      environment: macosPathEnv,
-    );
-
-    return result.stdout.toString().trim();
+    return response as String;
   }
 
   Future<HealthCheckResult> checkHealth() async {
