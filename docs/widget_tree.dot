@@ -33,6 +33,8 @@ digraph G {
         MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar", fontcolor="#44474E", fontsize=10];
         "Sidebar (Issue Inspector)" -> IssueInspector [label="builder", fontcolor="#44474E", fontsize=10];
         IssueInspector -> MacosPopupButton [label="Status/Priority", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "Dependencies Section" [label="Blocked By / Blocks / Hierarchy / Related", fontcolor="#44474E", fontsize=10];
+        "Dependencies Section" -> _AddDependencySheet [label="onClick (MacosSheet)", fontcolor="#44474E", fontsize=10];
         IssueInspector -> "Comments Section" [label="Timeline & Input", fontcolor="#44474E", fontsize=10];
         
         MacosWindow -> _InspectorController [label="child", fontcolor="#44474E", fontsize=10];
@@ -42,6 +44,9 @@ digraph G {
     ChildWidget -> ProjectDashboard [label="/", fontcolor="#44474E", fontsize=10];
     ChildWidget -> TreeViewScreen [label="/tree", fontcolor="#44474E", fontsize=10];
     ChildWidget -> KanbanScreen [label="/kanban", fontcolor="#44474E", fontsize=10];
+    ChildWidget -> ReadyQueueScreen [label="/ready", fontcolor="#44474E", fontsize=10];
+    ChildWidget -> BlockedScreen [label="/blocked", fontcolor="#44474E", fontsize=10];
+    ChildWidget -> DependencyGraphScreen [label="/graph", fontcolor="#44474E", fontsize=10];
     ChildWidget -> SettingsScreen [label="/settings", fontcolor="#44474E", fontsize=10];
 
     subgraph cluster_dashboard {
@@ -55,6 +60,9 @@ digraph G {
         "MacosScaffold (Dashboard)" -> "ContentArea (Dashboard)" [label="children", fontcolor="#44474E", fontsize=10];
         "ContentArea (Dashboard)" -> "SingleChildScrollView (Dashboard)";
         "SingleChildScrollView (Dashboard)" -> "Row (Stats)";
+        "SingleChildScrollView (Dashboard)" -> "ReadinessStatCard" [label="Ready/Blocked counts\n(tappable)", fontcolor="#44474E", fontsize=10];
+        "ReadinessStatCard" -> ReadyQueueScreen [label="onClick → /ready", fontcolor="#44474E", fontsize=10];
+        "ReadinessStatCard" -> BlockedScreen [label="onClick → /blocked", fontcolor="#44474E", fontsize=10];
         "SingleChildScrollView (Dashboard)" -> "Container (Federation Status)";
         "Container (Federation Status)" -> FederationModal [label="onClick (MacosSheet)", fontcolor="#44474E", fontsize=10];
         "SingleChildScrollView (Dashboard)" -> ActivityTicker [label="Recent Activity", fontcolor="#44474E", fontsize=10];
@@ -62,6 +70,50 @@ digraph G {
         "ToolBar (Dashboard)" -> CreateIssueModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
         "ToolBar (Dashboard)" -> AssessmentModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
         "ToolBar (Dashboard)" -> PlannerModal [label="actions (onClick)", fontcolor="#44474E", fontsize=10];
+    }
+
+    subgraph cluster_ready {
+        label="Ready Queue";
+        style=rounded;
+        color="#51A15E";
+        fontcolor="#51A15E";
+
+        ReadyQueueScreen -> "MacosScaffold (Ready)";
+        "MacosScaffold (Ready)" -> "ToolBar (Ready)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "MacosScaffold (Ready)" -> "ContentArea (Ready)" [label="children", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Ready)" -> "ListView (Ready)" [label="unblocked open issues, priority-sorted", fontcolor="#44474E", fontsize=10];
+        "ListView (Ready)" -> _ReadyRow [label="itemBuilder", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Ready)" -> "ViewModeSegmentedControl (Ready)" [label="actions", fontcolor="#44474E", fontsize=10];
+    }
+
+    subgraph cluster_blocked {
+        label="Blocked / Impediments";
+        style=rounded;
+        color="#BA1A1A";
+        fontcolor="#BA1A1A";
+
+        BlockedScreen -> "MacosScaffold (Blocked)";
+        "MacosScaffold (Blocked)" -> "ToolBar (Blocked)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "MacosScaffold (Blocked)" -> "ContentArea (Blocked)" [label="children", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Blocked)" -> "ListView (Blocked)" [label="blocked issues with open blockers inline", fontcolor="#44474E", fontsize=10];
+        "ListView (Blocked)" -> _BlockedRow [label="itemBuilder", fontcolor="#44474E", fontsize=10];
+        _BlockedRow -> _BlockerLink [label="open blockers (clickable)", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Blocked)" -> "ViewModeSegmentedControl (Blocked)" [label="actions", fontcolor="#44474E", fontsize=10];
+    }
+
+    subgraph cluster_graph {
+        label="Dependency Graph";
+        style=rounded;
+        color="#705575";
+        fontcolor="#705575";
+
+        DependencyGraphScreen -> "MacosScaffold (Graph)";
+        "MacosScaffold (Graph)" -> "ToolBar (Graph)" [label="toolBar", fontcolor="#44474E", fontsize=10];
+        "MacosScaffold (Graph)" -> "ContentArea (Graph)" [label="children", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Graph)" -> _SummaryBar [label="stats header", fontcolor="#44474E", fontsize=10];
+        "ContentArea (Graph)" -> _ChainCard [label="expandable root-blocker chains", fontcolor="#44474E", fontsize=10];
+        _ChainCard -> _IssueChip [label="blocked dependents", fontcolor="#44474E", fontsize=10];
+        "ToolBar (Graph)" -> "ViewModeSegmentedControl (Graph)" [label="actions", fontcolor="#44474E", fontsize=10];
     }
 
     subgraph cluster_settings {
