@@ -481,9 +481,9 @@ class AppState extends ChangeNotifier {
 
     _setupGlobalWatchers(); // Update watchers to include new project
 
-    if (selectedProject == null) {
-      selectProject(projects.last);
-    }
+    // Always navigate to the newly added project so the UI reflects it
+    // immediately, regardless of whether another project was previously open.
+    selectProject(projects.last);
   }
 
   Future<void> reorderProjects(
