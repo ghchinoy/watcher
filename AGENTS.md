@@ -2,6 +2,8 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
+**IMPORTANT FOR AI ASSISTANTS:** You must read **`GEMINI.md`** alongside this file. `GEMINI.md` contains core architectural rules, design patterns, and critical macOS-specific layout and execution quirks that you must adhere to when writing code.
+
 ## Quick Reference
 
 ```bash
