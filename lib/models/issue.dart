@@ -164,11 +164,10 @@ extension IssueDependencies on Issue {
   /// Checks explicit [parent-child] dependencies first, then falls back to
   /// the dotted-ID convention (e.g. "proj-1.2" → parent is "proj-1").
   Issue? parent(List<Issue> all) {
-    final explicitParentId =
-        dependencies
-            ?.where((d) => d.type == 'parent-child')
-            .map((d) => d.dependsOnId)
-            .firstOrNull;
+    final explicitParentId = dependencies
+        ?.where((d) => d.type == 'parent-child')
+        .map((d) => d.dependsOnId)
+        .firstOrNull;
     if (explicitParentId != null) {
       return all.where((i) => i.id == explicitParentId).firstOrNull;
     }

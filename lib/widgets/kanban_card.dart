@@ -81,6 +81,7 @@ class KanbanCard extends StatelessWidget {
                   style: MacosTheme.of(context).typography.footnote,
                 ),
               ],
+              _buildBlockerBadge(context),
             ],
           ),
         ),
@@ -99,6 +100,31 @@ class KanbanCard extends StatelessWidget {
       ),
       childWhenDragging: Opacity(opacity: 0.3, child: cardContent),
       child: cardContent,
+    );
+  }
+
+  Widget _buildBlockerBadge(BuildContext context) {
+    final blockers = issue.blockers(appState.currentIssues);
+    if (blockers.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          const MacosIcon(
+            CupertinoIcons.exclamationmark_circle_fill,
+            size: 12,
+            color: MacosColors.systemRedColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Blocked by ${blockers.length}',
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+              color: MacosColors.systemRedColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

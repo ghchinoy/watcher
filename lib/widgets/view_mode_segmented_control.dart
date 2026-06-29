@@ -11,6 +11,9 @@ class ViewModeSegmentedControl extends StatelessWidget {
     if (route == '/') return 0;
     if (route == '/tree') return 1;
     if (route == '/kanban') return 2;
+    if (route == '/ready') return 3;
+    if (route == '/blocked') return 4;
+    if (route == '/graph') return 5;
     return 0;
   }
 
@@ -18,6 +21,9 @@ class ViewModeSegmentedControl extends StatelessWidget {
     if (index == 0) context.go('/');
     if (index == 1) context.go('/tree');
     if (index == 2) context.go('/kanban');
+    if (index == 3) context.go('/ready');
+    if (index == 4) context.go('/blocked');
+    if (index == 5) context.go('/graph');
   }
 
   @override
@@ -70,6 +76,33 @@ class ViewModeSegmentedControl extends StatelessWidget {
               isSelected: currentIndex == 2,
               activeColor: activeColor,
               onTap: () => _onTabChanged(context, 2),
+            ),
+            _buildDivider(isDark, currentIndex == 2 || currentIndex == 3),
+            _buildSegment(
+              context: context,
+              icon: CupertinoIcons.checkmark_circle,
+              tooltip: 'Ready Queue',
+              isSelected: currentIndex == 3,
+              activeColor: activeColor,
+              onTap: () => _onTabChanged(context, 3),
+            ),
+            _buildDivider(isDark, currentIndex == 3 || currentIndex == 4),
+            _buildSegment(
+              context: context,
+              icon: CupertinoIcons.exclamationmark_circle,
+              tooltip: 'Blocked Issues',
+              isSelected: currentIndex == 4,
+              activeColor: activeColor,
+              onTap: () => _onTabChanged(context, 4),
+            ),
+            _buildDivider(isDark, currentIndex == 4 || currentIndex == 5),
+            _buildSegment(
+              context: context,
+              icon: CupertinoIcons.arrow_branch,
+              tooltip: 'Dependency Graph',
+              isSelected: currentIndex == 5,
+              activeColor: activeColor,
+              onTap: () => _onTabChanged(context, 5),
             ),
           ],
         ),

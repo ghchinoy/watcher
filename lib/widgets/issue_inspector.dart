@@ -198,10 +198,7 @@ class _IssueInspectorState extends State<IssueInspector> {
               _buildIssueLink(issueParent, context),
             ],
             if (issueChildren.isNotEmpty) ...[
-              _depSubLabel(
-                'Children (${issueChildren.length})',
-                context,
-              ),
+              _depSubLabel('Children (${issueChildren.length})', context),
               ...issueChildren.map((c) => _buildIssueLink(c, context)),
             ],
             const SizedBox(height: 10),
@@ -232,16 +229,54 @@ class _IssueInspectorState extends State<IssueInspector> {
               final label = entry.key == 'discovered-from'
                   ? 'Discovered from'
                   : 'Related';
-              return _buildIssueLink(
-                entry.value,
-                context,
-                prefixLabel: label,
-              );
+              return _buildIssueLink(entry.value, context, prefixLabel: label);
             }),
             const SizedBox(height: 10),
           ],
+          // ── Add dependency button ───────────────────────────────────────
+          _buildAddDependencyButton(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildAddDependencyButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showAddDependencySheet(context),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const MacosIcon(
+                CupertinoIcons.plus_circle,
+                size: 13,
+                color: MacosColors.systemGrayColor,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Add dependency',
+                style: MacosTheme.of(context).typography.footnote.copyWith(
+                  color: MacosColors.systemGrayColor,
+                  decoration: TextDecoration.underline,
+                  decorationColor: MacosColors.systemGrayColor.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddDependencySheet(BuildContext context) {
+    showMacosSheet(
+      context: context,
+      builder: (ctx) => _AddDependencySheet(forIssue: widget.issue),
     );
   }
 
@@ -593,5 +628,134 @@ class _IssueInspectorState extends State<IssueInspector> {
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Add-dependency sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AddDependencySheet extends StatefulWidget {
+  final Issue forIssue;
+
+  const _AddDependencySheet({required this.forIssue});
+
+  @override
+  State<_AddDependencySheet> createState() => _AddDependencySheetState();
+}
+
+class _AddDependencySheetState extends State<_AddDependencySheet> {
+  static const _types = ['blocks', 'related', 'discovered-from'];
+
+  String _selectedType = 'blocks';
+  final _targetController = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _targetController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final target = _targetController.text.trim();
+    if (target.isEmpty) {
+      setState(() => _error = 'Please enter a target issue ID.');
+      return;
+    }
+    final exists = appState.currentIssues.any((i) => i.id == target);
+    if (!exists) {
+      setState(
+        () => _error = 'Issue "$target" not found in the current project.',
+      );
+      return;
+    }
+    if (target == widget.forIssue.id) {
+      setState(() => _error = 'An issue cannot depend on itself.');
+      return;
+    }
+
+    Navigator.of(context).pop();
+    await appState.addDependency(widget.forIssue.id, target, _selectedType);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = MacosTheme.of(context);
+    return MacosSheet(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Add Dependency', style: theme.typography.largeTitle),
+            const SizedBox(height: 4),
+            Text(
+              'From: ${widget.forIssue.id}',
+              style: theme.typography.footnote.copyWith(
+                color: MacosColors.systemGrayColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Type',
+              style: theme.typography.footnote.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            MacosPopupButton<String>(
+              value: _selectedType,
+              onChanged: (v) => setState(() => _selectedType = v ?? 'blocks'),
+              items: _types
+                  .map((t) => MacosPopupMenuItem(value: t, child: Text(t)))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Target Issue ID',
+              style: theme.typography.footnote.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            MacosTextField(
+              controller: _targetController,
+              placeholder: 'e.g. proj-abc',
+              autofocus: true,
+              onSubmitted: (_) => _submit(),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: theme.typography.footnote.copyWith(
+                  color: MacosColors.systemRedColor,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                PushButton(
+                  controlSize: ControlSize.regular,
+                  secondary: true,
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 12),
+                PushButton(
+                  controlSize: ControlSize.regular,
+                  onPressed: _submit,
+                  child: const Text('Add'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
