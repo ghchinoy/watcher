@@ -15,6 +15,7 @@ For detailed architectural decisions, always refer to and update `docs/ARCHITECT
 1. **Issue Tracking:** All task tracking for the Watcher project itself must be done using the `bd` CLI. Follow the instructions in `AGENTS.md` for interacting with issues, claiming work, and completing tasks.
 2. **Documenting Decisions:** When making significant architectural decisions, trade-offs, or choosing specific patterns, document them in `docs/ARCHITECTURE.md` to maintain a historical record of *why* choices were made.
 3. **Adding Features:** When adding new UI screens, ensure they are properly registered in `lib/router.dart` (using `go_router`) and integrated into the `Sidebar` in `lib/screens/home_screen.dart`.
+4. **Automated Releases (Release Please):** We use Google's *Release Please* to fully automate versioning and changelog generation based on Conventional Commits (prefixes like `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`). Do NOT manually bump versions in `pubspec.yaml` or edit `CHANGELOG.md` when closing `bd` tasks; let the automated release pipeline handle it on merge.
 
 ## Interaction & Command Execution
 - Prefer using the `dart` tool integrations when manipulating Dart/Flutter code (e.g. `dart_format`, `dart_fix`, `analyze_files`, etc.).

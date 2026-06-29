@@ -122,6 +122,17 @@ bd automatically syncs with git:
 
 For more details, see README.md and docs/QUICKSTART.md.
 
+## Conventional Commits & Automated Releases
+
+This project uses Google's **Release Please** to automate versioning and release packaging.
+
+- **Use Conventional Commits Exclusively:** Your git commit messages must use standard prefixes (e.g. `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`) so the automated release pipeline can parse them.
+- **Commit Prefixes Rule the Version Bump:**
+  - `fix:` triggers a **Patch** version bump (e.g. `0.7.0 -> 0.7.1`).
+  - `feat:` triggers a **Minor** version bump (e.g. `0.7.0 -> 0.8.0`).
+  - `BREAKING CHANGE:` or `!` suffix (e.g. `feat!:`) triggers a **Major** version bump.
+- **NEVER Manually Edit Versions or Changelog:** Do not edit `CHANGELOG.md`, `pubspec.yaml`'s `version:` field, or `.release-please-manifest.json` directly. The release pipeline will automatically generate a release PR with these changes compiled based on your conventional commit messages.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
