@@ -117,6 +117,17 @@ class TmuxService {
     }
   }
 
+  static Future<bool> _isAppInstalled(String appName) async {
+    try {
+      final result = await Process.run('osascript', [
+        '-e', 'id of application "$appName"'
+      ]);
+      return result.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Launches the preferred terminal app and attaches it to the tmux session.
   static Future<void> attachInTerminal(
     String sessionName, {
@@ -128,6 +139,12 @@ class TmuxService {
     final tmux = await _getTmuxPath();
 
     if (terminalApp == 'Ghostty') {
+      if (!await _isAppInstalled('Ghostty')) {
+        throw Exception(
+          'Ghostty terminal is not installed. Please install it, or select a different preferred terminal under Global Settings.',
+        );
+      }
+
       final styleArgs = <String>['--window-save-state=never'];
       if (ghosttyTheme != null && ghosttyTheme.isNotEmpty) {
         styleArgs.add('--theme=$ghosttyTheme');
@@ -141,7 +158,6 @@ class TmuxService {
 
       // We use the 'open -na' approach but without the -e flag to just get the window,
       // then use AppleScript to write the text. This avoids the security dialog.
-
       final styleArgsList = <String>['-na', 'Ghostty'];
       if (styleArgs.isNotEmpty) {
         styleArgsList.add('--args');
@@ -150,22 +166,45 @@ class TmuxService {
 
       await Process.run('open', styleArgsList, environment: _env);
 
-      // Wait a moment for window to appear
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final writeScript =
-          '''
+      final writeScript = '''
         tell application "Ghostty"
-          set active_terminal to focused terminal of selected tab of front window
-          input text "$tmux attach -t $sessionName" to active_terminal
-          send key "enter" to active_terminal
+          try
+            set active_terminal to focused terminal of selected tab of front window
+            input text "$tmux attach -t $sessionName" to active_terminal
+            send key "enter" to active_terminal
+            return "success"
+          on error err
+            return "error: " & err
+          end try
         end tell
       ''';
-      await Process.run('osascript', ['-e', writeScript]);
+
+      // Poll until Ghostty window is ready and has responded to AppleScript
+      bool success = false;
+      for (int i = 0; i < 20; i++) {
+        final result = await Process.run('osascript', ['-e', writeScript]);
+        final output = result.stdout.toString().trim();
+        if (result.exitCode == 0 && output == 'success') {
+          success = true;
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+
+      if (!success) {
+        throw Exception(
+          'Ghostty failed to respond after launch. Please try clicking the action again.',
+        );
+      }
     } else if (terminalApp == 'iTerm2') {
+      if (!await _isAppInstalled('iTerm')) {
+        throw Exception(
+          'iTerm2 is not installed. Please install it, or select a different preferred terminal under Global Settings.',
+        );
+      }
+
       // iTerm2 AppleScript to create a new window and attach
-      final script =
-          '''
+      final script = '''
         tell application "iTerm"
           create window with default profile
           tell current session of current window
@@ -177,8 +216,7 @@ class TmuxService {
       await Process.run('osascript', ['-e', script]);
     } else {
       // Default to Apple's Terminal.app
-      final script =
-          '''
+      final script = '''
         tell application "Terminal"
           do script "$tmux attach -t $sessionName"
           activate
