@@ -21,9 +21,9 @@ The Watcher application needs to reflect changes to the `beads` issues in near r
    * *Cons:* Relies on polling which consumes constant CPU and disk I/O. Integrating a SQL driver or managing a background `dolt sql-server` process adds significant complexity and overhead to a lightweight desktop viewer.
 
 **Implementation Strategy:**
-The `AppState` or `BeadsService` will instantiate a file watcher on the `.beads` folder when a project is selected. When file modifications are detected, a debounce timer is reset. Once the timer fires, the app calls `bd export` and `bd graph` to refresh the in-memory models. 
+`AppState` instantiates a file watcher on the `.beads/backup/` folder when a project is selected. When file modifications are detected, a debounce timer is reset. Once the timer fires, the app calls `BeadsService.getIssues()` (which sends a `graph` JSON-RPC request to the `watcher-daemon`) to refresh the in-memory models. All reads go through the hot daemon connection, never through direct CLI shell-outs.
 
-Additionally, a **30-second background heartbeat** timer ensures the UI stays synchronized even if OS-level file events are missed or coalesced.
+Additionally, a configurable safety **heartbeat** timer (default 30 seconds) ensures the UI stays synchronized even if OS-level file events are missed or coalesced.
 
 ## macOS Native UI Paradigms
 
@@ -72,6 +72,12 @@ For automated, non-interactive tasks, Watcher calls the Gemini API directly via 
 1. **The Summarization Pipeline:** When a task is closed, `AppState` triggers an asynchronous call to `GenerativeAiService`. It uses `gemini-3-flash-preview` (via Vertex AI) to summarize the resolution based on comment history and description context.
 2. **System Comments:** The resulting summary is posted back to the issue as a system comment (e.g., `🤖 Resolution Summary: ...`), ensuring the resolution intent is captured in the `interactions.jsonl` audit trail and dashboard ticker.
 
+### 4. Dependency Visualization and Authoring
+Watcher now renders the full two-layer `bd` graph model:
+- **Parent-child tree** (Tree View): the hierarchical organization of epics → tasks → subtasks.
+- **Blocks DAG** (Kanban badges, Tree pips, Ready Queue, Blocked view, Dependency Graph): the execution-ordering graph. The `IssueDependencies` model extension computes `blockers()`, `blocking()`, and `isBlocked()` from the in-memory issue list using the canonical bd direction — a dependency `{depends_on_id: Y, type: 'blocks'}` on issue X means X is blocked by Y.
+- **Dependency authoring**: the `add_dependency` and `remove_dependency` RPC methods on the `watcher-daemon` (backed by `beads.Storage.AddDependency` / `RemoveDependency`) allow the UI to create and remove `blocks`, `related`, and `discovered-from` edges from the Inspector panel.
+
 ### 3. Future: Watcher Live (Voice Mode)
 We plan to implement a real-time, multimodal "Live" mode using `liveGenerativeModel`. This will allow bidirectional audio streaming to query the status of all local projects simultaneously using natural language (e.g., *"Which of my projects has the most P0 tasks?"*).
 
@@ -85,7 +91,7 @@ Originally, Watcher's tree view attempted to mimic the command-line styling of `
 **Implementation Strategy:**
 1. **Hierarchy via Indentation:** Do not draw branch lines or text prefixes to connect children to parents. Hierarchy is communicated entirely through negative space (indentation) and the presence of a disclosure triangle (chevron) on parent nodes.
 2. **Consistent Leading Icons:** Outline views expect visual context for each item. We render the `issue.issueType` icon (e.g., epic, bug, feature) as the leading element immediately following the disclosure triangle for *all* nodes, regardless of their depth in the tree.
-3. **Trailing Badges for Status:** The right side of the Outline View is reserved for secondary metadata. We map semantic statuses like `blocked` (Red/Minus Symbol) and `deferred` (Grey/Snow Symbol) to specific colors to allow quick scanning without interrupting the primary hierarchical layout on the left.
+3. **Trailing Badges for Status and Readiness:** The right side of the Outline View is reserved for secondary metadata. We render: a **computed-readiness pip** (red exclamation icon) when an issue's `blocks` dependencies include at least one open issue; an **orange hub chip** (`↑N`) when an issue is blocking N others; a **priority badge** (P0–P4 colour-coded); and a **status icon** mapping semantic statuses like `blocked` (Red/Minus) and `deferred` (Grey/Snow). The readiness pip is *distinct* from the status badge — it reflects computed dependency state, not the literal `status` field.
 
 ## Standalone Architecture: The Go RPC Daemon
 
@@ -113,5 +119,5 @@ Dolt operates in two modes:
 1. **Enforced Server Mode:** The `beads` library is configured to prefer Server mode. If a server is not already running, `beads` will attempt to start one automatically.
 2. **Pre-boot Cleanup:** Before the Go daemon attempts to connect to the Dolt database, it shells out to `bd dolt killall`. This mimics the behavior of `bd doctor`, proactively scanning the OS process tree and SIGKILLing any orphaned Dolt SQL servers that might be holding a dead lock on the `.beads/dolt/` directory.
 3. **Graceful IPC Errors:** If a database is fundamentally corrupted (e.g. `noms LOCK` from an embedded crash), the daemon catches the initialization error and prints a serialized JSON-RPC error payload to `stdout` before exiting. This ensures the Dart UI can gracefully render the error state on the dashboard instead of succumbing to an unhandled asynchronous `SocketException`.
-3. **Stream Accumulation:** To prevent large JSON-RPC payloads (like graphs containing massive architectural `.md` files) from being truncated or fragmented by Dart's internal buffer limits, the UI decodes the `stdout` stream using the raw `json.decoder` rather than the naive `LineSplitter()`.
+3. **Stream Framing:** The daemon emits one JSON object per line; `BeadsService` frames the stdout stream using `LineSplitter` so each line is parsed independently. Server-initiated notifications (e.g. `boot_status` during Dolt startup) are handled inline before request responses and do not consume a pending request ID.
 
