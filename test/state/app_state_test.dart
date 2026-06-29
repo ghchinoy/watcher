@@ -65,6 +65,21 @@ void main() {
     );
 
     test(
+      'addProject selects the new project even when one is already selected',
+      () async {
+        final state = AppState();
+        await state.addProject('/some/path1');
+        expect(state.selectedProject?.path, '/some/path1');
+
+        await state.addProject('/some/path2');
+
+        // The newly added project must become selected immediately.
+        expect(state.projects.length, 2);
+        expect(state.selectedProject?.path, '/some/path2');
+      },
+    );
+
+    test(
       'removeProject removes the project and updates selected project',
       () async {
         final state = AppState();
