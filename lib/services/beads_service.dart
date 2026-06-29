@@ -244,10 +244,7 @@ class BeadsService {
         'priority': priority ?? 2,
         if (parent != null && parent.isNotEmpty)
           'dependencies': [
-            {
-              'depends_on_id': parent,
-              'type': 'parent-child',
-            }
+            {'depends_on_id': parent, 'type': 'parent-child'},
           ],
       },
       'actor': actor,
@@ -302,6 +299,32 @@ class BeadsService {
       debugPrint('Failed to read project required version: $e');
     }
     return null;
+  }
+
+  Future<void> addDependency(
+    String issueId,
+    String dependsOn,
+    String type, {
+    required String actor,
+  }) async {
+    await _sendRpcRequest('add_dependency', {
+      'issue_id': issueId,
+      'depends_on': dependsOn,
+      'type': type,
+      'actor': actor,
+    });
+  }
+
+  Future<void> removeDependency(
+    String issueId,
+    String dependsOn, {
+    required String actor,
+  }) async {
+    await _sendRpcRequest('remove_dependency', {
+      'issue_id': issueId,
+      'depends_on': dependsOn,
+      'actor': actor,
+    });
   }
 
   Future<List<Map<String, dynamic>>> getComments(String issueId) async {

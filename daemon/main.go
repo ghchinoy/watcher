@@ -276,6 +276,61 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 	})
 }
 
+func handleAddDependency(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		IssueID   string `json:"issue_id"`
+		DependsOn string `json:"depends_on"`
+		Type      string `json:"type"`
+		Actor     string `json:"actor"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+	if params.Type == "" {
+		params.Type = "blocks"
+	}
+
+	dep := &beads.Dependency{
+		IssueID:     params.IssueID,
+		DependsOnID: params.DependsOn,
+		Type:        beads.DependencyType(params.Type),
+	}
+	if err := storage.AddDependency(ctx, dep, params.Actor); err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to add dependency: %v", err))
+		return
+	}
+
+	// Export so the UI file-watcher picks up the change.
+	cmd := exec.Command("bd", "export")
+	cmd.Env = append(os.Environ(), macosDeveloperPath)
+	_ = cmd.Run()
+
+	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
+}
+
+func handleRemoveDependency(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		IssueID   string `json:"issue_id"`
+		DependsOn string `json:"depends_on"`
+		Actor     string `json:"actor"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+	if err := storage.RemoveDependency(ctx, params.IssueID, params.DependsOn, params.Actor); err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to remove dependency: %v", err))
+		return
+	}
+
+	cmd := exec.Command("bd", "export")
+	cmd.Env = append(os.Environ(), macosDeveloperPath)
+	_ = cmd.Run()
+
+	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
+}
+
 type Diagnostic struct {
 	IssueID string `json:"issue_id"`
 	Type    string `json:"type"` // e.g., "inverted_hierarchy", "dangling_ref", "cycle"
@@ -468,6 +523,10 @@ func dispatchRequest(ctx context.Context, storage beads.Storage, req Request) {
 		handleAddPeer(ctx, storage, req)
 	case "sync_peer":
 		handleSyncPeer(ctx, storage, req)
+	case "add_dependency":
+		handleAddDependency(ctx, storage, req)
+	case "remove_dependency":
+		handleRemoveDependency(ctx, storage, req)
 	case "get_version":
 		version := "unknown"
 		if info, ok := debug.ReadBuildInfo(); ok {

@@ -120,7 +120,8 @@ class TmuxService {
   static Future<bool> _isAppInstalled(String appName) async {
     try {
       final result = await Process.run('osascript', [
-        '-e', 'id of application "$appName"'
+        '-e',
+        'id of application "$appName"',
       ]);
       return result.exitCode == 0;
     } catch (_) {
@@ -166,7 +167,8 @@ class TmuxService {
 
       await Process.run('open', styleArgsList, environment: _env);
 
-      final writeScript = '''
+      final writeScript =
+          '''
         tell application "Ghostty"
           try
             set active_terminal to focused terminal of selected tab of front window
@@ -204,7 +206,8 @@ class TmuxService {
       }
 
       // iTerm2 AppleScript to create a new window and attach
-      final script = '''
+      final script =
+          '''
         tell application "iTerm"
           create window with default profile
           tell current session of current window
@@ -216,7 +219,8 @@ class TmuxService {
       await Process.run('osascript', ['-e', script]);
     } else {
       // Default to Apple's Terminal.app
-      final script = '''
+      final script =
+          '''
         tell application "Terminal"
           do script "$tmux attach -t $sessionName"
           activate

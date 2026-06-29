@@ -95,7 +95,10 @@ class _TreeNodeState extends State<TreeNode> {
                     // Cannot drop epic onto another issue (to avoid epic hierarchy)
                     if (dragged.issueType == 'epic') return false;
                     // Prevent circular dependencies (dragged is an ancestor of target)
-                    if (widget.issue.isDescendantOf(dragged, widget.allIssues)) {
+                    if (widget.issue.isDescendantOf(
+                      dragged,
+                      widget.allIssues,
+                    )) {
                       return false;
                     }
                     return true;
@@ -226,6 +229,23 @@ class _TreeNodeState extends State<TreeNode> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Blocker indicator — only shown when blocked by an open dep,
+            // distinct from the status=='blocked' literal badge.
+            if (issue.isBlocked(appState.currentIssues))
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: MacosTooltip(
+                  message:
+                      'Blocked by ${issue.blockers(appState.currentIssues).length} open issue(s)',
+                  child: const MacosIcon(
+                    CupertinoIcons.exclamationmark_circle_fill,
+                    size: 12,
+                    color: MacosColors.systemRedColor,
+                  ),
+                ),
+              ),
+            // Hub indicator — shows how many issues depend on this one.
+            _buildDepCountChip(issue, context),
             SizedBox(
               width: 32,
               height: 20,
@@ -299,6 +319,40 @@ class _TreeNodeState extends State<TreeNode> {
             color: resolvedColor,
             fontWeight: FontWeight.w600,
             height: 1.0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Shows a small "↑N" chip when this issue is blocking N others,
+  /// surfacing it as a hub that others depend on.
+  Widget _buildDepCountChip(Issue issue, BuildContext context) {
+    final n = issue.blocking(appState.currentIssues).length;
+    if (n == 0) return const SizedBox.shrink();
+    final color = MacosDynamicColor.resolve(
+      MacosColors.systemOrangeColor,
+      context,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: MacosTooltip(
+        message: 'Blocks $n other issue${n == 1 ? '' : 's'}',
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Text(
+            '↑$n',
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+              height: 1.0,
+            ),
           ),
         ),
       ),

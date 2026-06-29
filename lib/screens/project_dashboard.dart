@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:go_router/go_router.dart';
 import '../main.dart';
+import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/activity_ticker.dart';
 import '../widgets/planner_modal.dart';
@@ -188,6 +189,15 @@ class ProjectDashboard extends StatelessWidget {
             .where((i) => i.status == 'in_progress')
             .length;
         final closedCount = issues.where((i) => i.status == 'closed').length;
+        final activeIssues = issues
+            .where((i) => i.status == 'open' || i.status == 'in_progress')
+            .toList();
+        final blockedCount = activeIssues
+            .where((i) => i.isBlocked(issues))
+            .length;
+        final readyCount = activeIssues
+            .where((i) => !i.isBlocked(issues))
+            .length;
 
         return MacosScaffold(
           toolBar: ToolBar(
@@ -372,6 +382,17 @@ class ProjectDashboard extends StatelessWidget {
                           SimpleStatCard(
                             title: 'Total',
                             value: issues.length.toString(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          ReadinessStatCard(
+                            readyCount: readyCount,
+                            blockedCount: blockedCount,
+                            onReadyTap: () => context.go('/ready'),
+                            onBlockedTap: () => context.go('/blocked'),
                           ),
                         ],
                       ),
@@ -666,6 +687,91 @@ class PriorityStatCard extends StatelessWidget {
           _buildBadge(context, 'P2', p2Count, MacosColors.systemYellowColor),
           const SizedBox(width: 12),
           _buildBadge(context, 'P3', p3Count, MacosColors.systemBlueColor),
+        ],
+      ),
+    );
+  }
+}
+
+/// A stat card showing Ready vs Blocked counts with tappable sections that
+/// navigate to the Ready Queue and Blocked views respectively.
+class ReadinessStatCard extends StatelessWidget {
+  final int readyCount;
+  final int blockedCount;
+  final VoidCallback onReadyTap;
+  final VoidCallback onBlockedTap;
+
+  const ReadinessStatCard({
+    super.key,
+    required this.readyCount,
+    required this.blockedCount,
+    required this.onReadyTap,
+    required this.onBlockedTap,
+  });
+
+  Widget _buildSection(
+    BuildContext context,
+    String label,
+    int count,
+    Color color,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MacosIcon(icon, size: 14, color: color),
+            const SizedBox(width: 6),
+            Text(
+              count.toString(),
+              style: MacosTheme.of(context).typography.title2.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: MacosTheme.of(context).typography.footnote.copyWith(
+                color: color,
+                decoration: TextDecoration.underline,
+                decorationColor: color.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StatCard(
+      title: 'Readiness',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildSection(
+            context,
+            'Ready',
+            readyCount,
+            MacosColors.systemGreenColor,
+            CupertinoIcons.checkmark_circle_fill,
+            onReadyTap,
+          ),
+          const SizedBox(width: 20),
+          _buildSection(
+            context,
+            'Blocked',
+            blockedCount,
+            MacosColors.systemRedColor,
+            CupertinoIcons.exclamationmark_circle_fill,
+            onBlockedTap,
+          ),
         ],
       ),
     );

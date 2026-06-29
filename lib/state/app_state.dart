@@ -725,6 +725,41 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> addDependency(
+    String issueId,
+    String dependsOn,
+    String type,
+  ) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      await _currentService!.addDependency(
+        issueId,
+        dependsOn,
+        type,
+        actor: actorName,
+      );
+      await _refreshData();
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to add dependency: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeDependency(String issueId, String dependsOn) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      await _currentService!.removeDependency(
+        issueId,
+        dependsOn,
+        actor: actorName,
+      );
+      await _refreshData();
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to remove dependency: $e';
+      notifyListeners();
+    }
+  }
+
   Future<void> addComment(String issueId, String text) async {
     if (_currentService == null) return;
     try {

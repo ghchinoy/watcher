@@ -4,6 +4,9 @@ import 'screens/home_screen.dart';
 import 'screens/project_dashboard.dart';
 import 'screens/tree_view_screen.dart';
 import 'screens/kanban_screen.dart';
+import 'screens/ready_queue_screen.dart';
+import 'screens/blocked_screen.dart';
+import 'screens/dependency_graph_screen.dart';
 import 'screens/project_settings_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -34,6 +37,18 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/kanban',
           builder: (context, state) => const KanbanScreen(),
+        ),
+        GoRoute(
+          path: '/ready',
+          builder: (context, state) => const ReadyQueueScreen(),
+        ),
+        GoRoute(
+          path: '/blocked',
+          builder: (context, state) => const BlockedScreen(),
+        ),
+        GoRoute(
+          path: '/graph',
+          builder: (context, state) => const DependencyGraphScreen(),
         ),
         GoRoute(
           path: '/project/settings',
