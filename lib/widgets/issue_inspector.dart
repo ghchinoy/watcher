@@ -160,82 +160,162 @@ class _IssueInspectorState extends State<IssueInspector> {
 
   Widget _buildDependenciesSection(BuildContext context) {
     final issue = widget.issue;
-    final blocksIds =
-        issue.dependencies
-            ?.where((d) => d.type == 'blocks')
-            .map((d) => d.dependsOnId)
-            .toList() ??
-        [];
+    final all = appState.currentIssues;
 
-    final blockedByIds = appState.currentIssues
-        .where(
-          (i) =>
-              i.dependencies?.any(
-                (d) => d.type == 'blocks' && d.dependsOnId == issue.id,
-              ) ??
-              false,
-        )
-        .map((i) => i.id)
-        .toList();
+    // ── Hierarchy ─────────────────────────────────────────────────────────
+    final issueParent = issue.parent(all);
+    final issueChildren = issue.children(all);
 
-    if (blocksIds.isEmpty && blockedByIds.isEmpty) {
+    // ── Blocks / Blocked By ───────────────────────────────────────────────
+    // Canonical direction: a dep {depends_on_id: Y, type: 'blocks'} on this
+    // issue means "this issue is BLOCKED BY Y."
+    // blockedByIssues = the live blockers of this issue.
+    // blocksIssues    = issues that are waiting on this issue to close.
+    final blockedByIssues = issue.blockers(all);
+    final blocksIssues = issue.blocking(all);
+
+    // ── Related / Discovered-from ─────────────────────────────────────────
+    final related = issue.relatedLinks(all);
+
+    final hasHierarchy = issueParent != null || issueChildren.isNotEmpty;
+    final hasBlocks = blockedByIssues.isNotEmpty || blocksIssues.isNotEmpty;
+    final hasRelated = related.isNotEmpty;
+
+    if (!hasHierarchy && !hasBlocks && !hasRelated) {
       return const SizedBox.shrink();
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (blockedByIds.isNotEmpty) ...[
-            Text(
-              'Blocked By',
-              style: MacosTheme.of(context).typography.footnote.copyWith(
-                color: MacosColors.systemGrayColor,
-                fontWeight: FontWeight.bold,
+          // ── Hierarchy section ───────────────────────────────────────────
+          if (hasHierarchy) ...[
+            _depSectionLabel('Hierarchy', context),
+            if (issueParent != null) ...[
+              _depSubLabel('Parent', context),
+              _buildIssueLink(issueParent, context),
+            ],
+            if (issueChildren.isNotEmpty) ...[
+              _depSubLabel(
+                'Children (${issueChildren.length})',
+                context,
               ),
-            ),
-            const SizedBox(height: 4),
-            ...blockedByIds.map((id) => _buildDependencyLink(id, context)),
-            const SizedBox(height: 8),
+              ...issueChildren.map((c) => _buildIssueLink(c, context)),
+            ],
+            const SizedBox(height: 10),
           ],
-          if (blocksIds.isNotEmpty) ...[
-            Text(
-              'Blocks',
-              style: MacosTheme.of(context).typography.footnote.copyWith(
-                color: MacosColors.systemGrayColor,
-                fontWeight: FontWeight.bold,
-              ),
+
+          // ── Blocked-by section ──────────────────────────────────────────
+          if (blockedByIssues.isNotEmpty) ...[
+            _depSectionLabel('Blocked By', context),
+            ...blockedByIssues.map(
+              (i) => _buildIssueLink(i, context, dimIfClosed: true),
             ),
-            const SizedBox(height: 4),
-            ...blocksIds.map((id) => _buildDependencyLink(id, context)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+          ],
+
+          // ── Blocks section ──────────────────────────────────────────────
+          if (blocksIssues.isNotEmpty) ...[
+            _depSectionLabel('Blocks', context),
+            ...blocksIssues.map(
+              (i) => _buildIssueLink(i, context, dimIfClosed: true),
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          // ── Related / Discovered-from ───────────────────────────────────
+          if (hasRelated) ...[
+            _depSectionLabel('Related', context),
+            ...related.map((entry) {
+              final label = entry.key == 'discovered-from'
+                  ? 'Discovered from'
+                  : 'Related';
+              return _buildIssueLink(
+                entry.value,
+                context,
+                prefixLabel: label,
+              );
+            }),
+            const SizedBox(height: 10),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildDependencyLink(String issueId, BuildContext context) {
+  Widget _depSectionLabel(String title, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        title,
+        style: MacosTheme.of(context).typography.footnote.copyWith(
+          color: MacosColors.systemGrayColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _depSubLabel(String title, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        title,
+        style: MacosTheme.of(context).typography.footnote.copyWith(
+          color: MacosColors.systemGrayColor,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+
+  /// A tappable link row for an issue.
+  /// [dimIfClosed] fades closed issues so live blockers stand out.
+  /// [prefixLabel] prepends a short type hint (e.g. "Discovered from").
+  Widget _buildIssueLink(
+    Issue target,
+    BuildContext context, {
+    bool dimIfClosed = false,
+    String? prefixLabel,
+  }) {
+    final isClosed = target.status == 'closed';
+    final linkColor = isClosed && dimIfClosed
+        ? MacosColors.systemGrayColor
+        : MacosTheme.of(context).primaryColor;
+
     return GestureDetector(
-      onTap: () {
-        final targetIssue = appState.currentIssues
-            .where((i) => i.id == issueId)
-            .firstOrNull;
-        if (targetIssue != null) {
-          appState.selectIssue(targetIssue);
-        }
-      },
+      onTap: () => appState.selectIssue(target),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-            issueId,
-            style: MacosTheme.of(context).typography.footnote.copyWith(
-              color: MacosTheme.of(context).primaryColor,
-              decoration: TextDecoration.underline,
-            ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (prefixLabel != null) ...[
+                Text(
+                  '$prefixLabel → ',
+                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                    color: MacosColors.systemGrayColor,
+                  ),
+                ),
+              ],
+              Expanded(
+                child: Text(
+                  '${target.id}  ${target.title}',
+                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                    color: linkColor,
+                    decoration: isClosed && dimIfClosed
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.underline,
+                    decorationColor: linkColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       ),

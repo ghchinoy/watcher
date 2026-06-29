@@ -115,6 +115,89 @@ class HealthCheckResult {
   Map<String, dynamic> toJson() => _$HealthCheckResultToJson(this);
 }
 
+/// Readiness and blocking semantics for the 'blocks' dependency type.
+///
+/// Canonical direction (verified against `bd blocked` output):
+///   A dependency {depends_on_id: Y, type: 'blocks'} stored on issue X
+///   means "X is blocked by Y — Y must close before X is actionable."
+///
+/// Example from the read-aloud sister project:
+///   ijo.3 carries depends_on=89j.3, type=blocks
+///   → `bd blocked` reports "ijo.3: Blocked by [89j.3]"
+///   → ijo.3.blockers([89j.3_open]) == [89j.3]
+///   → ijo.3.isBlocked([...]) == true
+extension IssueDependencies on Issue {
+  /// Open issues that are blocking this one from being actionable.
+  /// Computed from this issue's own [blocks] dependencies: the dep target
+  /// must exist in [all] and must NOT be closed.
+  List<Issue> blockers(List<Issue> all) {
+    final blockerIds =
+        dependencies
+            ?.where((d) => d.type == 'blocks')
+            .map((d) => d.dependsOnId)
+            .toSet() ??
+        {};
+    if (blockerIds.isEmpty) return [];
+    return all
+        .where((i) => blockerIds.contains(i.id) && i.status != 'closed')
+        .toList();
+  }
+
+  /// Issues that are waiting on this one to close before they become actionable.
+  /// Reverse lookup: issues in [all] whose own [blocks] dep points at this id.
+  List<Issue> blocking(List<Issue> all) {
+    return all
+        .where(
+          (i) =>
+              i.dependencies?.any(
+                (d) => d.type == 'blocks' && d.dependsOnId == id,
+              ) ??
+              false,
+        )
+        .toList();
+  }
+
+  /// True if this issue has at least one open blocker.
+  bool isBlocked(List<Issue> all) => blockers(all).isNotEmpty;
+
+  /// The direct parent of this issue, or null if it is a root.
+  /// Checks explicit [parent-child] dependencies first, then falls back to
+  /// the dotted-ID convention (e.g. "proj-1.2" → parent is "proj-1").
+  Issue? parent(List<Issue> all) {
+    final explicitParentId =
+        dependencies
+            ?.where((d) => d.type == 'parent-child')
+            .map((d) => d.dependsOnId)
+            .firstOrNull;
+    if (explicitParentId != null) {
+      return all.where((i) => i.id == explicitParentId).firstOrNull;
+    }
+    final lastDot = id.lastIndexOf('.');
+    if (lastDot != -1) {
+      final implicitParentId = id.substring(0, lastDot);
+      return all.where((i) => i.id == implicitParentId).firstOrNull;
+    }
+    return null;
+  }
+
+  /// Direct children of this issue in the parent-child hierarchy.
+  List<Issue> children(List<Issue> all) {
+    return all.where((i) => i.isDirectChildOf(this)).toList();
+  }
+
+  /// Issues with [related] or [discovered-from] dependency links.
+  List<MapEntry<String, Issue>> relatedLinks(List<Issue> all) {
+    final links = <MapEntry<String, Issue>>[];
+    for (final dep in dependencies ?? []) {
+      if (dep.type == 'related' || dep.type == 'discovered-from') {
+        final target = all.where((i) => i.id == dep.dependsOnId).firstOrNull;
+        if (target != null) links.add(MapEntry(dep.type, target));
+      }
+    }
+    return links;
+  }
+}
+
 extension IssueHierarchy on Issue {
   bool isDirectChildOf(Issue parent) {
     final explicit =
