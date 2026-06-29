@@ -20,11 +20,13 @@ class Project {
 
   // Helper to get effective session name
   String get effectiveTmuxSessionName {
-    if (tmuxSessionName != null && tmuxSessionName!.isNotEmpty) {
-      return tmuxSessionName!;
-    }
-    // Default safe deterministic name based on project name
-    return "watcher_${name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')}";
+    final rawName = (tmuxSessionName != null && tmuxSessionName!.isNotEmpty)
+        ? tmuxSessionName!
+        : name;
+    // Replace any characters NOT in a-z, A-Z, 0-9, _, - to prevent
+    // shell/AppleScript injection and tmux session name syntax errors.
+    final sanitized = rawName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return "watcher_$sanitized";
   }
 }
 
