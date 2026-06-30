@@ -1,15 +1,17 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../models/issue.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
 import '../services/generative_ai_service.dart';
 import '../services/tmux_service.dart';
+import 'settings_repository.dart';
+
+export 'settings_repository.dart' show GenerativeModelConfig, SidebarSortOrder;
 
 class Project {
   final String path;
@@ -29,37 +31,6 @@ class Project {
     return "watcher_$sanitized";
   }
 }
-
-class GenerativeModelConfig {
-  final String id;
-  final String displayName;
-  final String identifier;
-  final String region;
-
-  GenerativeModelConfig({
-    required this.id,
-    required this.displayName,
-    required this.identifier,
-    required this.region,
-  });
-
-  factory GenerativeModelConfig.fromJson(Map<String, dynamic> json) =>
-      GenerativeModelConfig(
-        id: json['id'] as String,
-        displayName: json['display_name'] as String,
-        identifier: json['identifier'] as String,
-        region: json['region'] as String,
-      );
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'display_name': displayName,
-    'identifier': identifier,
-    'region': region,
-  };
-}
-
-enum SidebarSortOrder { alphabetical, activity }
 
 class AppState extends ChangeNotifier {
   List<Project> projects = [];
@@ -127,9 +98,7 @@ class AppState extends ChangeNotifier {
   // Vertex AI Settings
   String? gcpProjectId;
 
-  /// Increment this whenever the default model seed list changes so existing
-  /// installs receive a migration pass on the next launch.
-  static const int _currentModelSeedVersion = 2;
+  final _settingsRepo = SettingsRepository();
 
   AppState() {
     _loadSettings();
@@ -162,187 +131,78 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _loadSettings() async {
-    final packageInfo = await PackageInfo.fromPlatform();
-    appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
-
-    final prefs = await SharedPreferences.getInstance();
-    syncIntervalMinutes = prefs.getInt('sync_interval_minutes') ?? 5;
-    preferredTerminal = prefs.getString('preferred_terminal') ?? 'Ghostty';
-    ghosttyTheme = prefs.getString('ghostty_theme');
-    ghosttyFontFamily = prefs.getString('ghostty_font_family');
-
-    showClosedInTree = prefs.getBool('show_closed_in_tree') ?? false;
-    customBdPath = prefs.getString('custom_bd_path') ?? '';
-
-    final sortOrderStr =
-        prefs.getString('sidebar_sort_order') ?? 'alphabetical';
-    sidebarSortOrder = sortOrderStr == 'activity'
-        ? SidebarSortOrder.activity
-        : SidebarSortOrder.alphabetical;
-
-    // Load Vertex AI Settings
-    gcpProjectId = prefs.getString('gcp_project_id');
-
-    final modelData = prefs.getStringList('ai_models') ?? [];
-    aiModels = modelData
-        .map((d) => GenerativeModelConfig.fromJson(jsonDecode(d)))
-        .toList();
-    defaultAiModelId = prefs.getString('default_ai_model_id');
-
-    // Seed: first-run install gets current defaults.
-    if (aiModels.isEmpty) {
-      aiModels = [
-        GenerativeModelConfig(
-          id: 'default-flash-3.5',
-          displayName: 'Gemini 3.5 Flash',
-          identifier: 'gemini-3.5-flash',
-          region: 'global',
-        ),
-        GenerativeModelConfig(
-          id: 'default-flash-2.5',
-          displayName: 'Gemini 2.5 Flash',
-          identifier: 'gemini-2.5-flash',
-          region: 'us-central1',
-        ),
-      ];
-      defaultAiModelId = 'default-flash-3.5';
-      await prefs.setInt('model_seed_version', _currentModelSeedVersion);
-      _saveAiModels();
-    } else {
-      // Versioned migration for existing installs.
-      final seedVersion = prefs.getInt('model_seed_version') ?? 1;
-      if (seedVersion < _currentModelSeedVersion) {
-        // v2: replace the retired gemini-3-flash-preview identifier in-place,
-        // preserving the entry's `id` so defaultAiModelId keeps pointing at it.
-        bool migrated = false;
-        for (int i = 0; i < aiModels.length; i++) {
-          if (aiModels[i].identifier == 'gemini-3-flash-preview') {
-            aiModels[i] = GenerativeModelConfig(
-              id: aiModels[i].id,
-              displayName: 'Gemini 3.5 Flash',
-              identifier: 'gemini-3.5-flash',
-              region: 'global',
-            );
-            migrated = true;
-          }
-        }
-        if (migrated) _saveAiModels();
-        await prefs.setInt('model_seed_version', _currentModelSeedVersion);
-      }
-    }
-
-    // Load last viewed timestamps
-    final lastViewedStrings = prefs.getStringList('project_last_viewed') ?? [];
-    for (final str in lastViewedStrings) {
-      final parts = str.split('|||');
-      if (parts.length == 2) {
-        projectLastViewed[parts[0]] = DateTime.parse(parts[1]);
-      }
-    }
-
-    // Load saved actor name, or try to get git username as a fallback
-    String? savedActor = prefs.getString('actor_name');
-    if (savedActor != null && savedActor.isNotEmpty) {
-      actorName = savedActor;
-    } else {
-      try {
-        final result = await Process.run('git', [
-          'config',
-          'user.name',
-        ], environment: macosPathEnv);
-        if (result.exitCode == 0 &&
-            result.stdout.toString().trim().isNotEmpty) {
-          actorName = result.stdout.toString().trim();
-        }
-      } catch (_) {
-        // Fallback to Watcher UI if git fails
-      }
-    }
-
-    heartbeatIntervalSeconds = prefs.getInt('heartbeat_interval_seconds') ?? 30;
+    final settings = await _settingsRepo.load();
+    appVersion = settings.appVersion;
+    syncIntervalMinutes = settings.syncIntervalMinutes;
+    heartbeatIntervalSeconds = settings.heartbeatIntervalSeconds;
+    preferredTerminal = settings.preferredTerminal;
+    ghosttyTheme = settings.ghosttyTheme;
+    ghosttyFontFamily = settings.ghosttyFontFamily;
+    showClosedInTree = settings.showClosedInTree;
+    customBdPath = settings.customBdPath;
+    sidebarSortOrder = settings.sidebarSortOrder;
+    gcpProjectId = settings.gcpProjectId;
+    aiModels = settings.aiModels;
+    defaultAiModelId = settings.defaultAiModelId;
+    actorName = settings.actorName;
+    projectLastViewed = settings.projectLastViewed;
     _startHeartbeat();
-
     notifyListeners();
   }
 
   Future<void> setHeartbeatInterval(int seconds) async {
     heartbeatIntervalSeconds = seconds;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('heartbeat_interval_seconds', seconds);
+    await _settingsRepo.saveHeartbeatInterval(seconds);
     notifyListeners();
-
-    // Restart heartbeat with new duration
     _startHeartbeat();
   }
 
   Future<void> setActorName(String name) async {
     actorName = name;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('actor_name', name);
+    await _settingsRepo.saveActorName(name);
     notifyListeners();
   }
 
   Future<void> setPreferredTerminal(String terminal) async {
     preferredTerminal = terminal;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('preferred_terminal', terminal);
+    await _settingsRepo.savePreferredTerminal(terminal);
     notifyListeners();
   }
 
   Future<void> setGhosttyTheme(String? theme) async {
     ghosttyTheme = theme;
-    final prefs = await SharedPreferences.getInstance();
-    if (theme != null && theme.isNotEmpty) {
-      await prefs.setString('ghostty_theme', theme);
-    } else {
-      await prefs.remove('ghostty_theme');
-    }
+    await _settingsRepo.saveGhosttyTheme(theme);
     notifyListeners();
   }
 
   Future<void> setGhosttyFontFamily(String? fontFamily) async {
     ghosttyFontFamily = fontFamily;
-    final prefs = await SharedPreferences.getInstance();
-    if (fontFamily != null && fontFamily.isNotEmpty) {
-      await prefs.setString('ghostty_font_family', fontFamily);
-    } else {
-      await prefs.remove('ghostty_font_family');
-    }
+    await _settingsRepo.saveGhosttyFontFamily(fontFamily);
     notifyListeners();
   }
 
   Future<void> toggleShowClosedInTree() async {
     showClosedInTree = !showClosedInTree;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('show_closed_in_tree', showClosedInTree);
+    await _settingsRepo.saveShowClosedInTree(showClosedInTree);
     notifyListeners();
   }
 
   Future<void> setCustomBdPath(String path) async {
     customBdPath = path;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('custom_bd_path', path);
+    await _settingsRepo.saveCustomBdPath(path);
     notifyListeners();
   }
 
   Future<void> setGcpProjectId(String? projectId) async {
     gcpProjectId = projectId;
-    final prefs = await SharedPreferences.getInstance();
-    if (projectId != null && projectId.isNotEmpty) {
-      await prefs.setString('gcp_project_id', projectId);
-    } else {
-      await prefs.remove('gcp_project_id');
-    }
+    await _settingsRepo.saveGcpProjectId(projectId);
     notifyListeners();
   }
 
   Future<void> setSyncInterval(int minutes) async {
     syncIntervalMinutes = minutes;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('sync_interval_minutes', minutes);
+    await _settingsRepo.saveSyncInterval(minutes);
     notifyListeners();
-
-    // Restart the timer immediately with the new interval if we are on a federated project
     if (selectedProject != null && currentPeers.isNotEmpty) {
       _startSyncTimer();
     }
@@ -377,20 +237,15 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadExpandedNodes() async {
     if (selectedProject == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    final list =
-        prefs.getStringList('expanded_nodes_${selectedProject!.path}') ?? [];
-    expandedNodes = list.toSet();
+    expandedNodes = await _settingsRepo.loadExpandedNodes(
+      selectedProject!.path,
+    );
     notifyListeners();
   }
 
   Future<void> _saveExpandedNodes() async {
     if (selectedProject == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      'expanded_nodes_${selectedProject!.path}',
-      expandedNodes.toList(),
-    );
+    await _settingsRepo.saveExpandedNodes(selectedProject!.path, expandedNodes);
   }
 
   Future<void> selectIssue(Issue? issue) async {
@@ -513,12 +368,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _saveAiModels() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modelData = aiModels.map((m) => jsonEncode(m.toJson())).toList();
-    await prefs.setStringList('ai_models', modelData);
-    if (defaultAiModelId != null) {
-      await prefs.setString('default_ai_model_id', defaultAiModelId!);
-    }
+    await _settingsRepo.saveAiModels(aiModels, defaultAiModelId);
   }
 
   Future<void> addAiModel(GenerativeModelConfig model) async {
@@ -624,8 +474,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> setSidebarSortOrder(SidebarSortOrder order) async {
     sidebarSortOrder = order;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('sidebar_sort_order', order.name);
+    await _settingsRepo.saveSidebarSortOrder(order);
     notifyListeners();
   }
 
@@ -693,11 +542,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _saveLastViewed() async {
-    final prefs = await SharedPreferences.getInstance();
-    final list = projectLastViewed.entries
-        .map((e) => '${e.key}|||${e.value.toIso8601String()}')
-        .toList();
-    await prefs.setStringList('project_last_viewed', list);
+    await _settingsRepo.saveProjectLastViewed(projectLastViewed);
   }
 
   void _startSyncTimer() {
