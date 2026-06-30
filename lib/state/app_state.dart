@@ -3,34 +3,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/issue.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
 import '../services/generative_ai_service.dart';
 import '../services/tmux_service.dart';
 import 'settings_repository.dart';
+import 'project_repository.dart';
+import 'watcher_coordinator.dart';
 
 export 'settings_repository.dart' show GenerativeModelConfig, SidebarSortOrder;
-
-class Project {
-  final String path;
-  final String name;
-  String? tmuxSessionName;
-
-  Project(this.path, {this.tmuxSessionName}) : name = path.split('/').last;
-
-  // Helper to get effective session name
-  String get effectiveTmuxSessionName {
-    final rawName = (tmuxSessionName != null && tmuxSessionName!.isNotEmpty)
-        ? tmuxSessionName!
-        : name;
-    // Replace any characters NOT in a-z, A-Z, 0-9, _, - to prevent
-    // shell/AppleScript injection and tmux session name syntax errors.
-    final sanitized = rawName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
-    return "watcher_$sanitized";
-  }
-}
+export 'project_repository.dart' show Project;
 
 class AppState extends ChangeNotifier {
   List<Project> projects = [];
@@ -68,11 +51,7 @@ class AppState extends ChangeNotifier {
   String? get error =>
       selectedProject != null ? projectErrors[selectedProject!.path] : null;
 
-  StreamSubscription<FileSystemEvent>? _watchSubscription;
-  final Map<String, StreamSubscription<FileSystemEvent>> _globalWatchers = {};
-  Timer? _debounceTimer;
-  Timer? _syncTimer;
-  Timer? _heartbeatTimer;
+  late final WatcherCoordinator _watcher;
   BeadsService? _currentService;
   BeadsService? get currentService => _currentService;
 
@@ -99,24 +78,20 @@ class AppState extends ChangeNotifier {
   String? gcpProjectId;
 
   final _settingsRepo = SettingsRepository();
+  final _projectRepo = ProjectRepository();
 
   AppState() {
+    _watcher = WatcherCoordinator(
+      onRefreshNeeded: _refreshData,
+      onSyncNeeded: syncPeer,
+      onNonSelectedProjectChanged: (_) => notifyListeners(),
+    );
     _loadSettings();
     _loadProjects();
   }
 
   void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
-    if (heartbeatIntervalSeconds <= 0) return; // Disabled
-
-    _heartbeatTimer = Timer.periodic(
-      Duration(seconds: heartbeatIntervalSeconds),
-      (_) {
-        if (selectedProject != null && !isLoading && !isRefreshing) {
-          _refreshData();
-        }
-      },
-    );
+    _watcher.startHeartbeat(heartbeatIntervalSeconds);
   }
 
   Future<void> refreshActiveProject() async {
@@ -264,25 +239,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _loadProjects() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Try to load from new JSON format first
-    final projectDataList = prefs.getStringList('project_data');
-    if (projectDataList != null) {
-      projects = projectDataList.map((data) {
-        try {
-          final map = jsonDecode(data);
-          return Project(map['path'], tmuxSessionName: map['tmuxSessionName']);
-        } catch (_) {
-          return Project(data); // Fallback for bad data
-        }
-      }).toList();
-    } else {
-      // Fallback to old string paths
-      final paths = prefs.getStringList('project_paths') ?? [];
-      projects = paths.map((p) => Project(p)).toList();
-    }
-
+    projects = await _projectRepo.load();
     if (projects.isNotEmpty) {
       selectProject(projects.first);
     } else {
@@ -292,42 +249,11 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _saveProjects() async {
-    final prefs = await SharedPreferences.getInstance();
-    final projectDataList = projects
-        .map(
-          (p) => jsonEncode({
-            'path': p.path,
-            'tmuxSessionName': p.tmuxSessionName,
-          }),
-        )
-        .toList();
-    await prefs.setStringList('project_data', projectDataList);
-    // Also save simple paths for backwards compatibility / safety
-    await prefs.setStringList(
-      'project_paths',
-      projects.map((p) => p.path).toList(),
-    );
+    await _projectRepo.save(projects);
   }
 
   void _setupGlobalWatchers() {
-    for (var sub in _globalWatchers.values) {
-      sub.cancel();
-    }
-    _globalWatchers.clear();
-
-    for (final project in projects) {
-      final backupDir = Directory('${project.path}/.beads/backup');
-      if (backupDir.existsSync()) {
-        _globalWatchers[project
-            .path] = backupDir.watch(recursive: true).listen((event) {
-          // If this is NOT the currently selected project, notify listeners
-          // so the sidebar can re-render and check the lastModified timestamps for the blue dot.
-          if (selectedProject?.path != project.path) {
-            notifyListeners();
-          }
-        });
-      }
-    }
+    _watcher.setupGlobalWatchers(projects);
   }
 
   Future<void> addProject(String path) async {
@@ -398,8 +324,7 @@ class AppState extends ChangeNotifier {
     projectErrors.remove(project.path);
     await _saveProjects();
 
-    _globalWatchers[project.path]?.cancel();
-    _globalWatchers.remove(project.path);
+    _watcher.cancelGlobalWatcher(project.path);
 
     if (selectedProject == project) {
       if (projects.isNotEmpty) {
@@ -490,7 +415,7 @@ class AppState extends ChangeNotifier {
   Future<void> selectProject(Project project) async {
     _currentService?.dispose();
     _currentService = null;
-    _syncTimer?.cancel();
+    _watcher.stopSyncTimer();
 
     selectedProject = project;
     isLoading = true;
@@ -512,6 +437,7 @@ class AppState extends ChangeNotifier {
           currentConnectionMode = mode;
           notifyListeners();
         },
+        bdPathResolver: () => customBdPath.isNotEmpty ? customBdPath : 'bd',
       );
 
       // Fetch daemon and CLI versions explicitly on first load
@@ -546,28 +472,11 @@ class AppState extends ChangeNotifier {
   }
 
   void _startSyncTimer() {
-    _syncTimer?.cancel();
-    if (syncIntervalMinutes <= 0) return; // Disabled
-
-    _syncTimer = Timer.periodic(Duration(minutes: syncIntervalMinutes), (_) {
-      syncPeer();
-    });
+    _watcher.startSyncTimer(syncIntervalMinutes);
   }
 
   void _setupWatcher(String projectPath) {
-    _watchSubscription?.cancel();
-    // We specifically watch the backup folder to avoid the massive I/O noise
-    // generated by the Dolt SQL server writing to .beads/dolt/.
-    // The bd CLI reliably flushes state to the backup folder after every mutation.
-    final backupDir = Directory('$projectPath/.beads/backup');
-    if (backupDir.existsSync()) {
-      _watchSubscription = backupDir.watch(recursive: true).listen((event) {
-        if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-        _debounceTimer = Timer(const Duration(milliseconds: 100), () {
-          _refreshData();
-        });
-      });
-    }
+    _watcher.watchProject(projectPath);
   }
 
   Future<void> addDependency(
@@ -666,7 +575,8 @@ class AppState extends ChangeNotifier {
     try {
       final comments = await _currentService!.getComments(issue.id);
       final summary = await GenerativeAiService.summarizeIssueResolution(
-        appState: this,
+        gcpProjectId: gcpProjectId,
+        defaultAiModel: defaultAiModel,
         issue: issue,
         comments: comments,
       );
@@ -771,7 +681,11 @@ class AppState extends ChangeNotifier {
     final sessionName = "${selectedProject!.effectiveTmuxSessionName}_server";
     try {
       await TmuxService.ensureSession(sessionName, selectedProject!.path);
-      await TmuxService.sendKeys(sessionName, "bd dolt server");
+      await TmuxService.sendKeys(
+        sessionName,
+        'bd dolt server',
+        customBdPath: customBdPath,
+      );
       await TmuxService.attachInTerminal(
         sessionName,
         terminalApp: preferredTerminal,
@@ -787,13 +701,7 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
-    _watchSubscription?.cancel();
-    for (var sub in _globalWatchers.values) {
-      sub.cancel();
-    }
-    _globalWatchers.clear();
-    _debounceTimer?.cancel();
-    _syncTimer?.cancel();
+    _watcher.dispose();
     _currentService?.dispose();
     super.dispose();
   }

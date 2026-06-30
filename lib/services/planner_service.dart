@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'beads_service.dart';
 import 'tmux_service.dart';
-import '../main.dart';
 
 class PlannerService {
   static Future<void> startGeneratePlan({
@@ -13,6 +12,7 @@ class PlannerService {
     required String terminalApp,
     String? ghosttyTheme,
     String? ghosttyFontFamily,
+    String customBdPath = '',
   }) async {
     final prompt =
         '''
@@ -85,7 +85,11 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     return result;
   }
 
-  static Future<void> executeScript(String workspacePath, String script) async {
+  static Future<void> executeScript(
+    String workspacePath,
+    String script, {
+    String customBdPath = '',
+  }) async {
     // Extract the bash script from the markdown
     final regex = RegExp(r'```bash\n(.*?)\n```', dotAll: true);
     final match = regex.firstMatch(script);
@@ -101,8 +105,8 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     await tempFile.writeAsString(bashCommands);
 
     String basePath = macosDefaultPath;
-    if (appState.customBdPath.isNotEmpty) {
-      final customDir = File(appState.customBdPath).parent.path;
+    if (customBdPath.isNotEmpty) {
+      final customDir = File(customBdPath).parent.path;
       basePath = '$customDir:$basePath';
     }
 
@@ -130,6 +134,7 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     required BeadsService beadsService,
     String? ghosttyTheme,
     String? ghosttyFontFamily,
+    String customBdPath = '',
   }) async {
     // Get the current bd export state via the internal daemon
     final issues = await beadsService.getIssues();
@@ -195,6 +200,7 @@ $exportData
     required String terminalApp,
     String? ghosttyTheme,
     String? ghosttyFontFamily,
+    String customBdPath = '',
   }) async {
     final prompt =
         '''
