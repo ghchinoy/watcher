@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_logger.dart';
 import '../services/beads_service.dart'; // for macosPathEnv
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -96,6 +97,8 @@ class AppSettings {
 /// caller is responsible for updating its local state and calling
 /// notifyListeners() if needed.
 class SettingsRepository {
+  static final _log = AppLogger('SettingsRepository');
+
   /// Current model-seed schema version. Increment when the default
   /// aiModels list changes so existing installs receive a migration pass.
   static const int _currentModelSeedVersion = 2;
@@ -232,7 +235,12 @@ class SettingsRepository {
       if (result.exitCode == 0 && result.stdout.toString().trim().isNotEmpty) {
         return result.stdout.toString().trim();
       }
-    } catch (_) {}
+    } catch (e) {
+      _log.debug(
+        'git config user.name unavailable, using default actor name',
+        error: e,
+      );
+    }
     return _defaults.actorName;
   }
 

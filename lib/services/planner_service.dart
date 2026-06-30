@@ -3,8 +3,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'beads_service.dart';
 import 'tmux_service.dart';
+import '../utils/app_logger.dart';
 
 class PlannerService {
+  static final _log = AppLogger('PlannerService');
   static Future<void> startGeneratePlan({
     required String workspacePath,
     required String goal,
@@ -80,7 +82,9 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
       await outFile.delete();
       final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
       if (promptFile.existsSync()) await promptFile.delete();
-    } catch (_) {}
+    } catch (e) {
+      _log.debug('Temp AI file cleanup failed (non-critical)', error: e);
+    }
 
     return result;
   }

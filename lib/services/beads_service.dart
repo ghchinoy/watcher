@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'dart:io';
 import '../models/issue.dart';
 import '../models/interaction.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/app_logger.dart';
 
 const macosDefaultPath =
     '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
 const macosPathEnv = {'PATH': macosDefaultPath};
 
 class BeadsService {
+  static final _log = AppLogger('BeadsService');
   final String workingDirectory;
 
   /// Resolves the bd executable path. Pass a closure that reads
@@ -85,7 +86,7 @@ class BeadsService {
               // Handle server-initiated notifications
               if (response['method'] == 'boot_status') {
                 final params = response['params'] as Map<String, dynamic>;
-                debugPrint('Daemon Notification: $params');
+                _log.info('Daemon boot_status', error: params);
                 if (params.containsKey('mode') && onModeChanged != null) {
                   onModeChanged!(params['mode'] as String);
                 }
@@ -103,17 +104,25 @@ class BeadsService {
                 }
                 _pendingRequests.remove(id);
               }
-            } catch (e) {
-              debugPrint('Failed to process daemon output object: $e');
+            } catch (e, st) {
+              _log.warning(
+                'Failed to process daemon output',
+                error: e,
+                stackTrace: st,
+              );
             }
           });
 
       _daemonProcess!.stderr.transform(utf8.decoder).listen((line) {
-        debugPrint('Daemon STDERR: $line');
+        if (line.trim().isNotEmpty) _log.warning('Daemon stderr: $line');
       });
 
       _daemonProcess!.exitCode.then((code) {
-        debugPrint('Daemon exited with code $code');
+        if (code != 0) {
+          _log.error('Daemon exited unexpectedly', error: 'exit code $code');
+        } else {
+          _log.info('Daemon exited cleanly');
+        }
         _daemonProcess = null;
         if (!_isDisposed) {
           for (var completer in _pendingRequests.values) {
@@ -182,7 +191,7 @@ class BeadsService {
         final Map<String, dynamic> data = jsonDecode(line);
         interactions.add(Interaction.fromJson(data));
       } catch (e) {
-        debugPrint('Error parsing interaction JSON: $e');
+        _log.warning('Error parsing interaction JSON', error: e);
       }
     }
     return interactions;
@@ -280,7 +289,7 @@ class BeadsService {
         return result.stdout.toString().trim();
       }
     } catch (e) {
-      debugPrint('Failed to get CLI version: $e');
+      _log.warning('Failed to get CLI version', error: e);
     }
     return null;
   }
@@ -294,7 +303,7 @@ class BeadsService {
         return data['required_version'] as String?;
       }
     } catch (e) {
-      debugPrint('Failed to read project required version: $e');
+      _log.warning('Failed to read project required version', error: e);
     }
     return null;
   }

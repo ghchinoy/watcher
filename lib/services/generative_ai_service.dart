@@ -1,11 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
-import 'package:flutter/foundation.dart';
 import '../models/issue.dart';
 import '../state/settings_repository.dart';
 import '../firebase_options.dart';
+import '../utils/app_logger.dart';
 
 class GenerativeAiService {
+  static final _log = AppLogger('GenerativeAiService');
   static bool _initialized = false;
 
   static Future<void> ensureInitialized() async {
@@ -16,7 +17,7 @@ class GenerativeAiService {
       );
       _initialized = true;
     } catch (e) {
-      debugPrint('Failed to initialize Firebase: $e');
+      _log.error('Failed to initialize Firebase', error: e);
     }
   }
 
@@ -31,7 +32,7 @@ class GenerativeAiService {
 
     final config = defaultAiModel;
     if (gcpProjectId == null || config == null) {
-      debugPrint('AI Configuration missing. Skipping summarization.');
+      _log.info('AI configuration missing — skipping summarization');
       return null;
     }
 
@@ -67,7 +68,7 @@ Resolution Summary:
       final response = await model.generateContent(prompt);
       return response.text?.trim();
     } catch (e) {
-      debugPrint('Generative AI Error: $e');
+      _log.error('Generative AI summarization error', error: e);
       return null;
     }
   }

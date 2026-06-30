@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'beads_service.dart';
+import '../utils/app_logger.dart';
 
 class TmuxService {
+  static final _log = AppLogger('TmuxService');
   static const _env = macosPathEnv;
 
   /// Resolves the absolute path to the bd executable.
@@ -48,7 +50,9 @@ class TmuxService {
       ], environment: _env);
       return result.exitCode == 0;
     } catch (e) {
-      // If tmux executable is not found, Process.run throws ProcessException
+      if (e is ProcessException) {
+        _log.warning('tmux not found for has-session check', error: e);
+      }
       return false;
     }
   }
@@ -71,7 +75,8 @@ class TmuxService {
       if (result.exitCode != 0) {
         throw Exception('Failed to create tmux session: ${result.stderr}');
       }
-    } on ProcessException {
+    } on ProcessException catch (e) {
+      _log.processException('tmux createSession', e);
       throw Exception(
         'tmux is not installed or could not be found. Please install it (e.g. `brew install tmux`) to use AI Terminal Orchestration.',
       );
@@ -117,7 +122,8 @@ class TmuxService {
           'Failed to send keys to tmux session: ${result.stderr}',
         );
       }
-    } on ProcessException {
+    } on ProcessException catch (e) {
+      _log.processException('tmux sendKeys', e);
       throw Exception(
         'tmux is not installed or could not be found. Please install it (e.g. `brew install tmux`) to use AI Terminal Orchestration.',
       );
@@ -131,7 +137,11 @@ class TmuxService {
         'id of application "$appName"',
       ]);
       return result.exitCode == 0;
-    } catch (_) {
+    } on ProcessException catch (e) {
+      _log.warning('osascript not available for app-installed check', error: e);
+      return false;
+    } catch (e) {
+      _log.warning('_isAppInstalled($appName) failed', error: e);
       return false;
     }
   }

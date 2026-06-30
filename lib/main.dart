@@ -7,6 +7,7 @@ import 'state/app_state.dart';
 import 'router.dart';
 import 'firebase_options.dart';
 import 'widgets/settings_modal.dart';
+import 'utils/app_logger.dart';
 
 final appState = AppState();
 
@@ -14,6 +15,8 @@ Future<void> _configureMacosWindowUtils() async {
   const config = MacosWindowUtilsConfig();
   await config.apply();
 }
+
+final _log = AppLogger('main');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +27,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
+    _log.error('Firebase initialization failed', error: e);
   }
 
   runApp(const WatcherApp());
