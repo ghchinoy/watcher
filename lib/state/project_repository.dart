@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_logger.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain model
@@ -36,6 +37,7 @@ class Project {
 /// format (`project_paths`) is still written for backwards compatibility and
 /// read as a fallback when `project_data` is absent.
 class ProjectRepository {
+  static final _log = AppLogger('ProjectRepository');
   // ── Load ──────────────────────────────────────────────────────────────────
 
   Future<List<Project>> load() async {
@@ -51,8 +53,11 @@ class ProjectRepository {
             map['path'] as String,
             tmuxSessionName: map['tmuxSessionName'] as String?,
           );
-        } catch (_) {
-          // Corrupt entry: treat the raw string as a bare path.
+        } catch (e) {
+          _log.warning(
+            'Corrupt project_data entry, treating as bare path',
+            error: e,
+          );
           return Project(raw);
         }
       }).toList();

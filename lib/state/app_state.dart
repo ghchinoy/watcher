@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/issue.dart';
+import '../utils/app_logger.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
 import '../services/generative_ai_service.dart';
@@ -75,6 +76,8 @@ class AppState extends ChangeNotifier {
 
   // Vertex AI Settings
   String? gcpProjectId;
+
+  static final _log = AppLogger('AppState');
 
   final _settingsRepo = SettingsRepository();
   final _projectRepo = ProjectRepository();
@@ -232,7 +235,7 @@ class AppState extends ChangeNotifier {
         selectedIssueComments = await _currentService!.getComments(issue.id);
         notifyListeners();
       } catch (e) {
-        debugPrint('Failed to fetch comments: $e');
+        _log.warning('Failed to fetch comments for ${issue.id}', error: e);
       }
     }
   }
@@ -519,7 +522,7 @@ class AppState extends ChangeNotifier {
       selectedIssueComments = await _currentService!.getComments(issueId);
       notifyListeners();
     } catch (e) {
-      debugPrint('Failed to add comment: $e');
+      _log.warning('Failed to add comment to $issueId', error: e);
     }
   }
 
@@ -582,7 +585,7 @@ class AppState extends ChangeNotifier {
         await addComment(issue.id, '🤖 **Resolution Summary:**\n$summary');
       }
     } catch (e) {
-      debugPrint('Background summarization failed: $e');
+      _log.warning('Background summarization failed for ${issue.id}', error: e);
     }
   }
 
@@ -714,7 +717,7 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Failed to fetch upstream version: $e');
+      _log.info('Failed to fetch upstream beads version', error: e);
     }
   }
 }
