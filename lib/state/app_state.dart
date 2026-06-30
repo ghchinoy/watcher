@@ -24,7 +24,6 @@ class AppState extends ChangeNotifier {
   String? defaultAiModelId;
 
   List<Issue> currentIssues = [];
-  List<GraphNode> currentGraph = [];
   List<Interaction> currentInteractions = [];
   List<Map<String, String>> currentPeers = [];
   Issue? selectedIssue;
@@ -332,7 +331,6 @@ class AppState extends ChangeNotifier {
       } else {
         selectedProject = null;
         currentIssues = [];
-        currentGraph = [];
         currentInteractions = [];
         currentPeers = [];
         _currentService?.dispose();
@@ -448,7 +446,6 @@ class AppState extends ChangeNotifier {
       _checkUpstreamVersion();
 
       currentIssues = await _currentService!.getIssues();
-      currentGraph = await _currentService!.getGraph();
       currentInteractions = await _currentService!.getInteractions();
       currentPeers = await _currentService!.getPeers();
 
@@ -625,12 +622,10 @@ class AppState extends ChangeNotifier {
 
     try {
       final newIssues = await _currentService!.getIssues();
-      final newGraph = await _currentService!.getGraph();
       final newInteractions = await _currentService!.getInteractions();
       final newPeers = await _currentService!.getPeers();
 
       currentIssues = newIssues;
-      currentGraph = newGraph;
       currentInteractions = newInteractions;
       currentPeers = newPeers;
       projectErrors.remove(projectPath);
