@@ -41,6 +41,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
         beadsService: widget.appState.currentService!,
         ghosttyTheme: widget.appState.ghosttyTheme,
         ghosttyFontFamily: widget.appState.ghosttyFontFamily,
+        customBdPath: widget.appState.customBdPath,
       );
 
       if (!started) {
@@ -90,6 +91,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
         terminalApp: widget.appState.preferredTerminal,
         ghosttyTheme: widget.appState.ghosttyTheme,
         ghosttyFontFamily: widget.appState.ghosttyFontFamily,
+        customBdPath: widget.appState.customBdPath,
       );
 
       final script = await PlannerService.pollForCompletion(
@@ -124,6 +126,7 @@ class _AssessmentModalState extends State<AssessmentModal> {
       await PlannerService.executeScript(
         widget.project.path,
         _fixScriptMarkdown!,
+        customBdPath: widget.appState.customBdPath,
       );
       if (mounted) {
         Navigator.of(context).pop(); // Close the modal on success

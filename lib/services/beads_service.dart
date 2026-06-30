@@ -4,7 +4,6 @@ import 'dart:io';
 import '../models/issue.dart';
 import '../models/interaction.dart';
 import 'package:flutter/foundation.dart';
-import '../main.dart';
 
 const macosDefaultPath =
     '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
@@ -13,8 +12,12 @@ const macosPathEnv = {'PATH': macosDefaultPath};
 class BeadsService {
   final String workingDirectory;
 
-  String get _bdExecutable =>
-      appState.customBdPath.isNotEmpty ? appState.customBdPath : 'bd';
+  /// Resolves the bd executable path. Pass a closure that reads
+  /// the user's custom path from settings, defaulting to 'bd'.
+  /// Defaults to a no-op resolver that always returns 'bd'.
+  final String Function() _bdPathResolver;
+
+  String get _bdExecutable => _bdPathResolver();
 
   Process? _daemonProcess;
   int _requestId = 1;
@@ -24,7 +27,11 @@ class BeadsService {
   bool _isDisposed = false;
   Function(String)? onModeChanged;
 
-  BeadsService(this.workingDirectory, {this.onModeChanged});
+  BeadsService(
+    this.workingDirectory, {
+    this.onModeChanged,
+    String Function()? bdPathResolver,
+  }) : _bdPathResolver = bdPathResolver ?? (() => 'bd');
 
   Future<void> _ensureDaemonRunning() async {
     if (_isDisposed) throw Exception('Service disposed');

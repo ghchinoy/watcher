@@ -25,14 +25,20 @@ Issue _issue({
 Dependency _blocksDep(String issueId, String dependsOnId) =>
     Dependency(issueId: issueId, dependsOnId: dependsOnId, type: 'blocks');
 
-Dependency _parentChildDep(String issueId, String dependsOnId) =>
-    Dependency(issueId: issueId, dependsOnId: dependsOnId, type: 'parent-child');
+Dependency _parentChildDep(String issueId, String dependsOnId) => Dependency(
+  issueId: issueId,
+  dependsOnId: dependsOnId,
+  type: 'parent-child',
+);
 
 Dependency _relatedDep(String issueId, String dependsOnId) =>
     Dependency(issueId: issueId, dependsOnId: dependsOnId, type: 'related');
 
-Dependency _discoveredFromDep(String issueId, String dependsOnId) =>
-    Dependency(issueId: issueId, dependsOnId: dependsOnId, type: 'discovered-from');
+Dependency _discoveredFromDep(String issueId, String dependsOnId) => Dependency(
+  issueId: issueId,
+  dependsOnId: dependsOnId,
+  type: 'discovered-from',
+);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -80,15 +86,18 @@ void main() {
       expect(leaf.isBlocked([leaf]), isFalse);
     });
 
-    test('blockers() is empty when the blocker id is not in the issue list', () {
-      // A missing blocker (not in the in-memory list) does not crash and
-      // is treated as non-blocking — don't invent blocks from dangling refs.
-      final ijo3 = _issue(
-        id: 'ijo.3',
-        deps: [_blocksDep('ijo.3', 'missing-issue')],
-      );
-      expect(ijo3.blockers([ijo3]), isEmpty);
-    });
+    test(
+      'blockers() is empty when the blocker id is not in the issue list',
+      () {
+        // A missing blocker (not in the in-memory list) does not crash and
+        // is treated as non-blocking — don't invent blocks from dangling refs.
+        final ijo3 = _issue(
+          id: 'ijo.3',
+          deps: [_blocksDep('ijo.3', 'missing-issue')],
+        );
+        expect(ijo3.blockers([ijo3]), isEmpty);
+      },
+    );
 
     test('multiple blockers: only open ones count', () {
       final task = _issue(
@@ -115,8 +124,14 @@ void main() {
       // If ijo.3 is blocked by A, then ijo.3.deps = [{depends_on: A, type: blocks}].
       // blocking() = reverse = "who has a blocks dep pointing at ME?"
       final a = _issue(id: 'a');
-      final b = _issue(id: 'b', deps: [_blocksDep('b', 'a')]); // b is blocked by a
-      final c = _issue(id: 'c', deps: [_blocksDep('c', 'a')]); // c is blocked by a
+      final b = _issue(
+        id: 'b',
+        deps: [_blocksDep('b', 'a')],
+      ); // b is blocked by a
+      final c = _issue(
+        id: 'c',
+        deps: [_blocksDep('c', 'a')],
+      ); // c is blocked by a
       final d = _issue(id: 'd'); // no relation
 
       final all = [a, b, c, d];

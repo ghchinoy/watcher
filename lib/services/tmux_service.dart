@@ -1,15 +1,16 @@
 import 'dart:io';
-import '../main.dart';
 import 'beads_service.dart';
 
 class TmuxService {
   static const _env = macosPathEnv;
 
   /// Resolves the absolute path to the bd executable.
-  static Future<String> _getBdPath() async {
-    if (appState.customBdPath.isNotEmpty) {
-      if (await File(appState.customBdPath).exists()) {
-        return appState.customBdPath;
+  /// [customBdPath] is an optional override from user settings; when empty
+  /// or absent the method probes standard Homebrew / system locations.
+  static Future<String> _getBdPath({String customBdPath = ''}) async {
+    if (customBdPath.isNotEmpty) {
+      if (await File(customBdPath).exists()) {
+        return customBdPath;
       }
     }
     const paths = ['/opt/homebrew/bin/bd', '/usr/local/bin/bd', '/usr/bin/bd'];
@@ -88,12 +89,18 @@ class TmuxService {
   }
 
   /// Sends keys (a command) to the specified tmux session and presses Enter.
-  static Future<void> sendKeys(String sessionName, String command) async {
+  /// [customBdPath] is passed through to [_getBdPath] when the command starts
+  /// with `bd ` so the user's configured executable is used.
+  static Future<void> sendKeys(
+    String sessionName,
+    String command, {
+    String customBdPath = '',
+  }) async {
     final tmux = await _getTmuxPath();
     // Resolve bd path if the command starts with it
     var finalCommand = command;
     if (command.startsWith('bd ')) {
-      final bd = await _getBdPath();
+      final bd = await _getBdPath(customBdPath: customBdPath);
       finalCommand = command.replaceFirst('bd ', '$bd ');
     }
 

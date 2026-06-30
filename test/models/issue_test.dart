@@ -5,67 +5,77 @@ void main() {
   group('IssueHierarchy extension', () {
     final now = DateTime.now();
 
-    test('isDirectChildOf detects implicit dotted parent-child relationships', () {
-      final parent = Issue(
-        id: 'epic-1',
-        title: 'Epic 1',
-        status: 'open',
-        priority: 1,
-        issueType: 'epic',
-        createdAt: now,
-        updatedAt: now,
-      );
+    test(
+      'isDirectChildOf detects implicit dotted parent-child relationships',
+      () {
+        final parent = Issue(
+          id: 'epic-1',
+          title: 'Epic 1',
+          status: 'open',
+          priority: 1,
+          issueType: 'epic',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final child = Issue(
-        id: 'epic-1.task-1',
-        title: 'Child Task',
-        status: 'open',
-        priority: 1,
-        issueType: 'task',
-        createdAt: now,
-        updatedAt: now,
-      );
+        final child = Issue(
+          id: 'epic-1.task-1',
+          title: 'Child Task',
+          status: 'open',
+          priority: 1,
+          issueType: 'task',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final nonChild = Issue(
-        id: 'epic-2.task-1',
-        title: 'Non Child',
-        status: 'open',
-        priority: 1,
-        issueType: 'task',
-        createdAt: now,
-        updatedAt: now,
-      );
+        final nonChild = Issue(
+          id: 'epic-2.task-1',
+          title: 'Non Child',
+          status: 'open',
+          priority: 1,
+          issueType: 'task',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      expect(child.isDirectChildOf(parent), isTrue);
-      expect(nonChild.isDirectChildOf(parent), isFalse);
-    });
+        expect(child.isDirectChildOf(parent), isTrue);
+        expect(nonChild.isDirectChildOf(parent), isFalse);
+      },
+    );
 
-    test('isDirectChildOf detects explicit parent-child relationships via dependencies', () {
-      final parent = Issue(
-        id: 'some-epic',
-        title: 'Epic',
-        status: 'open',
-        priority: 1,
-        issueType: 'epic',
-        createdAt: now,
-        updatedAt: now,
-      );
+    test(
+      'isDirectChildOf detects explicit parent-child relationships via dependencies',
+      () {
+        final parent = Issue(
+          id: 'some-epic',
+          title: 'Epic',
+          status: 'open',
+          priority: 1,
+          issueType: 'epic',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final child = Issue(
-        id: 'independent-task',
-        title: 'Child Task',
-        status: 'open',
-        priority: 1,
-        issueType: 'task',
-        createdAt: now,
-        updatedAt: now,
-        dependencies: [
-          Dependency(issueId: 'independent-task', dependsOnId: 'some-epic', type: 'parent-child'),
-        ],
-      );
+        final child = Issue(
+          id: 'independent-task',
+          title: 'Child Task',
+          status: 'open',
+          priority: 1,
+          issueType: 'task',
+          createdAt: now,
+          updatedAt: now,
+          dependencies: [
+            Dependency(
+              issueId: 'independent-task',
+              dependsOnId: 'some-epic',
+              type: 'parent-child',
+            ),
+          ],
+        );
 
-      expect(child.isDirectChildOf(parent), isTrue);
-    });
+        expect(child.isDirectChildOf(parent), isTrue);
+      },
+    );
 
     test('hasParentIn identifies if a parent exists in the list', () {
       final parent = Issue(
@@ -130,42 +140,45 @@ void main() {
       expect(root.hasOpenDescendant(issuesList), isTrue);
     });
 
-    test('isDescendantOf identifies deep ancestors correctly without circular loops', () {
-      final root = Issue(
-        id: 'epic-a',
-        title: 'Root Epic',
-        status: 'open',
-        priority: 1,
-        issueType: 'epic',
-        createdAt: now,
-        updatedAt: now,
-      );
+    test(
+      'isDescendantOf identifies deep ancestors correctly without circular loops',
+      () {
+        final root = Issue(
+          id: 'epic-a',
+          title: 'Root Epic',
+          status: 'open',
+          priority: 1,
+          issueType: 'epic',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final mid = Issue(
-        id: 'epic-a.task-b',
-        title: 'Middle Task',
-        status: 'open',
-        priority: 1,
-        issueType: 'task',
-        createdAt: now,
-        updatedAt: now,
-      );
+        final mid = Issue(
+          id: 'epic-a.task-b',
+          title: 'Middle Task',
+          status: 'open',
+          priority: 1,
+          issueType: 'task',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final leaf = Issue(
-        id: 'epic-a.task-b.subtask-c',
-        title: 'Leaf Subtask',
-        status: 'open',
-        priority: 1,
-        issueType: 'task',
-        createdAt: now,
-        updatedAt: now,
-      );
+        final leaf = Issue(
+          id: 'epic-a.task-b.subtask-c',
+          title: 'Leaf Subtask',
+          status: 'open',
+          priority: 1,
+          issueType: 'task',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final allIssues = [root, mid, leaf];
+        final allIssues = [root, mid, leaf];
 
-      expect(leaf.isDescendantOf(root, allIssues), isTrue);
-      expect(mid.isDescendantOf(root, allIssues), isTrue);
-      expect(root.isDescendantOf(leaf, allIssues), isFalse);
-    });
+        expect(leaf.isDescendantOf(root, allIssues), isTrue);
+        expect(mid.isDescendantOf(root, allIssues), isTrue);
+        expect(root.isDescendantOf(leaf, allIssues), isFalse);
+      },
+    );
   });
 }

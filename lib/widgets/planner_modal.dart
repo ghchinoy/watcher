@@ -48,6 +48,7 @@ class _PlannerModalState extends State<PlannerModal> {
         terminalApp: widget.appState.preferredTerminal,
         ghosttyTheme: widget.appState.ghosttyTheme,
         ghosttyFontFamily: widget.appState.ghosttyFontFamily,
+        customBdPath: widget.appState.customBdPath,
       );
 
       final result = await PlannerService.pollForCompletion(
@@ -83,7 +84,11 @@ class _PlannerModalState extends State<PlannerModal> {
     });
 
     try {
-      await PlannerService.executeScript(widget.project.path, _planMarkdown!);
+      await PlannerService.executeScript(
+        widget.project.path,
+        _planMarkdown!,
+        customBdPath: widget.appState.customBdPath,
+      );
       if (mounted) {
         Navigator.of(context).pop(); // Close the modal on success
       }

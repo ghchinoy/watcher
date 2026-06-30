@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import '../models/issue.dart';
-import '../state/app_state.dart';
+import '../state/settings_repository.dart';
 import '../firebase_options.dart';
 
 class GenerativeAiService {
@@ -21,15 +21,16 @@ class GenerativeAiService {
   }
 
   static Future<String?> summarizeIssueResolution({
-    required AppState appState,
+    required String? gcpProjectId,
+    required GenerativeModelConfig? defaultAiModel,
     required Issue issue,
     required List<Map<String, dynamic>> comments,
     String? gitDiff,
   }) async {
     await ensureInitialized();
 
-    final config = appState.defaultAiModel;
-    if (appState.gcpProjectId == null || config == null) {
+    final config = defaultAiModel;
+    if (gcpProjectId == null || config == null) {
       debugPrint('AI Configuration missing. Skipping summarization.');
       return null;
     }
