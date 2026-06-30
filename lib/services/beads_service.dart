@@ -201,15 +201,6 @@ class BeadsService {
     return issues;
   }
 
-  // Kept for backward compatibility but currently delegates to getIssues
-  Future<List<GraphNode>> getGraph() async {
-    final issues = await getIssues();
-    // Wrap them in GraphNodes if that's what the UI expects,
-    // or just return dummy wrappers. Currently TreeView doesn't even use getGraph,
-    // it uses getIssues via AppState.
-    return issues.map((i) => GraphNode(root: i)).toList();
-  }
-
   Future<void> updateIssue(
     String id, {
     String? status,
