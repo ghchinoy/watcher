@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/ghchinoy/watcher/compare/agent_watcher-v0.8.0...agent_watcher-v0.9.0) (2026-06-30)
+
+
+### Features
+
+* add AppLogger structured logging, replace all debugPrint with levelled calls ([1f9bdd7](https://github.com/ghchinoy/watcher/commit/1f9bdd783028c5c70a80e4c79af6ee45b0128f9e))
+
 ## [0.8.0](https://github.com/ghchinoy/watcher/compare/agent_watcher-v0.7.0...agent_watcher-v0.8.0) (2026-06-29)
 
 
