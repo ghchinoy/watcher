@@ -15,9 +15,12 @@
 - **🍎 Native macOS Design:** Built with `macos_ui`, Watcher feels right at home on your Mac. It features glassmorphic sidebars, native segmented controls, and deep integration with light/dark modes.
 - **⚡️ Live Reloading:** Watcher watches your local `.beads` directories. If you (or an AI agent) update a task using the `bd` CLI, the UI updates instantly. No refresh button required.
 - **🗂️ Multi-Project Management:** Add as many local repositories as you want to the sidebar. Seamlessly jump between contexts in milliseconds.
-- **🌳 Hierarchical Tree View:** Visualize your Epics, Tasks, and Subtasks exactly how they relate to each other, complete with native disclosure triangles to expand or collapse complex trees.
-- **📋 Kanban Board:** See the flow of your work at a glance with automatically organized columns for Open, In Progress, and Closed issues.
-- **🔍 Issue Inspector:** Click any issue to slide out a detailed inspector panel containing the full description, priority, owner, and timestamps.
+- **🌳 Hierarchical Tree View:** Visualize your Epics, Tasks, and Subtasks exactly how they relate to each other, complete with native disclosure triangles to expand or collapse complex trees. Blocked issues surface a red indicator; hub issues show how many others depend on them.
+- **📋 Kanban Board:** See the flow of your work at a glance with automatically organized columns for Open, In Progress, and Closed issues. Blocked cards show a live "Blocked by N" badge.
+- **✅ Ready Queue:** A flat, priority-sorted list of only the actionable issues right now — open, unblocked, nothing waiting on them. Mirrors `bd ready`.
+- **🚫 Blocked View:** Every impediment in one place with its open blockers listed inline, so you can triage what to unblock first. Mirrors `bd blocked`.
+- **🕸️ Dependency Graph:** Visualize the `blocks` DAG — which issues are in critical-path chains and which are indirect impediments — including edges that cross epic boundaries.
+- **🔍 Issue Inspector:** Click any issue to slide out a detailed inspector panel. Shows Hierarchy (parent/children), Blocked By / Blocks, Related and Discovered-from links, and lets you add new dependency edges directly from the UI.
 - **🤖 AI Terminal Orchestration:** Run AI Health Assessments and Planners transparently! Watcher seamlessly orchestrates `tmux` sessions in the background and can launch your preferred terminal emulator (Ghostty, iTerm2, or Terminal.app) so you can watch the AI agent work in real-time, approve commands, and retain context across sessions.
 - **🤖 Native AI Integration:** Direct integration with Gemini via Firebase AI Logic (Vertex AI backend) for background task summarization and future voice mode features.
 
@@ -49,10 +52,7 @@ Watcher uses **Firebase AI Logic** with the **Vertex AI** backend for native Gem
 4.  **Configure Watcher:**
     - Open Watcher Settings (`Cmd + ,`).
     - Enter your **GCP Project ID**.
-    - Set your preferred **Vertex Location** (default: `us-central1`).
-    - Select a **Gemini Model** (e.g., `gemini-3-flash-preview`).
-
-*Note: Preview models like Gemini 3 Flash automatically use the `global` region.*
+    - Watcher defaults to **Gemini 3.5 Flash** in the `global` region. You can add additional models or change the default from the Settings panel.
 
 ### Installation
 

@@ -119,5 +119,35 @@ Dolt operates in two modes:
 1. **Enforced Server Mode:** The `beads` library is configured to prefer Server mode. If a server is not already running, `beads` will attempt to start one automatically.
 2. **Pre-boot Cleanup:** Before the Go daemon attempts to connect to the Dolt database, it shells out to `bd dolt killall`. This mimics the behavior of `bd doctor`, proactively scanning the OS process tree and SIGKILLing any orphaned Dolt SQL servers that might be holding a dead lock on the `.beads/dolt/` directory.
 3. **Graceful IPC Errors:** If a database is fundamentally corrupted (e.g. `noms LOCK` from an embedded crash), the daemon catches the initialization error and prints a serialized JSON-RPC error payload to `stdout` before exiting. This ensures the Dart UI can gracefully render the error state on the dashboard instead of succumbing to an unhandled asynchronous `SocketException`.
-3. **Stream Framing:** The daemon emits one JSON object per line; `BeadsService` frames the stdout stream using `LineSplitter` so each line is parsed independently. Server-initiated notifications (e.g. `boot_status` during Dolt startup) are handled inline before request responses and do not consume a pending request ID.
+4. **Stream Framing:** The daemon emits one JSON object per line; `BeadsService` frames the stdout stream using `LineSplitter` so each line is parsed independently. Server-initiated notifications (e.g. `boot_status` during Dolt startup) are handled inline before request responses and do not consume a pending request ID.
+
+## State Layer Architecture
+
+**Decision:** Split `AppState` from a 900-line god-object into focused, independently-testable layers.
+
+**Context:**
+The original `AppState` owned settings persistence, project CRUD, file watchers, three timers, daemon orchestration, and AI calls — making services impossible to test and every `SharedPreferences` call impossible to mock without a full Flutter environment.
+
+**Implementation Strategy:**
+The state layer now lives in `lib/state/` as four focused components:
+- `SettingsRepository` — all `SharedPreferences` reads/writes, AI model seed + migration.
+- `ProjectRepository` — project list persistence (JSON format, legacy fallback, `Project` model).
+- `WatcherCoordinator` — all timers and file watchers behind a clean `onRefreshNeeded`/`onSyncNeeded`/`onNonSelectedProjectChanged` callback interface.
+- `AppState` — thin reactive view-model (~720 lines). Composes the three repositories and `BeadsService`; exposes user-action methods (`selectProject`, `createIssue`, `addDependency`, etc.).
+
+Services (`BeadsService`, `TmuxService`, `PlannerService`, `GenerativeAiService`) no longer import `main.dart`. They receive dependencies (bd path resolver, GCP config, etc.) via constructor parameters or named arguments, making them independently unit-testable.
+
+## Structured Logging
+
+**Decision:** Use `dart:developer` `log()` as the logging substrate, wrapped in a thin `AppLogger` facade (`lib/utils/app_logger.dart`).
+
+**Context:**
+All error handling previously used bare `debugPrint` calls or silent `catch (_) {}` blocks, making it impossible to filter by severity or component and causing `ProcessException` context (executable, arguments, error code) to be lost.
+
+**Implementation Strategy:**
+- `AppLogger(name)` — one `const` instance per component (`static final _log = AppLogger('BeadsService')`).
+- Four log levels: `debug` / `info` / `warning` / `error`. A `processException(context, e)` helper captures `ProcessException` fields as a structured map.
+- In **debug builds**: all levels print to the console with emoji prefixes; visible in Flutter DevTools under the named-logger filter.
+- In **release builds**: only `WARNING` and above reach the platform console; `DEBUG`/`INFO` go to DevTools only.
+- Zero new pub dependencies — `dart:developer` is part of the Dart SDK.
 
