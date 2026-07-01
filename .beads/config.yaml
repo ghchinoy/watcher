@@ -52,3 +52,5 @@ issue-prefix: "watcher"
 # - linear.api-key
 # - github.org
 # - github.repo
+
+sync.remote: "git+ssh://git@github.com/ghchinoy/watcher.git"
