@@ -225,9 +225,47 @@ class AppState extends ChangeNotifier {
     await _settingsRepo.saveExpandedNodes(selectedProject!.path, expandedNodes);
   }
 
+  List<String> getAncestorIds(Issue issue) {
+    final ancestors = <String>[];
+    Issue? current = issue;
+    final visited = <String>{issue.id};
+
+    while (current != null) {
+      String? parentId;
+      final hasExplicit = current.dependencies?.any((d) => d.type == 'parent-child') ?? false;
+      if (hasExplicit) {
+        parentId = current.dependencies!
+            .firstWhere((d) => d.type == 'parent-child')
+            .dependsOnId;
+      } else {
+        final lastDotIndex = current.id.lastIndexOf('.');
+        if (lastDotIndex != -1) {
+          parentId = current.id.substring(0, lastDotIndex);
+        }
+      }
+
+      if (parentId == null || visited.contains(parentId)) break;
+
+      visited.add(parentId);
+      ancestors.add(parentId);
+      final parentIdx = currentIssues.indexWhere((i) => i.id == parentId);
+      current = parentIdx != -1 ? currentIssues[parentIdx] : null;
+    }
+    return ancestors;
+  }
+
   Future<void> selectIssue(Issue? issue) async {
     selectedIssue = issue;
     selectedIssueComments = [];
+
+    if (issue != null) {
+      final ancestors = getAncestorIds(issue);
+      if (ancestors.isNotEmpty) {
+        expandedNodes.addAll(ancestors);
+        await _saveExpandedNodes();
+      }
+    }
+
     notifyListeners();
 
     if (issue != null && _currentService != null) {

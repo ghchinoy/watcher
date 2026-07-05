@@ -44,6 +44,10 @@ class _TreeNodeState extends State<TreeNode> {
 
   @override
   Widget build(BuildContext context) {
+    if (appState.expandedNodes.isNotEmpty) {
+      _isExpanded = appState.isNodeExpanded(widget.issue.id);
+    }
+
     // Find children of this issue and filter out closed issues,
     // UNLESS the closed child has its own open children.
     final children = widget.allIssues.where((potentialChild) {
@@ -109,14 +113,25 @@ class _TreeNodeState extends State<TreeNode> {
                   },
                   builder: (context, candidateData, rejectedData) {
                     final isHovered = candidateData.isNotEmpty;
+                    final isSelected = appState.selectedIssue?.id == widget.issue.id;
                     return Container(
                       decoration: BoxDecoration(
-                        color: isHovered
-                            ? MacosTheme.of(
-                                context,
-                              ).primaryColor.withValues(alpha: 0.1)
-                            : null,
+                        color: isSelected
+                            ? MacosTheme.of(context).primaryColor.withValues(alpha: 0.15)
+                            : (isHovered
+                                ? MacosTheme.of(
+                                    context,
+                                  ).primaryColor.withValues(alpha: 0.1)
+                                : null),
                         borderRadius: BorderRadius.circular(4),
+                        border: isSelected
+                            ? Border.all(
+                                color: MacosTheme.of(context)
+                                    .primaryColor
+                                    .withValues(alpha: 0.3),
+                                width: 1,
+                              )
+                            : null,
                       ),
                       child: Draggable<Issue>(
                         data: widget.issue,
