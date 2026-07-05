@@ -243,7 +243,12 @@ class AppState extends ChangeNotifier {
   Future<void> _loadProjects() async {
     projects = await _projectRepo.load();
     if (projects.isNotEmpty) {
-      selectProject(projects.first);
+      final lastSelectedPath = await _settingsRepo.loadLastSelectedProject();
+      final lastProject = projects.firstWhere(
+        (p) => p.path == lastSelectedPath,
+        orElse: () => projects.first,
+      );
+      selectProject(lastProject);
     } else {
       notifyListeners();
     }
@@ -419,6 +424,7 @@ class AppState extends ChangeNotifier {
     _watcher.stopSyncTimer();
 
     selectedProject = project;
+    await _settingsRepo.saveLastSelectedProject(project.path);
     isLoading = true;
     currentConnectionMode = null;
     projectErrors.remove(project.path);

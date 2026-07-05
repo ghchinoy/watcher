@@ -347,6 +347,16 @@ class SettingsRepository {
     return (prefs.getStringList('expanded_nodes_$projectPath') ?? []).toSet();
   }
 
+  Future<void> saveLastSelectedProject(String projectPath) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_selected_project_path', projectPath);
+  }
+
+  Future<String?> loadLastSelectedProject() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('last_selected_project_path');
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<void> _persistAiModels(
