@@ -7,6 +7,7 @@ import 'state/app_state.dart';
 import 'router.dart';
 import 'firebase_options.dart';
 import 'widgets/settings_modal.dart';
+import 'widgets/command_palette.dart';
 import 'utils/app_logger.dart';
 
 final appState = AppState();
@@ -214,6 +215,20 @@ class WatcherApp extends StatelessWidget {
                 shift: false,
                 meta: true,
               ): const _OpenSettingsIntent(),
+              const SingleActivator(
+                LogicalKeyboardKey.keyP,
+                control: false,
+                alt: false,
+                shift: false,
+                meta: true,
+              ): const _OpenSearchIntent(),
+              const SingleActivator(
+                LogicalKeyboardKey.keyK,
+                control: false,
+                alt: false,
+                shift: false,
+                meta: true,
+              ): const _OpenSearchIntent(),
             },
             child: Actions(
               actions: <Type, Action<Intent>>{
@@ -222,6 +237,16 @@ class WatcherApp extends StatelessWidget {
                     final context =
                         appRouter.routerDelegate.navigatorKey.currentContext;
                     if (context != null) SettingsModal.show(context);
+                    return null;
+                  },
+                ),
+                _OpenSearchIntent: CallbackAction<_OpenSearchIntent>(
+                  onInvoke: (intent) {
+                    final context =
+                        appRouter.routerDelegate.navigatorKey.currentContext;
+                    if (context != null && appState.selectedProject != null) {
+                      CommandPalette.show(context);
+                    }
                     return null;
                   },
                 ),
@@ -243,4 +268,8 @@ class WatcherApp extends StatelessWidget {
 
 class _OpenSettingsIntent extends Intent {
   const _OpenSettingsIntent();
+}
+
+class _OpenSearchIntent extends Intent {
+  const _OpenSearchIntent();
 }

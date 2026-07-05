@@ -6,6 +6,7 @@ import '../main.dart';
 import '../state/app_state.dart';
 import '../widgets/issue_inspector.dart';
 import '../widgets/settings_modal.dart';
+import '../widgets/command_palette.dart';
 
 class HomeScreen extends StatefulWidget {
   final Widget child;
@@ -81,6 +82,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Expanded(child: Text('PROJECTS')),
                         if (appState.selectedProject != null) ...[
+                          MacosTooltip(
+                            message: 'Search Issues (⌘P)',
+                            child: MacosIconButton(
+                              icon: const MacosIcon(
+                                CupertinoIcons.search,
+                                size: 14,
+                                color: MacosColors.systemGrayColor,
+                              ),
+                              onPressed: () {
+                                CommandPalette.show(context);
+                              },
+                              boxConstraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           MacosTooltip(
                             message: 'Voice Mode (Watcher Live)',
                             child: MacosIconButton(
