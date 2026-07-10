@@ -210,5 +210,74 @@ void main() {
         proc.kill();
       }
     });
+
+    test('force-restarts the daemon if requests time out consecutively (REL-02)', () async {
+      int spawnCount = 0;
+      final mockProcesses = <MockProcess>[];
+
+      Future<Process> mockProcessStart(
+        String executable,
+        List<String> arguments, {
+        String? workingDirectory,
+        Map<String, String>? environment,
+        bool includeParentEnvironment = true,
+        bool runInShell = false,
+        ProcessStartMode mode = ProcessStartMode.normal,
+      }) async {
+        spawnCount++;
+        final proc = MockProcess();
+        mockProcesses.add(proc);
+        return proc;
+      }
+
+      // Initialize with a short timeout to make testing fast.
+      final service = BeadsService(
+        '/dummy/path',
+        processStart: mockProcessStart,
+        requestTimeout: const Duration(milliseconds: 10),
+      );
+
+      // Trigger first timeout. This should fail with a timeout exception.
+      await expectLater(service.getVersion(), throwsException);
+      expect(spawnCount, 1);
+
+      // Trigger second timeout. Since we are using same daemon (spawnCount remains 1), it also times out.
+      // After this second consecutive timeout, the daemon should be killed/restarted.
+      await expectLater(service.getVersion(), throwsException);
+      expect(spawnCount, 1);
+
+      // Trigger a third call. Since the previous two timed out consecutively,
+      // the daemon should have been force-terminated, so this call should try
+      // to spawn a fresh daemon process.
+      // We will let this third call succeed.
+      final future = service.getVersion();
+
+      // Wait for second mock process to be spawned.
+      await Future.doWhile(() async {
+        if (mockProcesses.length >= 2 && mockProcesses[1].mockStdin.writtenLines.isNotEmpty) {
+          return false;
+        }
+        await Future.delayed(const Duration(milliseconds: 5));
+        return true;
+      });
+
+      expect(spawnCount, 2);
+      expect(mockProcesses.length, 2);
+
+      final written = mockProcesses[1].mockStdin.writtenLines.first;
+      final requestObj = jsonDecode(written);
+      final reqId = requestObj['id'];
+
+      mockProcesses[1].sendLine('{"jsonrpc":"2.0","result":"1.2.3","id":$reqId}');
+
+      final version = await future;
+      expect(version, '1.2.3');
+
+      // Cleanup
+      service.dispose();
+      for (final proc in mockProcesses) {
+        proc.kill();
+      }
+    });
   });
 }

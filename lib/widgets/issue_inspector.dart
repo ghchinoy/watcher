@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import '../utils/dialog_utils.dart';
 
 class IssueInspector extends StatefulWidget {
   final Issue issue;
@@ -24,6 +25,21 @@ class _IssueInspectorState extends State<IssueInspector> {
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  /// REL-01: run an issue mutation and show a native alert if it fails, instead
+  /// of silently swallowing the error in a fire-and-forget callback.
+  Future<void> _mutate(Future<bool> Function() action) async {
+    final ok = await action();
+    if (!ok && mounted) {
+      await DialogUtils.showError(
+        context,
+        title: 'Update Failed',
+        message:
+            'The change could not be saved. See the project error banner for '
+            'details, then try again.',
+      );
+    }
   }
 
   @override
@@ -56,14 +72,16 @@ class _IssueInspectorState extends State<IssueInspector> {
                   _buildEditableField('Owner', issue.owner ?? '', context, (
                     value,
                   ) {
-                    appState.updateIssue(issue.id, owner: value);
+                    _mutate(() => appState.updateIssue(issue.id, owner: value));
                   }),
                   _buildEditableField(
                     'Assignee',
                     issue.assignee ?? '',
                     context,
                     (value) {
-                      appState.updateIssue(issue.id, assignee: value);
+                      _mutate(
+                        () => appState.updateIssue(issue.id, assignee: value),
+                      );
                     },
                   ),
 
@@ -376,7 +394,7 @@ class _IssueInspectorState extends State<IssueInspector> {
             value: issue.status.toLowerCase(),
             onChanged: (String? newValue) {
               if (newValue != null && newValue != issue.status) {
-                appState.updateIssue(issue.id, status: newValue);
+                _mutate(() => appState.updateIssue(issue.id, status: newValue));
               }
             },
             items: const [
@@ -414,7 +432,9 @@ class _IssueInspectorState extends State<IssueInspector> {
             value: issue.priority,
             onChanged: (int? newValue) {
               if (newValue != null && newValue != issue.priority) {
-                appState.updateIssue(issue.id, priority: newValue);
+                _mutate(
+                  () => appState.updateIssue(issue.id, priority: newValue),
+                );
               }
             },
             items: const [
