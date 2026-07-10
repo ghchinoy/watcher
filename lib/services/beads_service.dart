@@ -23,7 +23,11 @@ class BeadsService {
   Process? _daemonProcess;
   int _requestId = 1;
   final Map<int, Completer<dynamic>> _pendingRequests = {};
-  bool _isInitializing = false;
+
+  /// Guards daemon startup so concurrent callers share a single initialization
+  /// future instead of racing to spawn multiple daemons (RACE-01). Non-null
+  /// while an initialization is in flight; cleared when it settles.
+  Completer<void>? _initCompleter;
 
   bool _isDisposed = false;
   Function(String)? onModeChanged;
@@ -37,13 +41,23 @@ class BeadsService {
   Future<void> _ensureDaemonRunning() async {
     if (_isDisposed) throw Exception('Service disposed');
     if (_daemonProcess != null) return;
-    if (_isInitializing) {
-      // Simple backoff wait if currently initializing
-      await Future.delayed(const Duration(milliseconds: 100));
-      return _ensureDaemonRunning();
+
+    // RACE-01: if another caller is already initializing, await the SAME future
+    // rather than spinning on a timer (which could race and spawn a second
+    // daemon, causing Dolt/noms LOCK contention).
+    if (_initCompleter != null) {
+      await _initCompleter!.future;
+      // The initializer either set _daemonProcess or failed; if it failed,
+      // surface that to this caller too.
+      if (_daemonProcess == null) {
+        throw Exception('Daemon initialization failed');
+      }
+      return;
     }
 
-    _isInitializing = true;
+    final completer = Completer<void>();
+    completer.future.ignore();
+    _initCompleter = completer;
     try {
       // Find the bundled daemon binary.
       String daemonPath = 'daemon/watcher-daemon';
@@ -135,8 +149,20 @@ class BeadsService {
         }
         _pendingRequests.clear();
       });
+
+      // Initialization succeeded (daemon spawned and listeners attached).
+      if (!completer.isCompleted) completer.complete();
+    } catch (e, st) {
+      // Initialization failed: ensure no half-started state lingers and
+      // propagate the error to every waiter.
+      _log.error('Daemon initialization failed', error: e, stackTrace: st);
+      _daemonProcess?.kill();
+      _daemonProcess = null;
+      if (!completer.isCompleted) completer.completeError(e);
+      rethrow;
     } finally {
-      _isInitializing = false;
+      // Allow a subsequent call to retry initialization from scratch.
+      _initCompleter = null;
     }
   }
 
