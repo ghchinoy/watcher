@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'beads_service.dart';
 import 'tmux_service.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
 class PlannerService {
@@ -390,4 +391,10 @@ $exportData
       ghosttyFontFamily: ghosttyFontFamily,
     );
   }
+
+  @visibleForTesting
+  static List<List<String>> parseBdCommands(String block) => _parseBdCommands(block);
+
+  @visibleForTesting
+  static List<String> tokenize(String input) => _tokenize(input);
 }

@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:agent_watcher/state/app_state.dart';
+import 'package:agent_watcher/models/issue.dart';
+import 'package:agent_watcher/models/interaction.dart';
+import 'package:agent_watcher/services/beads_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -163,5 +166,57 @@ void main() {
         expect(state.defaultAiModel?.identifier, 'gemini-3.5-flash');
       },
     );
+
+    test(
+      'refreshData coalesces concurrent triggers via trailing-edge coalescing (RACE-02)',
+      () async {
+        final state = AppState();
+        state.selectedProject = Project('/dummy');
+        final fakeService = FakeBeadsService();
+        state.currentServiceForTesting = fakeService;
+
+        // Trigger multiple refreshes concurrently/synchronously (without awaiting)
+        final f1 = state.refreshDataForTesting();
+        final f2 = state.refreshDataForTesting();
+        final f3 = state.refreshDataForTesting();
+
+        await Future.wait([f1, f2, f3]);
+
+        // The first run runs immediately. The second and third runs are queued.
+        // The second run starts when the first finishes.
+        // The third run is queued during the second run's loop, or during the first run's loop.
+        // Thus, getIssues() should be called exactly TWICE!
+        expect(fakeService.getIssuesCount, 2);
+      },
+    );
   });
+}
+
+class FakeBeadsService implements BeadsService {
+  int getIssuesCount = 0;
+  final Duration delay;
+
+  FakeBeadsService({this.delay = const Duration(milliseconds: 10)});
+
+  @override
+  Future<List<Issue>> getIssues() async {
+    getIssuesCount++;
+    await Future.delayed(delay);
+    return [];
+  }
+
+  @override
+  Future<List<Interaction>> getInteractions() async {
+    await Future.delayed(delay);
+    return [];
+  }
+
+  @override
+  Future<List<Map<String, String>>> getPeers() async {
+    await Future.delayed(delay);
+    return [];
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
