@@ -8,6 +8,70 @@ import '../utils/app_logger.dart';
 
 class PlannerService {
   static final _log = AppLogger('PlannerService');
+
+  // ── SEC-04: symlink-safe AI IPC scratch files ──────────────────────────────
+  // The planner exchanges data with the `gemini` CLI (running in a tmux session)
+  // through three files under the project's `.beads/` dir. Their names are fixed
+  // because the tmux shell pipeline reads/writes them by relative path, so we
+  // cannot randomize them without also rewriting that pipeline and threading a
+  // token into pollForCompletion. Instead we defend against the actual risk —
+  // an attacker pre-planting a SYMLINK at one of these predictable paths so the
+  // app writes prompt data through it, or reads attacker-controlled output.
+  //
+  // Before any write we resolve the path and, if an entry already exists that is
+  // a symlink (or otherwise not a plain file we own), we delete it and recreate
+  // it as a fresh regular file. Reads likewise refuse to follow a symlink.
+
+  static const _aiPromptName = 'ai_prompt.txt';
+  static const _aiOutName = 'ai_out.md';
+  static const _aiDoneName = 'ai_done';
+
+  static String _beadsPath(String workspacePath, String name) =>
+      '$workspacePath/.beads/$name';
+
+  /// True if [path] currently exists as a symlink (link to file OR dir).
+  static bool _isSymlink(String path) =>
+      FileSystemEntity.isLinkSync(path);
+
+  /// Removes any pre-existing entry at [path] that is a symlink, so a subsequent
+  /// write creates a fresh regular file instead of following an attacker-planted
+  /// link (SEC-04). Safe to call when nothing exists.
+  static Future<void> _unlinkIfSymlink(String path) async {
+    if (_isSymlink(path)) {
+      _log.warning(
+        'Refusing to follow symlink at AI scratch path; removing it: $path',
+      );
+      await Link(path).delete();
+    }
+  }
+
+  /// Writes [contents] to a `.beads/` scratch file, guaranteeing the target is a
+  /// regular file we create (never a followed symlink). Written with the default
+  /// user-only-writable umask; the file lives in the project dir owned by the
+  /// user, and is consumed by the same-user gemini process.
+  static Future<void> _writeScratch(
+    String workspacePath,
+    String name,
+    String contents,
+  ) async {
+    final path = _beadsPath(workspacePath, name);
+    await _unlinkIfSymlink(path);
+    // Overwrite (do not follow) — writeAsString on a plain path truncates the
+    // regular file; the symlink guard above ensures it is not a link.
+    await File(path).writeAsString(contents, flush: true);
+  }
+
+  /// Deletes a `.beads/` scratch file (whether it is a regular file or a
+  /// leftover symlink) if present.
+  static Future<void> _deleteScratch(String workspacePath, String name) async {
+    final path = _beadsPath(workspacePath, name);
+    if (_isSymlink(path)) {
+      await Link(path).delete();
+    } else if (File(path).existsSync()) {
+      await File(path).delete();
+    }
+  }
+
   static Future<void> startGeneratePlan({
     required String workspacePath,
     required String goal,
@@ -32,15 +96,13 @@ Make sure to use '--parent' to nest tasks under epics, and use '--type epic' and
 Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands.
 ''';
 
-    // 1. Write the prompt to a temp file to avoid complex shell escaping in tmux send-keys
-    final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
-    await promptFile.writeAsString(prompt);
+    // 1. Write the prompt to a scratch file to avoid complex shell escaping in
+    //    tmux send-keys (SEC-04: symlink-safe write).
+    await _writeScratch(workspacePath, _aiPromptName, prompt);
 
-    // 2. Clean up previous run files if they exist
-    final doneFile = File('$workspacePath/.beads/ai_done');
-    final outFile = File('$workspacePath/.beads/ai_out.md');
-    if (doneFile.existsSync()) await doneFile.delete();
-    if (outFile.existsSync()) await outFile.delete();
+    // 2. Clean up previous run files if they exist (SEC-04: symlink-safe).
+    await _deleteScratch(workspacePath, _aiDoneName);
+    await _deleteScratch(workspacePath, _aiOutName);
 
     // 3. Ensure the tmux session exists
     await TmuxService.ensureSession(sessionName, workspacePath);
@@ -63,26 +125,28 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
   }
 
   static Future<String> pollForCompletion(String workspacePath) async {
-    final doneFile = File('$workspacePath/.beads/ai_done');
-    final outFile = File('$workspacePath/.beads/ai_out.md');
+    final donePath = _beadsPath(workspacePath, _aiDoneName);
+    final outPath = _beadsPath(workspacePath, _aiOutName);
 
-    // Poll every second until ai_done exists
-    while (!doneFile.existsSync()) {
+    // Poll every second until ai_done exists (a plain file, not a symlink).
+    while (!(File(donePath).existsSync() && !_isSymlink(donePath))) {
       await Future.delayed(const Duration(seconds: 1));
     }
 
-    // Read the output
+    // Read the output — SEC-04: refuse to read through an attacker-planted
+    // symlink at the predictable output path.
     String result = '';
-    if (outFile.existsSync()) {
-      result = await outFile.readAsString();
+    if (_isSymlink(outPath)) {
+      _log.warning('Refusing to read AI output via symlink: $outPath');
+    } else if (File(outPath).existsSync()) {
+      result = await File(outPath).readAsString();
     }
 
-    // Clean up temp files
+    // Clean up scratch files (SEC-04: symlink-safe).
     try {
-      await doneFile.delete();
-      await outFile.delete();
-      final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
-      if (promptFile.existsSync()) await promptFile.delete();
+      await _deleteScratch(workspacePath, _aiDoneName);
+      await _deleteScratch(workspacePath, _aiOutName);
+      await _deleteScratch(workspacePath, _aiPromptName);
     } catch (e) {
       _log.debug('Temp AI file cleanup failed (non-critical)', error: e);
     }
@@ -314,15 +378,12 @@ JSONL Data:
 $exportData
 ''';
 
-    // 1. Write prompt
-    final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
-    await promptFile.writeAsString(prompt);
+    // 1. Write prompt (SEC-04: symlink-safe).
+    await _writeScratch(workspacePath, _aiPromptName, prompt);
 
-    // 2. Clean up
-    final doneFile = File('$workspacePath/.beads/ai_done');
-    final outFile = File('$workspacePath/.beads/ai_out.md');
-    if (doneFile.existsSync()) await doneFile.delete();
-    if (outFile.existsSync()) await outFile.delete();
+    // 2. Clean up (SEC-04: symlink-safe).
+    await _deleteScratch(workspacePath, _aiDoneName);
+    await _deleteScratch(workspacePath, _aiOutName);
 
     // 3. Ensure session
     await TmuxService.ensureSession(sessionName, workspacePath);
@@ -365,15 +426,12 @@ $exportData
   $assessmentMarkdown
   ''';
 
-    // 1. Write prompt
-    final promptFile = File('$workspacePath/.beads/ai_prompt.txt');
-    await promptFile.writeAsString(prompt);
+    // 1. Write prompt (SEC-04: symlink-safe).
+    await _writeScratch(workspacePath, _aiPromptName, prompt);
 
-    // 2. Clean up
-    final doneFile = File('$workspacePath/.beads/ai_done');
-    final outFile = File('$workspacePath/.beads/ai_out.md');
-    if (doneFile.existsSync()) await doneFile.delete();
-    if (outFile.existsSync()) await outFile.delete();
+    // 2. Clean up (SEC-04: symlink-safe).
+    await _deleteScratch(workspacePath, _aiDoneName);
+    await _deleteScratch(workspacePath, _aiOutName);
 
     // 3. Ensure session
     await TmuxService.ensureSession(sessionName, workspacePath);
@@ -397,4 +455,13 @@ $exportData
 
   @visibleForTesting
   static List<String> tokenize(String input) => _tokenize(input);
+
+  @visibleForTesting
+  static Future<void> writeScratchForTesting(String workspacePath, String name, String contents) => _writeScratch(workspacePath, name, contents);
+
+  @visibleForTesting
+  static Future<void> deleteScratchForTesting(String workspacePath, String name) => _deleteScratch(workspacePath, name);
+
+  @visibleForTesting
+  static bool isSymlinkForTesting(String path) => _isSymlink(path);
 }

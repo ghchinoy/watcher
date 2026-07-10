@@ -115,7 +115,7 @@ class _TreeNodeState extends State<TreeNode> {
                       dragged.id,
                       parent: widget.issue.id,
                     );
-                    if (!ok && mounted) {
+                    if (!ok && context.mounted) {
                       await DialogUtils.showError(
                         context,
                         title: 'Could Not Move Issue',
@@ -188,14 +188,19 @@ class _TreeNodeState extends State<TreeNode> {
                             ),
                           ),
                         ),
-                        child: GestureDetector(
-                          onTap: () => appState.selectIssue(widget.issue),
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: _buildIssueRow(
-                              widget.issue,
-                              context,
-                              isRoot: widget.depth == 0,
+                        child: Semantics(
+                          button: true,
+                          label:
+                              'Open issue ${widget.issue.id}: ${widget.issue.title}',
+                          child: GestureDetector(
+                            onTap: () => appState.selectIssue(widget.issue),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: _buildIssueRow(
+                                widget.issue,
+                                context,
+                                isRoot: widget.depth == 0,
+                              ),
                             ),
                           ),
                         ),

@@ -259,10 +259,13 @@ class _IssueInspectorState extends State<IssueInspector> {
   }
 
   Widget _buildAddDependencyButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showAddDependencySheet(context),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
+    return Semantics(
+      button: true,
+      label: 'Add dependency',
+      child: GestureDetector(
+        onTap: () => _showAddDependencySheet(context),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
         child: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Row(
@@ -282,10 +285,11 @@ class _IssueInspectorState extends State<IssueInspector> {
                   decorationColor: MacosColors.systemGrayColor.withValues(
                     alpha: 0.5,
                   ),
-                ),
-              ),
-            ],
-          ),
+                 ),
+               ),
+             ],
+           ),
+         ),
         ),
       ),
     );
@@ -338,16 +342,19 @@ class _IssueInspectorState extends State<IssueInspector> {
         ? MacosColors.systemGrayColor
         : MacosTheme.of(context).primaryColor;
 
-    return GestureDetector(
-      onTap: () => appState.selectIssue(target),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (prefixLabel != null) ...[
+    return Semantics(
+      button: true,
+      label: 'Open issue ${target.id}: ${target.title}',
+      child: GestureDetector(
+        onTap: () => appState.selectIssue(target),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (prefixLabel != null) ...[
                 Text(
                   '$prefixLabel → ',
                   style: MacosTheme.of(context).typography.footnote.copyWith(
@@ -370,6 +377,7 @@ class _IssueInspectorState extends State<IssueInspector> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

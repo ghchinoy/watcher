@@ -34,6 +34,8 @@ class CommandPalette extends StatefulWidget {
 class _CommandPaletteState extends State<CommandPalette> {
   final _searchController = TextEditingController();
   final _focusNode = FocusNode();
+  // A11Y-02: dedicated scope so Tab/Shift-Tab cycles within the palette only.
+  final _focusScopeNode = FocusScopeNode();
   final _scrollController = ScrollController();
   List<Issue> _filteredIssues = [];
   int _selectedIndex = 0;
@@ -55,6 +57,7 @@ class _CommandPaletteState extends State<CommandPalette> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _focusNode.dispose();
+    _focusScopeNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -174,7 +177,12 @@ class _CommandPaletteState extends State<CommandPalette> {
         ? const Color(0xE01E1E1E) // Frosted dark
         : const Color(0xF0F5F5F7); // Frosted light
 
-    return Focus(
+    // A11Y-02: trap Tab traversal inside the palette so keyboard focus cannot
+    // escape into the background screen while this modal is open.
+    return FocusScope(
+      node: _focusScopeNode,
+      child: FocusTraversalGroup(
+        child: Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
@@ -332,7 +340,10 @@ class _CommandPaletteState extends State<CommandPalette> {
                                     _selectedIndex = index;
                                   });
                                 },
-                                child: GestureDetector(
+                                child: Semantics(
+                                  button: true,
+                                  label: 'Open issue ${issue.id}: ${issue.title}',
+                                  child: GestureDetector(
                                   onTap: () => _selectIssue(issue),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -464,13 +475,14 @@ class _CommandPaletteState extends State<CommandPalette> {
                                             color: MacosColors.systemGrayColor,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                                       ],
+                                     ),
+                                   ),
+                                 ),
+                                 ),
+                               );
+                             },
+                           ),
                   ),
                   // Keyboard help footer
                   Container(
@@ -514,6 +526,8 @@ class _CommandPaletteState extends State<CommandPalette> {
               ),
             ),
           ),
+        ),
+      ),
         ),
       ),
     );
