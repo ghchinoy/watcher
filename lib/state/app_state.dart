@@ -64,6 +64,9 @@ class AppState extends ChangeNotifier {
   BeadsService? _currentService;
   BeadsService? get currentService => _currentService;
 
+  @visibleForTesting
+  set currentServiceForTesting(BeadsService? service) => _currentService = service;
+
   int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
   int heartbeatIntervalSeconds =
       30; // Default to 30 seconds safety heartbeat. 0 means disabled.
@@ -689,6 +692,9 @@ class AppState extends ChangeNotifier {
       _refreshInFlight = false;
     }
   }
+
+  @visibleForTesting
+  Future<void> refreshDataForTesting() => _refreshData();
 
   Future<void> _performRefresh() async {
     if (selectedProject == null) return;

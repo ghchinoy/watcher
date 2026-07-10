@@ -32,11 +32,31 @@ class BeadsService {
   bool _isDisposed = false;
   Function(String)? onModeChanged;
 
+  final Future<Process> Function(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment,
+    bool runInShell,
+    ProcessStartMode mode,
+  }) _processStart;
+
   BeadsService(
     this.workingDirectory, {
     this.onModeChanged,
     String Function()? bdPathResolver,
-  }) : _bdPathResolver = bdPathResolver ?? (() => 'bd');
+    Future<Process> Function(
+      String executable,
+      List<String> arguments, {
+      String? workingDirectory,
+      Map<String, String>? environment,
+      bool includeParentEnvironment,
+      bool runInShell,
+      ProcessStartMode mode,
+    })? processStart,
+  })  : _bdPathResolver = bdPathResolver ?? (() => 'bd'),
+        _processStart = processStart ?? Process.start;
 
   Future<void> _ensureDaemonRunning() async {
     if (_isDisposed) throw Exception('Service disposed');
@@ -78,7 +98,7 @@ class BeadsService {
         }
       }
 
-      _daemonProcess = await Process.start(
+      _daemonProcess = await _processStart(
         daemonPath,
         [workingDirectory],
         workingDirectory: workingDirectory,

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'beads_service.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
 class TmuxService {
@@ -17,6 +18,9 @@ class TmuxService {
   static String _escapeForAppleScript(String value) {
     return value.replaceAll('\\', r'\\').replaceAll('"', r'\"');
   }
+
+  @visibleForTesting
+  static String escapeForAppleScript(String value) => _escapeForAppleScript(value);
 
   /// Resolves the absolute path to the bd executable.
   /// [customBdPath] is an optional override from user settings; when empty
