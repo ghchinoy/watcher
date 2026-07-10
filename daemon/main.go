@@ -11,13 +11,119 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/steveyegge/beads"
 )
 
-const macosDeveloperPath = "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+// appendDeveloperPath returns a copy of env with robust macOS developer paths
+// appended to the existing PATH environment variable (SEC-03).
+func appendDeveloperPath(env []string) []string {
+	var pathVal string
+	var pathIdx = -1
+	for i, e := range env {
+		if strings.HasPrefix(e, "PATH=") {
+			pathVal = strings.TrimPrefix(e, "PATH=")
+			pathIdx = i
+			break
+		}
+	}
+
+	const devPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+	var newPath string
+	if pathVal == "" {
+		newPath = "PATH=" + devPaths
+	} else {
+		newPath = "PATH=" + pathVal + ":" + devPaths
+	}
+
+	if pathIdx != -1 {
+		result := make([]string, len(env))
+		copy(result, env)
+		result[pathIdx] = newPath
+		return result
+	}
+	return append(env, newPath)
+}
+
+// exportDebounce is how long the exporter waits after the last mutation before
+// running `bd export`, so a burst of rapid mutations collapses into one export.
+const exportDebounce = 400 * time.Millisecond
 
 var outputWriter io.Writer = os.Stdout
+
+// debouncedExporter serializes and coalesces background `bd export` runs
+// (RACE-04). Every mutation used to spawn its own `bd export` inline; rapid UI
+// actions therefore launched multiple concurrent exporter processes that
+// collided on the Dolt file lock under .beads/backup/. This runs a single
+// worker goroutine: mutation handlers call Request() (non-blocking), and the
+// worker runs at most one export at a time, waiting exportDebounce after the
+// most recent Request so a burst produces a single export.
+type debouncedExporter struct {
+	dir    string        // repo root to run `bd export` in
+	notify chan struct{} // buffered(1): a coalescing "export needed" signal
+}
+
+func newDebouncedExporter(dir string) *debouncedExporter {
+	e := &debouncedExporter{
+		dir:    dir,
+		notify: make(chan struct{}, 1),
+	}
+	go e.run()
+	return e
+}
+
+// Request signals that an export is needed. Non-blocking and coalescing: if a
+// signal is already pending, this is a no-op (the pending run will cover it).
+func (e *debouncedExporter) Request() {
+	select {
+	case e.notify <- struct{}{}:
+	default:
+		// A signal is already queued; the worker will pick up the latest state.
+	}
+}
+
+func (e *debouncedExporter) run() {
+	for range e.notify {
+		// Debounce: drain any additional signals that arrive within the window
+		// so a burst of mutations results in exactly one export.
+		timer := time.NewTimer(exportDebounce)
+		draining := true
+		for draining {
+			select {
+			case <-e.notify:
+				// Another mutation arrived; extend the debounce window.
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(exportDebounce)
+			case <-timer.C:
+				draining = false
+			}
+		}
+
+		cmd := exec.Command("bd", "export")
+		cmd.Env = appendDeveloperPath(os.Environ())
+		if e.dir != "" {
+			cmd.Dir = e.dir
+		}
+		if out, err := cmd.CombinedOutput(); err != nil {
+			log.Printf("background bd export failed: %v\nOutput: %s", err, string(out))
+		}
+	}
+}
+
+// exporter is the process-wide single-worker exporter, initialized in main().
+var exporter *debouncedExporter
+
+// requestExport asks the shared exporter to run (coalesced/debounced). Safe to
+// call from any handler; falls back to a no-op if the exporter is unset (e.g.
+// in tests that don't start it).
+func requestExport() {
+	if exporter != nil {
+		exporter.Request()
+	}
+}
 
 // sanitizeEnvValue strips characters that would let a value break out of a
 // single "KEY=VALUE" entry when placed in a process environment (SEC-03).
@@ -105,7 +211,7 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 	cmd := exec.CommandContext(ctx, "bd", "federation", "sync")
 
 	// Inject standard macOS developer PATH environments so that GUI bundle context can locate Brew/System bin paths
-	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+	cmd.Env = appendDeveloperPath(os.Environ())
 
 	// Ensure it runs in the correct directory. FindBeadsDir starts from CWD.
 	beadsDir := beads.FindBeadsDir()
@@ -183,11 +289,10 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		}
 	}
 
-	// Trigger a background export so .beads/backup/events.jsonl updates,
-	// which notifies the UI file watcher that changes occurred.
-	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), macosDeveloperPath)
-	_ = cmd.Run()
+	// RACE-04: request a coalesced background export (single-worker, debounced)
+	// so .beads/backup/events.jsonl updates and the UI file watcher notices,
+	// without spawning concurrent `bd export` processes that fight the Dolt lock.
+	requestExport()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",
@@ -210,7 +315,7 @@ func handleGetComments(ctx context.Context, storage beads.Storage, req Request) 
 	// positional after "--" so an ID beginning with "-" cannot be parsed
 	// as a flag (flag injection).
 	cmd := exec.Command("bd", "comments", "--json", "--", params.ID)
-	cmd.Env = append(os.Environ(), macosDeveloperPath)
+	cmd.Env = appendDeveloperPath(os.Environ())
 	out, err := cmd.Output()
 	if err != nil {
 		sendError(req.ID, -32000, fmt.Sprintf("failed to get comments: %v", string(out)))
@@ -250,10 +355,9 @@ func handleAddComment(ctx context.Context, storage beads.Storage, req Request) {
 	// it into the process environment. cmd.Env is a []string of "KEY=VALUE"
 	// entries; an embedded newline could otherwise smuggle in additional
 	// environment variables (e.g. LD_PRELOAD, PATH) -> code execution.
-	cmd.Env = append(os.Environ(),
+	cmd.Env = appendDeveloperPath(append(os.Environ(),
 		fmt.Sprintf("BD_ACTOR=%s", sanitizeEnvValue(params.Actor)),
-		macosDeveloperPath,
-	)
+	))
 
 	if out, err := cmd.CombinedOutput(); err != nil {
 		sendError(req.ID, -32000, fmt.Sprintf("failed to add comment: %v - %s", err, string(out)))
@@ -284,11 +388,8 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		return
 	}
 
-	// Trigger a background export so .beads/backup/events.jsonl updates,
-	// which notifies the UI file watcher that changes occurred.
-	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), macosDeveloperPath)
-	_ = cmd.Run()
+	// RACE-04: coalesced background export (see requestExport / debouncedExporter).
+	requestExport()
 
 	sendResponse(Response{
 		JSONRPC: "2.0",
@@ -322,10 +423,8 @@ func handleAddDependency(ctx context.Context, storage beads.Storage, req Request
 		return
 	}
 
-	// Export so the UI file-watcher picks up the change.
-	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), macosDeveloperPath)
-	_ = cmd.Run()
+	// RACE-04: coalesced background export (see requestExport / debouncedExporter).
+	requestExport()
 
 	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
 }
@@ -345,9 +444,8 @@ func handleRemoveDependency(ctx context.Context, storage beads.Storage, req Requ
 		return
 	}
 
-	cmd := exec.Command("bd", "export")
-	cmd.Env = append(os.Environ(), macosDeveloperPath)
-	_ = cmd.Run()
+	// RACE-04: coalesced background export (see requestExport / debouncedExporter).
+	requestExport()
 
 	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
 }
@@ -479,7 +577,7 @@ func main() {
 	// that might be holding a dead port or a dead file lock before we attempt to connect.
 	// We shell out to 'bd dolt killall' since doltserver is an internal package.
 	killCmd := exec.Command("bd", "dolt", "killall")
-	killCmd.Env = append(os.Environ(), macosDeveloperPath)
+	killCmd.Env = appendDeveloperPath(os.Environ())
 	killCmd.Dir = repoPath
 	if out, err := killCmd.CombinedOutput(); err == nil {
 		// Just log it internally; it's a helpful sanity check
@@ -506,6 +604,9 @@ func main() {
 			log.Printf("Error closing storage: %v", err)
 		}
 	}()
+
+	// RACE-04: start the single-worker debounced exporter, rooted at the repo.
+	exporter = newDebouncedExporter(repoPath)
 
 	// Simple stdin/stdout JSON-RPC loop
 	decoder := json.NewDecoder(os.Stdin)
