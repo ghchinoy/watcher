@@ -4,6 +4,7 @@ import 'package:flutter/material.dart'
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../state/app_state.dart';
+import '../utils/dialog_utils.dart';
 import 'add_model_modal.dart';
 
 class SettingsModal extends StatefulWidget {
@@ -66,7 +67,8 @@ class _SettingsModalState extends State<SettingsModal> {
   @override
   Widget build(BuildContext context) {
     return MacosSheet(
-      child: ListenableBuilder(
+      child: ModalFocusTrap(
+        child: ListenableBuilder(
         listenable: appState,
         builder: (context, _) {
           return Padding(
@@ -627,6 +629,7 @@ class _SettingsModalState extends State<SettingsModal> {
             ),
           );
         },
+      ),
       ),
     );
   }

@@ -699,32 +699,36 @@ class ReadinessStatCard extends StatelessWidget {
     IconData icon,
     VoidCallback onTap,
   ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            MacosIcon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
-            Text(
-              count.toString(),
-              style: MacosTheme.of(context).typography.title2.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+    return Semantics(
+      button: true,
+      label: '$count $label',
+      child: GestureDetector(
+        onTap: onTap,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MacosIcon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                count.toString(),
+                style: MacosTheme.of(context).typography.title2.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: MacosTheme.of(context).typography.footnote.copyWith(
-                color: color,
-                decoration: TextDecoration.underline,
-                decorationColor: color.withValues(alpha: 0.5),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: MacosTheme.of(context).typography.footnote.copyWith(
+                  color: color,
+                  decoration: TextDecoration.underline,
+                  decorationColor: color.withValues(alpha: 0.5),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

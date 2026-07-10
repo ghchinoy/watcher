@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../state/app_state.dart';
+import '../utils/dialog_utils.dart';
 
 class CreateIssueModal extends StatefulWidget {
   final AppState appState;
@@ -81,7 +82,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         .where((i) => i.issueType == 'epic')
         .toList();
 
-    return Container(
+    return ModalFocusTrap(
+      child: Container(
       constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
       decoration: BoxDecoration(color: MacosTheme.of(context).canvasColor),
       padding: const EdgeInsets.all(20.0),
@@ -240,6 +242,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

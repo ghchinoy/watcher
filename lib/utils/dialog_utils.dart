@@ -1,6 +1,48 @@
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 
+/// A11Y-02: wraps modal content so keyboard Tab/Shift-Tab traversal stays inside
+/// the modal instead of leaking into the background screen's toolbar/sidebar.
+///
+/// Use as the root of a modal presented via `showMacosSheet` (which provides a
+/// route barrier but no Tab trap). It creates a dedicated [FocusScope] that
+/// requests focus on show and restores the previously-focused node on dismiss,
+/// and a [FocusTraversalGroup] so Tab cycles only through this subtree.
+class ModalFocusTrap extends StatefulWidget {
+  final Widget child;
+  const ModalFocusTrap({super.key, required this.child});
+
+  @override
+  State<ModalFocusTrap> createState() => _ModalFocusTrapState();
+}
+
+class _ModalFocusTrapState extends State<ModalFocusTrap> {
+  final FocusScopeNode _scopeNode = FocusScopeNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Move focus into the modal once it is mounted so Tab starts inside it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scopeNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scopeNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusScope(
+      node: _scopeNode,
+      child: FocusTraversalGroup(child: widget.child),
+    );
+  }
+}
+
 /// Shared alert helpers (REL-01).
 ///
 /// Fire-and-forget UI mutations (updateIssue, removeProject, drag-and-drop

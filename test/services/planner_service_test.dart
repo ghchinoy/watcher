@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:agent_watcher/services/planner_service.dart';
+
 
 void main() {
   group('PlannerService _tokenize', () {
@@ -109,6 +111,78 @@ bd create "x"
 bd config set some-key
 ''';
       expect(() => PlannerService.parseBdCommands(block), throwsException);
+    });
+  });
+
+  group('PlannerService SEC-04 Symlink-Safe Scratch File Helpers', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('planner_service_test_');
+      // Create .beads subdirectory inside tempDir
+      await Directory('${tempDir.path}/.beads').create();
+    });
+
+    tearDown(() async {
+      await tempDir.delete(recursive: true);
+    });
+
+    test('isSymlinkForTesting correctly identifies symlinks and regular files', () async {
+      final regularFilePath = '${tempDir.path}/.beads/regular.txt';
+      final symlinkPath = '${tempDir.path}/.beads/link.txt';
+
+      await File(regularFilePath).writeAsString('regular content');
+      await Link(symlinkPath).create(regularFilePath);
+
+      expect(PlannerService.isSymlinkForTesting(regularFilePath), isFalse);
+      expect(PlannerService.isSymlinkForTesting(symlinkPath), isTrue);
+    });
+
+    test('writeScratchForTesting unlinks pre-planted symlink and writes regular file', () async {
+      final targetFilePath = '${tempDir.path}/target.txt';
+      final scratchName = 'ai_prompt.txt';
+      final scratchPath = '${tempDir.path}/.beads/$scratchName';
+
+      // Create a target file that we do NOT want to overwrite (e.g. simulating /etc/passwd)
+      final targetFile = File(targetFilePath);
+      await targetFile.writeAsString('sensitive data');
+
+      // Pre-plant a symlink at the scratch path pointing to the sensitive target file
+      await Link(scratchPath).create(targetFilePath);
+
+      // Now, try writing to the scratch path using writeScratchForTesting
+      await PlannerService.writeScratchForTesting(tempDir.path, scratchName, 'new prompt content');
+
+      // The symlink at scratchPath should have been destroyed and replaced by a regular file
+      expect(PlannerService.isSymlinkForTesting(scratchPath), isFalse);
+      expect(await File(scratchPath).readAsString(), 'new prompt content');
+
+      // The sensitive target file MUST remain untouched!
+      expect(await targetFile.readAsString(), 'sensitive data');
+    });
+
+    test('deleteScratchForTesting removes regular file and symlink correctly', () async {
+      final targetFilePath = '${tempDir.path}/target.txt';
+      final scratchName = 'ai_prompt.txt';
+      final scratchPath = '${tempDir.path}/.beads/$scratchName';
+
+      // 1. Test deleting a regular file
+      final scratchFile = File(scratchPath);
+      await scratchFile.writeAsString('prompt');
+      expect(scratchFile.existsSync(), isTrue);
+
+      await PlannerService.deleteScratchForTesting(tempDir.path, scratchName);
+      expect(scratchFile.existsSync(), isFalse);
+
+      // 2. Test deleting a symlink (ensure it deletes the link, not the target)
+      final targetFile = File(targetFilePath);
+      await targetFile.writeAsString('sensitive');
+      await Link(scratchPath).create(targetFilePath);
+      expect(PlannerService.isSymlinkForTesting(scratchPath), isTrue);
+
+      await PlannerService.deleteScratchForTesting(tempDir.path, scratchName);
+      expect(Link(scratchPath).existsSync(), isFalse);
+      expect(targetFile.existsSync(), isTrue); // Target must still exist
     });
   });
 }

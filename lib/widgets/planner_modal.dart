@@ -3,6 +3,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../services/planner_service.dart';
 import '../state/app_state.dart';
+import '../utils/dialog_utils.dart';
 
 class PlannerModal extends StatefulWidget {
   final Project project;
@@ -107,7 +108,8 @@ class _PlannerModalState extends State<PlannerModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ModalFocusTrap(
+      child: Container(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
       decoration: BoxDecoration(color: MacosTheme.of(context).canvasColor),
       padding: const EdgeInsets.all(20.0),
@@ -230,6 +232,7 @@ class _PlannerModalState extends State<PlannerModal> {
             ),
           ],
         ],
+      ),
       ),
     );
   }
