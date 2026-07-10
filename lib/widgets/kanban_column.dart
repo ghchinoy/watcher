@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import '../utils/dialog_utils.dart';
 import 'kanban_card.dart';
 
 class KanbanColumn extends StatelessWidget {
@@ -22,9 +23,19 @@ class KanbanColumn extends StatelessWidget {
       onWillAcceptWithDetails: (details) {
         return details.data.status != statusKey;
       },
-      onAcceptWithDetails: (details) {
+      onAcceptWithDetails: (details) async {
         final issue = details.data;
-        appState.updateIssue(issue.id, status: statusKey);
+        // REL-01: surface a native alert if the drag-to-move fails, rather than
+        // silently reverting on the next refresh.
+        final ok = await appState.updateIssue(issue.id, status: statusKey);
+        if (!ok && context.mounted) {
+          await DialogUtils.showError(
+            context,
+            title: 'Could Not Move Issue',
+            message:
+                'Failed to change ${issue.id} to "$title". Please try again.',
+          );
+        }
       },
       builder: (context, candidateData, rejectedData) {
         return Container(

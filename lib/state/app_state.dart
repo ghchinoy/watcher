@@ -376,10 +376,27 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> removeProject(Project project) async {
+  /// Removes a project. Returns `true` on success, `false` if persistence
+  /// failed. REL-01: previously this swallowed a failed [_saveProjects] and the
+  /// removal would silently reappear on next launch.
+  Future<bool> removeProject(Project project) async {
+    // Snapshot for rollback if persistence fails.
+    final index = projects.indexOf(project);
     projects.remove(project);
-    projectErrors.remove(project.path);
-    await _saveProjects();
+    final savedError = projectErrors.remove(project.path);
+
+    try {
+      await _saveProjects();
+    } catch (e) {
+      // Roll back the in-memory removal so UI and persisted state stay in sync.
+      if (index >= 0 && !projects.contains(project)) {
+        projects.insert(index, project);
+      }
+      if (savedError != null) projectErrors[project.path] = savedError;
+      projectErrors[project.path] = 'Failed to remove project: $e';
+      notifyListeners();
+      return false;
+    }
 
     _watcher.cancelGlobalWatcher(project.path);
 
@@ -398,6 +415,7 @@ class AppState extends ChangeNotifier {
     } else {
       notifyListeners();
     }
+    return true;
   }
 
   bool hasUnreadActivity(Project project) {
@@ -582,7 +600,10 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateIssue(
+  /// Updates an issue. Returns `true` on success, `false` on failure.
+  /// REL-01: callers awaiting this can surface a native alert on `false`; the
+  /// error is also recorded in [projectErrors] for the sidebar indicator.
+  Future<bool> updateIssue(
     String id, {
     String? status,
     int? priority,
@@ -590,7 +611,7 @@ class AppState extends ChangeNotifier {
     String? assignee,
     String? parent,
   }) async {
-    if (selectedProject == null) return;
+    if (selectedProject == null) return false;
 
     // Optimistically update the selected issue if it matches
     if (selectedIssue?.id == id) {
@@ -621,9 +642,11 @@ class AppState extends ChangeNotifier {
           }
         }
       }
+      return true;
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to update issue: $e';
       notifyListeners();
+      return false;
     }
   }
 

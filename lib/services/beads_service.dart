@@ -24,6 +24,14 @@ class BeadsService {
   int _requestId = 1;
   final Map<int, Completer<dynamic>> _pendingRequests = {};
 
+  /// REL-02: number of RPC requests that have timed out back-to-back with no
+  /// intervening successful response. When it reaches
+  /// [_maxConsecutiveTimeouts] the daemon is assumed hung/deadlocked and is
+  /// force-restarted so subsequent requests don't time out indefinitely.
+  /// Reset to 0 on any successful response.
+  int _consecutiveTimeouts = 0;
+  static const int _maxConsecutiveTimeouts = 2;
+
   /// Guards daemon startup so concurrent callers share a single initialization
   /// future instead of racing to spawn multiple daemons (RACE-01). Non-null
   /// while an initialization is in flight; cleared when it settles.
@@ -42,6 +50,8 @@ class BeadsService {
     ProcessStartMode mode,
   }) _processStart;
 
+  final Duration _requestTimeout;
+
   BeadsService(
     this.workingDirectory, {
     this.onModeChanged,
@@ -55,8 +65,10 @@ class BeadsService {
       bool runInShell,
       ProcessStartMode mode,
     })? processStart,
+    Duration? requestTimeout,
   })  : _bdPathResolver = bdPathResolver ?? (() => 'bd'),
-        _processStart = processStart ?? Process.start;
+        _processStart = processStart ?? Process.start,
+        _requestTimeout = requestTimeout ?? const Duration(seconds: 15);
 
   Future<void> _ensureDaemonRunning() async {
     if (_isDisposed) throw Exception('Service disposed');
@@ -129,6 +141,9 @@ class BeadsService {
 
               final id = response['id'] as int?;
               if (id != null && _pendingRequests.containsKey(id)) {
+                // REL-02: a matched response (even an error) proves the daemon
+                // is alive and responsive, so the hang streak is broken.
+                _consecutiveTimeouts = 0;
                 if (response['error'] != null) {
                   _pendingRequests[id]!.completeError(
                     Exception(response['error']['message']),
@@ -212,14 +227,43 @@ class BeadsService {
     }
 
     return completer.future.timeout(
-      const Duration(seconds: 15),
+      _requestTimeout,
       onTimeout: () {
         _pendingRequests.remove(id);
+
+        // REL-02: track consecutive timeouts. A hung/deadlocked daemon would
+        // otherwise make every subsequent request time out forever, because
+        // _ensureDaemonRunning reuses the still-alive process. After
+        // [_maxConsecutiveTimeouts] in a row, force-restart it so the next
+        // request spawns a fresh daemon.
+        _consecutiveTimeouts++;
+        if (_consecutiveTimeouts >= _maxConsecutiveTimeouts) {
+          _log.warning(
+            'Daemon unresponsive after $_consecutiveTimeouts consecutive '
+            'timeouts; force-restarting.',
+          );
+          _restartDaemon();
+        }
+
         throw Exception(
-          'Daemon timed out after 15s waiting for Dolt server to boot. Try selecting the project again.',
+          'Daemon timed out after ${_requestTimeout.inSeconds}s waiting for Dolt server to boot. Try selecting the project again.',
         );
       },
     );
+  }
+
+  /// REL-02: forcibly terminate the daemon so the next [_ensureDaemonRunning]
+  /// spawns a fresh one. Killing the process triggers the existing
+  /// `exitCode.then` handler, which nulls [_daemonProcess], fails any still
+  /// pending requests, and clears [_pendingRequests]. We also reset the timeout
+  /// counter so the fresh daemon starts with a clean slate.
+  void _restartDaemon() {
+    _consecutiveTimeouts = 0;
+    final proc = _daemonProcess;
+    // Null it eagerly so a concurrent caller doesn't reuse a dying process; the
+    // exitCode handler is idempotent (it also nulls and clears).
+    _daemonProcess = null;
+    proc?.kill();
   }
 
   Future<List<Interaction>> getInteractions() async {

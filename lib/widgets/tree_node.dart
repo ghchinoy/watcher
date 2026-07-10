@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import '../utils/dialog_utils.dart';
 
 class TreeNode extends StatefulWidget {
   final Issue issue;
@@ -107,9 +108,22 @@ class _TreeNodeState extends State<TreeNode> {
                     }
                     return true;
                   },
-                  onAcceptWithDetails: (details) {
+                  onAcceptWithDetails: (details) async {
                     final dragged = details.data;
-                    appState.updateIssue(dragged.id, parent: widget.issue.id);
+                    // REL-01: surface a native alert if the reparent fails.
+                    final ok = await appState.updateIssue(
+                      dragged.id,
+                      parent: widget.issue.id,
+                    );
+                    if (!ok && mounted) {
+                      await DialogUtils.showError(
+                        context,
+                        title: 'Could Not Move Issue',
+                        message:
+                            'Failed to reparent ${dragged.id} under '
+                            '${widget.issue.id}. Please try again.',
+                      );
+                    }
                   },
                   builder: (context, candidateData, rejectedData) {
                     final isHovered = candidateData.isNotEmpty;

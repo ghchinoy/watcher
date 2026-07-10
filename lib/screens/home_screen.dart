@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../widgets/issue_inspector.dart';
 import '../widgets/settings_modal.dart';
 import '../widgets/command_palette.dart';
+import '../utils/dialog_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   final Widget child;
@@ -192,8 +193,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           CupertinoIcons.clear_circled,
                           size: 14,
                         ),
-                        onPressed: () {
-                          appState.removeProject(p);
+                        onPressed: () async {
+                          final ok = await appState.removeProject(p);
+                          if (!context.mounted) return;
+                          if (!ok) {
+                            await DialogUtils.showError(
+                              context,
+                              title: 'Could Not Remove Project',
+                              message:
+                                  'Failed to remove "${p.name}". Your projects '
+                                  'could not be saved. Please try again.',
+                            );
+                            return;
+                          }
                           if (appState.projects.isEmpty) {
                             context.go('/settings');
                           }
