@@ -146,13 +146,13 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
-  appkit_ui_element_colors: c8e13c23cbd781e0f5d9b75cad686e6a4bb958da
-  file_selector_macos: 9e9e068e90ebee155097d00e89ae91edb2374db7
+  appkit_ui_element_colors: bb247a2d02b8313cc47e1b83be48d996034c4001
+  file_selector_macos: 3e56eaea051180007b900eacb006686fd54da150
   Firebase: 065f2bb395062046623036d8e6dc857bc2521d56
-  firebase_ai: 06132fc2e250706e325426f330a30e832418b57e
-  firebase_app_check: f537b491cf474f916fd60e3559328c7ba39a3ffa
-  firebase_auth: e48180de625a2d9c673f74790b4af512a08490ba
-  firebase_core: 82d678e9e10fc0b515ea1872dd446eee4722f144
+  firebase_ai: b5ed2589bebd678765ad0433942120eb4ed8c220
+  firebase_app_check: aa9c78f21d215a23de7516d77d788899ad3c9cae
+  firebase_auth: 4437c13d38b14dc692a6593ab15514adbd78417b
+  firebase_core: e00200c307d299e4ffe12288aafeebdedeba38a6
   FirebaseAppCheck: 94dae4d9bb682bdef85a778b0c1024a4613f1e89
   FirebaseAppCheckInterop: 4bade10286cc977e516f75d2d8312cbdfa534789
   FirebaseAuth: 3a39f6436c21ebfd7919b698228b4f89ff94c23b
@@ -163,11 +163,11 @@ SPEC CHECKSUMS:
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   GTMSessionFetcher: b8ab00db932816e14b0a0664a08cb73dda6d164b
-  macos_ui: ff29104a215c2e1b76f37aacdcbba648abb25faa
-  macos_window_utils: 23f54331a0fd51eea9e0ed347253bf48fd379d1d
-  package_info_plus: f0052d280d17aa382b932f399edf32507174e870
+  macos_ui: 50a2048b7ef82bde42570e2775f50907537a0eeb
+  macos_window_utils: 721df4da91cb4bde7b2b7b6ae93cdead4851118f
+  package_info_plus: 12f1c5c2cfe8727ca46cbd0b26677728972d9a5b
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
 
 PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
 

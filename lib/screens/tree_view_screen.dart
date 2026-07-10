@@ -5,6 +5,7 @@ import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/tree_node.dart';
 import '../widgets/create_issue_modal.dart';
+import '../widgets/error_display_view.dart';
 
 class TreeViewScreen extends StatefulWidget {
   const TreeViewScreen({super.key});
@@ -133,32 +134,13 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Error: ${appState.error}',
-                          style: const TextStyle(
-                            color: MacosColors.systemRedColor,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        PushButton(
-                          controlSize: ControlSize.regular,
-                          onPressed: () {
-                            if (appState.selectedProject != null) {
-                              appState.selectProject(appState.selectedProject!);
-                            }
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
+                builder: (context, scrollController) => ErrorDisplayView(
+                  error: appState.error!,
+                  onRetry: () {
+                    if (appState.selectedProject != null) {
+                      appState.selectProject(appState.selectedProject!);
+                    }
+                  },
                 ),
               ),
             ],

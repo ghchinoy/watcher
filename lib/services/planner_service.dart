@@ -89,46 +89,191 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     return result;
   }
 
+  /// Subcommands the planner/auto-fix flows are permitted to run. Anything
+  /// else in the LLM output is rejected rather than executed.
+  static const _allowedBdSubcommands = {'create', 'update', 'dep'};
+
+  /// Parses the `bd` commands from an LLM planner/auto-fix response and executes
+  /// them **without a shell**.
+  ///
+  /// SECURITY (SEC-01): the previous implementation wrote the LLM-authored bash
+  /// block to `.beads/temp_plan.sh` and ran it via `bash`, which is arbitrary
+  /// remote code execution the moment a prompt/issue/repo can influence the
+  /// model output. We now tokenize each line ourselves, require the first token
+  /// to be `bd` with an allow-listed subcommand, and invoke the resolved `bd`
+  /// binary directly with an argument vector — no shell, no temp file, so shell
+  /// metacharacters (`;`, `|`, `$(...)`, backticks, `&&`, redirects) are inert.
   static Future<void> executeScript(
     String workspacePath,
     String script, {
     String customBdPath = '',
   }) async {
-    // Extract the bash script from the markdown
-    final regex = RegExp(r'```bash\n(.*?)\n```', dotAll: true);
+    // Extract the script block from the markdown (kept as ```bash for prompt
+    // compatibility; the contents are parsed, never handed to a shell).
+    final regex = RegExp(r'```(?:bash|sh)?\n(.*?)\n```', dotAll: true);
     final match = regex.firstMatch(script);
 
     if (match == null) {
-      throw Exception('No bash script block found in the planner response.');
+      throw Exception('No command block found in the planner response.');
     }
 
-    final bashCommands = match.group(1)!;
-
-    // Write to a temporary file to execute
-    final tempFile = File('$workspacePath/.beads/temp_plan.sh');
-    await tempFile.writeAsString(bashCommands);
-
-    String basePath = macosDefaultPath;
-    if (customBdPath.isNotEmpty) {
-      final customDir = File(customBdPath).parent.path;
-      basePath = '$customDir:$basePath';
+    final commands = _parseBdCommands(match.group(1)!);
+    if (commands.isEmpty) {
+      throw Exception(
+        'No runnable `bd` commands were found in the planner response.',
+      );
     }
 
-    final result = await Process.run(
-      'bash',
-      ['.beads/temp_plan.sh'],
-      workingDirectory: workspacePath,
-      environment: {'PATH': basePath},
-    );
+    final bdPath = await _resolveBdPath(customBdPath);
 
-    // Clean up
-    if (await tempFile.exists()) {
-      await tempFile.delete();
+    final failures = <String>[];
+    for (final args in commands) {
+      final result = await Process.run(
+        bdPath,
+        args,
+        workingDirectory: workspacePath,
+        environment: {'PATH': macosDefaultPath},
+      );
+      if (result.exitCode != 0) {
+        failures.add('bd ${args.join(' ')} -> ${result.stderr}'.trim());
+      }
     }
 
-    if (result.exitCode != 0) {
-      throw Exception('Failed to execute plan: ${result.stderr}');
+    if (failures.isNotEmpty) {
+      throw Exception('Failed to execute plan:\n${failures.join('\n')}');
     }
+  }
+
+  /// Splits an LLM script block into a list of validated `bd` argument vectors.
+  ///
+  /// - Blank lines, comments (`#...`) and shell line-continuations are handled.
+  /// - Each logical line is tokenized with [_tokenize] (POSIX-ish quoting).
+  /// - The first token MUST be `bd` (any leading absolute path is stripped) and
+  ///   the subcommand MUST be in [_allowedBdSubcommands]; anything else throws.
+  static List<List<String>> _parseBdCommands(String block) {
+    final commands = <List<String>>[];
+
+    // Join backslash line-continuations so multi-line `bd create ... \` works.
+    final logicalLines = block
+        .replaceAll('\\\n', ' ')
+        .split('\n');
+
+    for (final raw in logicalLines) {
+      final line = raw.trim();
+      if (line.isEmpty || line.startsWith('#')) continue;
+
+      final tokens = _tokenize(line);
+      if (tokens.isEmpty) continue;
+
+      // Normalize the executable token: accept `bd`, `/abs/path/bd`, or the
+      // user's configured bd path; reject anything else outright.
+      final exe = tokens.first;
+      final exeName = exe.split('/').last;
+      if (exeName != 'bd') {
+        throw Exception(
+          'Refusing to run non-bd command from planner output: "$exe". '
+          'Only `bd` commands are permitted.',
+        );
+      }
+
+      if (tokens.length < 2 || !_allowedBdSubcommands.contains(tokens[1])) {
+        final sub = tokens.length < 2 ? '(none)' : tokens[1];
+        throw Exception(
+          'Refusing to run disallowed bd subcommand "$sub". '
+          'Allowed: ${_allowedBdSubcommands.join(', ')}.',
+        );
+      }
+
+      // Drop the executable token; keep the subcommand + its args as the vector.
+      commands.add(tokens.sublist(1));
+    }
+
+    return commands;
+  }
+
+  /// Minimal POSIX-style tokenizer: splits on unquoted whitespace and honors
+  /// single quotes, double quotes and backslash escaping. Because the result is
+  /// passed to [Process.run] as an argv (never to a shell), unquoted shell
+  /// metacharacters carry no special meaning and cannot inject extra commands.
+  static List<String> _tokenize(String input) {
+    final tokens = <String>[];
+    final buf = StringBuffer();
+    var inSingle = false;
+    var inDouble = false;
+    var hasToken = false;
+
+    for (var i = 0; i < input.length; i++) {
+      final ch = input[i];
+
+      if (inSingle) {
+        if (ch == "'") {
+          inSingle = false;
+        } else {
+          buf.write(ch);
+        }
+        continue;
+      }
+
+      if (inDouble) {
+        if (ch == '\\' && i + 1 < input.length) {
+          final next = input[i + 1];
+          // In double quotes only these are escapes; otherwise keep backslash.
+          if (next == '"' || next == '\\' || next == r'$' || next == '`') {
+            buf.write(next);
+            i++;
+          } else {
+            buf.write(ch);
+          }
+        } else if (ch == '"') {
+          inDouble = false;
+        } else {
+          buf.write(ch);
+        }
+        continue;
+      }
+
+      // Unquoted context.
+      if (ch == "'") {
+        inSingle = true;
+        hasToken = true;
+      } else if (ch == '"') {
+        inDouble = true;
+        hasToken = true;
+      } else if (ch == '\\' && i + 1 < input.length) {
+        buf.write(input[i + 1]);
+        i++;
+        hasToken = true;
+      } else if (ch == ' ' || ch == '\t') {
+        if (hasToken) {
+          tokens.add(buf.toString());
+          buf.clear();
+          hasToken = false;
+        }
+      } else {
+        buf.write(ch);
+        hasToken = true;
+      }
+    }
+
+    if (hasToken) tokens.add(buf.toString());
+    return tokens;
+  }
+
+  /// Resolves the absolute path to the `bd` executable, preferring the user's
+  /// configured override, then standard Homebrew/system locations.
+  static Future<String> _resolveBdPath(String customBdPath) async {
+    if (customBdPath.isNotEmpty && await File(customBdPath).exists()) {
+      return customBdPath;
+    }
+    const candidates = [
+      '/opt/homebrew/bin/bd',
+      '/usr/local/bin/bd',
+      '/usr/bin/bd',
+    ];
+    for (final c in candidates) {
+      if (await File(c).exists()) return c;
+    }
+    return 'bd'; // last resort; PATH is set on the Process.run call
   }
 
   static Future<bool> startAssessGraph({

@@ -39,6 +39,15 @@ class AppState extends ChangeNotifier {
   bool isLoading = false;
   bool isRefreshing = false;
 
+  // RACE-02: re-entrancy guard for _refreshData. Multiple concurrent triggers
+  // (file-watcher debounce, heartbeat timer, sync timer, UI actions) must not
+  // flood the IPC pipe. `_refreshInFlight` serializes them; `_refreshQueued`
+  // records a request that arrived mid-refresh so we re-run EXACTLY ONCE at the
+  // end (trailing edge) — this coalesces bursts without dropping the latest
+  // change (a naive early-return would lose in-flight file-watcher events).
+  bool _refreshInFlight = false;
+  bool _refreshQueued = false;
+
   // Track errors per project path so the sidebar icon persists
   Map<String, String> projectErrors = {};
 
@@ -660,7 +669,28 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Public/observable refresh entry point with trailing-edge coalescing
+  /// (RACE-02). If a refresh is already running, this records a pending re-run
+  /// and returns immediately; the in-flight refresh will loop once more when it
+  /// finishes so the newest data is always picked up.
   Future<void> _refreshData() async {
+    if (_refreshInFlight) {
+      _refreshQueued = true;
+      return;
+    }
+
+    _refreshInFlight = true;
+    try {
+      do {
+        _refreshQueued = false;
+        await _performRefresh();
+      } while (_refreshQueued);
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
+  Future<void> _performRefresh() async {
     if (selectedProject == null) return;
     final projectPath = selectedProject!.path;
 

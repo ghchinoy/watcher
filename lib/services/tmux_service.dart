@@ -6,6 +6,18 @@ class TmuxService {
   static final _log = AppLogger('TmuxService');
   static const _env = macosPathEnv;
 
+  /// Escapes a value for safe interpolation inside an AppleScript double-quoted
+  /// string literal (SEC-02, defense-in-depth).
+  ///
+  /// Callers already sanitize session names to `[a-zA-Z0-9_-]` upstream
+  /// (`Project.effectiveTmuxSessionName`), but this method must not trust its
+  /// inputs: it is a public API and interpolates values into `osascript -e`.
+  /// Backslashes are escaped first, then double quotes, so a value can never
+  /// terminate the string literal or inject additional AppleScript statements.
+  static String _escapeForAppleScript(String value) {
+    return value.replaceAll('\\', r'\\').replaceAll('"', r'\"');
+  }
+
   /// Resolves the absolute path to the bd executable.
   /// [customBdPath] is an optional override from user settings; when empty
   /// or absent the method probes standard Homebrew / system locations.
@@ -156,6 +168,10 @@ class TmuxService {
   }) async {
     final tmux = await _getTmuxPath();
 
+    // Escape all values interpolated into osascript strings (SEC-02).
+    final safeTmux = _escapeForAppleScript(tmux);
+    final safeSession = _escapeForAppleScript(sessionName);
+
     if (terminalApp == 'Ghostty') {
       if (!await _isAppInstalled('Ghostty')) {
         throw Exception(
@@ -189,7 +205,7 @@ class TmuxService {
         tell application "Ghostty"
           try
             set active_terminal to focused terminal of selected tab of front window
-            input text "$tmux attach -t $sessionName" to active_terminal
+            input text "$safeTmux attach -t $safeSession" to active_terminal
             send key "enter" to active_terminal
             return "success"
           on error err
@@ -228,7 +244,7 @@ class TmuxService {
         tell application "iTerm"
           create window with default profile
           tell current session of current window
-            write text "$tmux attach -t $sessionName"
+            write text "$safeTmux attach -t $safeSession"
           end tell
           activate
         end tell
@@ -239,7 +255,7 @@ class TmuxService {
       final script =
           '''
         tell application "Terminal"
-          do script "$tmux attach -t $sessionName"
+          do script "$safeTmux attach -t $safeSession"
           activate
         end tell
       ''';

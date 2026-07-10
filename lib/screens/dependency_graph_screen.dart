@@ -3,6 +3,7 @@ import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
+import '../widgets/error_display_view.dart';
 
 /// A structured visualization of the blocks DAG — which issues are
 /// blocking which others, including chains that cross epic boundaries.
@@ -86,6 +87,16 @@ class DependencyGraphScreen extends StatelessWidget {
               builder: (context, scrollController) {
                 if (appState.selectedProject == null) {
                   return const Center(child: Text('No project selected.'));
+                }
+                if (appState.error != null) {
+                  return ErrorDisplayView(
+                    error: appState.error!,
+                    onRetry: () {
+                      if (appState.selectedProject != null) {
+                        appState.selectProject(appState.selectedProject!);
+                      }
+                    },
+                  );
                 }
                 if (appState.isLoading) {
                   return const Center(child: ProgressCircle());

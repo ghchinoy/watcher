@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 
 	"github.com/steveyegge/beads"
 )
@@ -17,6 +18,18 @@ import (
 const macosDeveloperPath = "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 var outputWriter io.Writer = os.Stdout
+
+// sanitizeEnvValue strips characters that would let a value break out of a
+// single "KEY=VALUE" entry when placed in a process environment (SEC-03).
+// Newlines (\n, \r) and null bytes are removed so an attacker-controlled actor
+// name cannot inject additional environment variables such as LD_PRELOAD.
+func sanitizeEnvValue(v string) string {
+	return strings.NewReplacer(
+		"\n", "",
+		"\r", "",
+		"\x00", "",
+	).Replace(v)
+}
 
 type Request struct {
 	Method string          `json:"method"`
@@ -90,10 +103,10 @@ func handleSyncPeer(ctx context.Context, storage beads.Storage, req Request) {
 	// Execute 'bd federation sync' via shell to leverage the CLI's robust remote
 	// handling (including GCS gs:// plugins and auth) without battling unexported Go interfaces.
 	cmd := exec.CommandContext(ctx, "bd", "federation", "sync")
-	
+
 	// Inject standard macOS developer PATH environments so that GUI bundle context can locate Brew/System bin paths
 	cmd.Env = append(os.Environ(), "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
-	
+
 	// Ensure it runs in the correct directory. FindBeadsDir starts from CWD.
 	beadsDir := beads.FindBeadsDir()
 	if beadsDir != "" {
@@ -170,7 +183,7 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		}
 	}
 
-	// Trigger a background export so .beads/backup/events.jsonl updates, 
+	// Trigger a background export so .beads/backup/events.jsonl updates,
 	// which notifies the UI file watcher that changes occurred.
 	cmd := exec.Command("bd", "export")
 	cmd.Env = append(os.Environ(), macosDeveloperPath)
@@ -184,66 +197,74 @@ func handleCreateIssue(ctx context.Context, storage beads.Storage, req Request) 
 }
 
 func handleGetComments(ctx context.Context, storage beads.Storage, req Request) {
-        var params struct {
-                ID string `json:"id"`
-        }
-        if err := json.Unmarshal(req.Params, &params); err != nil {
-                sendError(req.ID, -32602, "Invalid params")
-                return
-        }
+	var params struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
 
-        // Because beads/internal/types is internal, we shell out to bd comments --json
-        cmd := exec.Command("bd", "comments", params.ID, "--json")
+	// Because beads/internal/types is internal, we shell out to bd comments --json.
+	// SEC-03: place flags before "--" and pass the (untrusted) ID as a
+	// positional after "--" so an ID beginning with "-" cannot be parsed
+	// as a flag (flag injection).
+	cmd := exec.Command("bd", "comments", "--json", "--", params.ID)
 	cmd.Env = append(os.Environ(), macosDeveloperPath)
-        out, err := cmd.Output()
-        if err != nil {
-                sendError(req.ID, -32000, fmt.Sprintf("failed to get comments: %v", string(out)))
-                return
-        }
+	out, err := cmd.Output()
+	if err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to get comments: %v", string(out)))
+		return
+	}
 
-        var comments []interface{}
-        if len(out) > 0 {
-                if err := json.Unmarshal(out, &comments); err != nil {
-                        sendError(req.ID, -32000, "failed to parse comments JSON")
-                        return
-                }
-        }
+	var comments []interface{}
+	if len(out) > 0 {
+		if err := json.Unmarshal(out, &comments); err != nil {
+			sendError(req.ID, -32000, "failed to parse comments JSON")
+			return
+		}
+	}
 
-        sendResponse(Response{
-                JSONRPC: "2.0",
-                Result:  comments,
-                ID:      req.ID,
-        })
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  comments,
+		ID:      req.ID,
+	})
 }
 
 func handleAddComment(ctx context.Context, storage beads.Storage, req Request) {
-        var params struct {
-                ID      string `json:"id"`
-                Actor   string `json:"actor"`
-                Comment string `json:"comment"`
-        }
-        if err := json.Unmarshal(req.Params, &params); err != nil {
-                sendError(req.ID, -32602, "Invalid params")
-                return
-        }
+	var params struct {
+		ID      string `json:"id"`
+		Actor   string `json:"actor"`
+		Comment string `json:"comment"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
 
-        cmd := exec.Command("bd", "comments", "add", params.ID, params.Comment)
-        // Pass actor and path down to the command
-        cmd.Env = append(os.Environ(), 
-            fmt.Sprintf("BD_ACTOR=%s", params.Actor),
-            macosDeveloperPath,
-        )
-        
-        if out, err := cmd.CombinedOutput(); err != nil {
-                sendError(req.ID, -32000, fmt.Sprintf("failed to add comment: %v - %s", err, string(out)))
-                return
-        }
+	// SEC-03: terminate flag parsing with "--" so an ID or comment body
+	// beginning with "-" is treated as a positional, not a flag.
+	cmd := exec.Command("bd", "comments", "add", "--", params.ID, params.Comment)
+	// SEC-03: strip newlines and null bytes from the actor before injecting
+	// it into the process environment. cmd.Env is a []string of "KEY=VALUE"
+	// entries; an embedded newline could otherwise smuggle in additional
+	// environment variables (e.g. LD_PRELOAD, PATH) -> code execution.
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("BD_ACTOR=%s", sanitizeEnvValue(params.Actor)),
+		macosDeveloperPath,
+	)
 
-        sendResponse(Response{
-                JSONRPC: "2.0",
-                Result:  "ok",
-                ID:      req.ID,
-        })
+	if out, err := cmd.CombinedOutput(); err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to add comment: %v - %s", err, string(out)))
+		return
+	}
+
+	sendResponse(Response{
+		JSONRPC: "2.0",
+		Result:  "ok",
+		ID:      req.ID,
+	})
 }
 
 func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) {
@@ -263,7 +284,7 @@ func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) 
 		return
 	}
 
-	// Trigger a background export so .beads/backup/events.jsonl updates, 
+	// Trigger a background export so .beads/backup/events.jsonl updates,
 	// which notifies the UI file watcher that changes occurred.
 	cmd := exec.Command("bd", "export")
 	cmd.Env = append(os.Environ(), macosDeveloperPath)
@@ -423,7 +444,6 @@ func handleGraph(ctx context.Context, storage beads.Storage, id int) {
 	})
 }
 
-
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("Usage: %s <path-to-repo>", os.Args[0])
@@ -431,7 +451,7 @@ func main() {
 	repoPath := os.Args[1]
 
 	ctx := context.Background()
-	
+
 	// Initialize database connection
 	// We just change into the repoPath so FindBeadsDir works contextually,
 	if err := os.Chdir(repoPath); err != nil {
@@ -453,7 +473,7 @@ func main() {
 	if _, err := os.Stat(filepath.Join(beadsDir, "dolt-server.pid")); os.IsNotExist(err) {
 		mode = "embedded"
 	}
-	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database","mode":"%s"}}` + "\n", mode)
+	fmt.Printf(`{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database","mode":"%s"}}`+"\n", mode)
 
 	// Proactively kill any orphaned dolt sql-server processes on the system
 	// that might be holding a dead port or a dead file lock before we attempt to connect.

@@ -9,6 +9,7 @@ import '../widgets/planner_modal.dart';
 import '../widgets/assessment_modal.dart';
 import '../widgets/create_issue_modal.dart';
 import '../widgets/health_check_modal.dart';
+import '../widgets/error_display_view.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
@@ -142,32 +143,13 @@ class ProjectDashboard extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Error: ${appState.error}',
-                          style: const TextStyle(
-                            color: MacosColors.systemRedColor,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        PushButton(
-                          controlSize: ControlSize.regular,
-                          onPressed: () {
-                            if (appState.selectedProject != null) {
-                              appState.selectProject(appState.selectedProject!);
-                            }
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
+                builder: (context, scrollController) => ErrorDisplayView(
+                  error: appState.error!,
+                  onRetry: () {
+                    if (appState.selectedProject != null) {
+                      appState.selectProject(appState.selectedProject!);
+                    }
+                  },
                 ),
               ),
             ],

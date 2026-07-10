@@ -4,6 +4,7 @@ import '../main.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/kanban_column.dart';
 import '../widgets/create_issue_modal.dart';
+import '../widgets/error_display_view.dart';
 
 class KanbanScreen extends StatelessWidget {
   const KanbanScreen({super.key});
@@ -74,32 +75,13 @@ class KanbanScreen extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Error: ${appState.error}',
-                          style: const TextStyle(
-                            color: MacosColors.systemRedColor,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        PushButton(
-                          controlSize: ControlSize.regular,
-                          onPressed: () {
-                            if (appState.selectedProject != null) {
-                              appState.selectProject(appState.selectedProject!);
-                            }
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
+                builder: (context, scrollController) => ErrorDisplayView(
+                  error: appState.error!,
+                  onRetry: () {
+                    if (appState.selectedProject != null) {
+                      appState.selectProject(appState.selectedProject!);
+                    }
+                  },
                 ),
               ),
             ],
