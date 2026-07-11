@@ -53,6 +53,10 @@ class AppState extends ChangeNotifier {
   bool isLoading = false;
   bool isRefreshing = false;
 
+  /// REL-05: true while the daemon has crashed and we are auto-reconnecting.
+  /// The UI can show a transient "Reconnecting…" banner instead of a hard error.
+  bool daemonReconnecting = false;
+
   // RACE-02: re-entrancy guard for _refreshData. Multiple concurrent triggers
   // (file-watcher debounce, heartbeat timer, sync timer, UI actions) must not
   // flood the IPC pipe. `_refreshInFlight` serializes them; `_refreshQueued`
@@ -526,6 +530,9 @@ class AppState extends ChangeNotifier {
           currentConnectionMode = mode;
           notifyListeners();
         },
+        onCrash: (code, {required bool wasKilled}) {
+          _handleDaemonCrash(project.path, code, wasKilled: wasKilled);
+        },
         bdPathResolver: () => customBdPath.isNotEmpty ? customBdPath : 'bd',
       );
 
@@ -765,6 +772,62 @@ class AppState extends ChangeNotifier {
       isRefreshing = false;
       notifyListeners();
     }
+  }
+
+  /// REL-05: recover from an unexpected daemon exit (e.g. SIGKILL/-9 from OS
+  /// memory pressure or a sleep transition). Rather than surfacing a raw crash,
+  /// mark the UI as reconnecting and re-fetch — [_refreshData] -> [getIssues]
+  /// transparently respawns the daemon via BeadsService._ensureDaemonRunning.
+  /// Retries a few times with backoff; on repeated failure leaves a clear error.
+  Future<void> _handleDaemonCrash(
+    String projectPath,
+    int code, {
+    required bool wasKilled,
+  }) async {
+    // Ignore stale crashes from a project the user already navigated away from.
+    if (selectedProject?.path != projectPath) return;
+    // If a recovery is already running, let it continue.
+    if (daemonReconnecting) return;
+
+    _log.warning(
+      'Daemon crashed (exit $code, wasKilled=$wasKilled); attempting recovery.',
+    );
+    daemonReconnecting = true;
+    // Clear any raw crash error so the banner shows "reconnecting" instead.
+    projectErrors.remove(projectPath);
+    notifyListeners();
+
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Brief backoff so the OS/Dolt lock settles before respawning.
+      await Future.delayed(Duration(milliseconds: 300 * attempt));
+
+      // Bail if the user switched projects or the service was torn down.
+      if (selectedProject?.path != projectPath || _currentService == null) {
+        daemonReconnecting = false;
+        notifyListeners();
+        return;
+      }
+
+      try {
+        await _refreshData(); // respawns the daemon on the next RPC
+        if (projectErrors[projectPath] == null) {
+          _log.info('Daemon recovered after crash (attempt $attempt).');
+          daemonReconnecting = false;
+          notifyListeners();
+          return;
+        }
+      } catch (e) {
+        _log.warning('Daemon recovery attempt $attempt failed', error: e);
+      }
+    }
+
+    // Recovery exhausted — surface a clear, actionable error.
+    daemonReconnecting = false;
+    projectErrors[projectPath] =
+        'The background service stopped (exit code $code) and could not be '
+        'restarted automatically. Try reselecting the project.';
+    notifyListeners();
   }
 
   Future<void> syncPeer([String? peer]) async {

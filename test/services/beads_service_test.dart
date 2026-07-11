@@ -279,5 +279,70 @@ void main() {
         proc.kill();
       }
     });
+
+    test('handles daemon crash with exit code -9 (SIGKILL) gracefully (REL-05)', () async {
+      int spawnCount = 0;
+      final mockProcesses = <MockProcess>[];
+
+      Future<Process> mockProcessStart(
+        String executable,
+        List<String> arguments, {
+        String? workingDirectory,
+        Map<String, String>? environment,
+        bool includeParentEnvironment = true,
+        bool runInShell = false,
+        ProcessStartMode mode = ProcessStartMode.normal,
+      }) async {
+        spawnCount++;
+        final proc = MockProcess();
+        mockProcesses.add(proc);
+        return proc;
+      }
+
+      int? crashedCode;
+      bool? crashedWasKilled;
+      final service = BeadsService(
+        '/dummy/path',
+        processStart: mockProcessStart,
+        onCrash: (code, {required bool wasKilled}) {
+          crashedCode = code;
+          crashedWasKilled = wasKilled;
+        },
+      );
+
+      // Trigger a request. This will start the daemon.
+      final future = service.getVersion();
+
+      // Wait until mockProcess is registered
+      await Future.doWhile(() async {
+        if (mockProcesses.isNotEmpty) return false;
+        await Future.delayed(const Duration(milliseconds: 5));
+        return true;
+      });
+
+      final proc = mockProcesses[0];
+
+      // Simulate a SIGKILL (-9) crash on the daemon process before it replies.
+      proc.stdoutController.close();
+      proc.stderrController.close();
+      proc.exitCodeCompleter.complete(-9);
+
+      // The pending request should throw a DaemonCrashException.
+      try {
+        await future;
+        fail('Expected DaemonCrashException');
+      } on DaemonCrashException catch (e) {
+        expect(e.code, -9);
+        expect(e.wasKilled, true);
+        expect(e.toString(), contains('stopped by the system'));
+      }
+
+      // The onCrash callback should have fired with the correct parameters.
+      expect(crashedCode, -9);
+      expect(crashedWasKilled, true);
+
+      // Cleanup
+      service.dispose();
+    });
   });
 }
