@@ -64,6 +64,9 @@ class KanbanColumn extends StatelessWidget {
                 child: Text(
                   '$title (${issues.length})',
                   style: MacosTheme.of(context).typography.headline,
+                  // UI-03 (r1f.8): avoid wrapping/clipping on narrow widths.
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Container(height: 1, color: MacosTheme.of(context).dividerColor),

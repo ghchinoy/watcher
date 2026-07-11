@@ -85,7 +85,8 @@ class BeadsService {
     bool includeParentEnvironment,
     bool runInShell,
     ProcessStartMode mode,
-  }) _processStart;
+  })
+  _processStart;
 
   final Duration _requestTimeout;
 
@@ -102,11 +103,12 @@ class BeadsService {
       bool includeParentEnvironment,
       bool runInShell,
       ProcessStartMode mode,
-    })? processStart,
+    })?
+    processStart,
     Duration? requestTimeout,
-  })  : _bdPathResolver = bdPathResolver ?? (() => 'bd'),
-        _processStart = processStart ?? Process.start,
-        _requestTimeout = requestTimeout ?? const Duration(seconds: 15);
+  }) : _bdPathResolver = bdPathResolver ?? (() => 'bd'),
+       _processStart = processStart ?? Process.start,
+       _requestTimeout = requestTimeout ?? const Duration(seconds: 15);
 
   Future<void> _ensureDaemonRunning() async {
     if (_isDisposed) throw Exception('Service disposed');

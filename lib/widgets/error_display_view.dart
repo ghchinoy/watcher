@@ -7,11 +7,7 @@ class ErrorDisplayView extends StatefulWidget {
   final String error;
   final VoidCallback? onRetry;
 
-  const ErrorDisplayView({
-    super.key,
-    required this.error,
-    this.onRetry,
-  });
+  const ErrorDisplayView({super.key, required this.error, this.onRetry});
 
   @override
   State<ErrorDisplayView> createState() => _ErrorDisplayViewState();
@@ -78,9 +74,16 @@ class _ErrorDisplayViewState extends State<ErrorDisplayView> {
                 ),
                 child: SelectableText(
                   widget.error,
+                  // UI-05 (watcher-ckm): pin an explicit high-contrast label
+                  // color so the message meets WCAG AA on the alternating
+                  // background instead of inheriting a faint default.
                   style: MacosTheme.of(context).typography.body.copyWith(
                     fontFamily: 'CupertinoSystemMonospaced',
                     fontSize: 12,
+                    color: MacosDynamicColor.resolve(
+                      MacosColors.labelColor,
+                      context,
+                    ),
                   ),
                   textAlign: TextAlign.left,
                 ),

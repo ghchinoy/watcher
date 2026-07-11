@@ -4,6 +4,8 @@ import '../main.dart';
 import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/error_display_view.dart';
+import '../widgets/priority_badge.dart';
+import '../widgets/empty_state_view.dart';
 
 /// A flat, priority-sorted list of actionable issues — open or in-progress
 /// and not blocked by any open dependency. Mirrors `bd ready`.
@@ -78,28 +80,12 @@ class ReadyQueueScreen extends StatelessWidget {
                   return const Center(child: ProgressCircle());
                 }
                 if (ready.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const MacosIcon(
-                          CupertinoIcons.checkmark_circle,
-                          size: 48,
-                          color: MacosColors.systemGreenColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Nothing to do!',
-                          style: MacosTheme.of(context).typography.title1,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'All open issues are either blocked or there are none.',
-                          style: MacosTheme.of(context).typography.body
-                              .copyWith(color: MacosColors.systemGrayColor),
-                        ),
-                      ],
-                    ),
+                  return const EmptyStateView(
+                    icon: CupertinoIcons.checkmark_circle,
+                    iconColor: MacosColors.systemGreenColor,
+                    title: 'Nothing to do!',
+                    subtitle:
+                        'All open issues are either blocked or there are none.',
                   );
                 }
                 return ListView.builder(
@@ -244,38 +230,9 @@ class _ReadyRow extends StatelessWidget {
     );
   }
 
-  Widget _priorityChip(int priority, BuildContext context) {
-    final colors = [
-      MacosColors.systemRedColor,
-      MacosColors.systemOrangeColor,
-      MacosColors.systemYellowColor,
-      MacosColors.systemBlueColor,
-      MacosColors.systemGrayColor,
-    ];
-    final color = MacosDynamicColor.resolve(
-      colors[priority.clamp(0, 4)],
-      context,
-    );
-    return Container(
-      width: 28,
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Center(
-        child: Text(
-          'P$priority',
-          style: TextStyle(
-            fontSize: 10,
-            color: color,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
+  // UI-01 (r1f.4): delegates to the shared PriorityBadge widget.
+  Widget _priorityChip(int priority, BuildContext context) =>
+      PriorityBadge(priority: priority);
 
   IconData _iconForType(String type) {
     switch (type.toLowerCase()) {

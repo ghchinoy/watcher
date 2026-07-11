@@ -122,11 +122,10 @@ void main() {
           identifier: 'gemini-3-flash-preview',
           region: 'global',
         );
-        SharedPreferences.setMockInitialValues({
-          'ai_models': [jsonEncode(oldModel.toJson())],
-          'default_ai_model_id': 'default-flash-3',
-          // model_seed_version intentionally absent → defaults to 1
-        });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('ai_models', [jsonEncode(oldModel.toJson())]);
+        await prefs.setString('default_ai_model_id', 'default-flash-3');
+        await prefs.remove('model_seed_version');
 
         final state = AppState();
         await Future.delayed(const Duration(milliseconds: 200));
@@ -152,11 +151,10 @@ void main() {
           identifier: 'gemini-3.5-flash',
           region: 'global',
         );
-        SharedPreferences.setMockInitialValues({
-          'ai_models': [jsonEncode(currentModel.toJson())],
-          'default_ai_model_id': 'default-flash-3.5',
-          'model_seed_version': 2,
-        });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('ai_models', [jsonEncode(currentModel.toJson())]);
+        await prefs.setString('default_ai_model_id', 'default-flash-3.5');
+        await prefs.setInt('model_seed_version', 2);
 
         final state = AppState();
         await Future.delayed(const Duration(milliseconds: 200));

@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/issue.dart';
 import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
+import '../utils/date_formatters.dart';
 
 class IssueInspector extends StatefulWidget {
   final Issue issue;
@@ -280,30 +281,30 @@ class _IssueInspectorState extends State<IssueInspector> {
         onTap: () => _showAddDependencySheet(context),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const MacosIcon(
-                CupertinoIcons.plus_circle,
-                size: 13,
-                color: MacosColors.systemGrayColor,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Add dependency',
-                style: MacosTheme.of(context).typography.footnote.copyWith(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const MacosIcon(
+                  CupertinoIcons.plus_circle,
+                  size: 13,
                   color: MacosColors.systemGrayColor,
-                  decoration: TextDecoration.underline,
-                  decorationColor: MacosColors.systemGrayColor.withValues(
-                    alpha: 0.5,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Add dependency',
+                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                    color: MacosColors.systemGrayColor,
+                    decoration: TextDecoration.underline,
+                    decorationColor: MacosColors.systemGrayColor.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
-                 ),
-               ),
-             ],
-           ),
-         ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -369,29 +370,29 @@ class _IssueInspectorState extends State<IssueInspector> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (prefixLabel != null) ...[
-                Text(
-                  '$prefixLabel → ',
-                  style: MacosTheme.of(context).typography.footnote.copyWith(
-                    color: MacosColors.systemGrayColor,
+                  Text(
+                    '$prefixLabel → ',
+                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                      color: MacosColors.systemGrayColor,
+                    ),
+                  ),
+                ],
+                Expanded(
+                  child: Text(
+                    '${target.id}  ${target.title}',
+                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                      color: linkColor,
+                      decoration: isClosed && dimIfClosed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.underline,
+                      decorationColor: linkColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
-              Expanded(
-                child: Text(
-                  '${target.id}  ${target.title}',
-                  style: MacosTheme.of(context).typography.footnote.copyWith(
-                    color: linkColor,
-                    decoration: isClosed && dimIfClosed
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.underline,
-                    decorationColor: linkColor,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -498,6 +499,9 @@ class _IssueInspectorState extends State<IssueInspector> {
                 Text(
                   issue.title,
                   style: MacosTheme.of(context).typography.headline,
+                  // UI-03 (r1f.8): clamp long titles instead of wrapping.
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -587,11 +591,16 @@ class _IssueInspectorState extends State<IssueInspector> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: MacosTextField(
-                controller: _commentController,
-                placeholder: 'Add a comment...',
-                maxLines: 3,
-                minLines: 1,
+              // A11Y-04 (r1f.7): name the field for screen readers.
+              child: Semantics(
+                textField: true,
+                label: 'Add a comment',
+                child: MacosTextField(
+                  controller: _commentController,
+                  placeholder: 'Add a comment...',
+                  maxLines: 3,
+                  minLines: 1,
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -657,20 +666,24 @@ class _IssueInspectorState extends State<IssueInspector> {
             ),
           ),
           const SizedBox(height: 4),
-          MacosTextField(
-            controller: controller,
-            maxLines: 1,
-            onSubmitted: onSubmitted,
-            placeholder: 'Unassigned',
+          // A11Y-04 (r1f.7): associate the section heading with the input.
+          Semantics(
+            textField: true,
+            label: title,
+            child: MacosTextField(
+              controller: controller,
+              maxLines: 1,
+              onSubmitted: onSubmitted,
+              placeholder: 'Unassigned',
+            ),
           ),
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
+  // UI-04 (r1f.9): delegates to the shared DateFormatters utility.
+  String _formatDate(DateTime date) => DateFormatters.full(date);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -762,11 +775,16 @@ class _AddDependencySheetState extends State<_AddDependencySheet> {
               ),
             ),
             const SizedBox(height: 4),
-            MacosTextField(
-              controller: _targetController,
-              placeholder: 'e.g. proj-abc',
-              autofocus: true,
-              onSubmitted: (_) => _submit(),
+            // A11Y-04 (r1f.7): name the target-id input.
+            Semantics(
+              textField: true,
+              label: 'Target Issue ID',
+              child: MacosTextField(
+                controller: _targetController,
+                placeholder: 'e.g. proj-abc',
+                autofocus: true,
+                onSubmitted: (_) => _submit(),
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),

@@ -83,7 +83,8 @@ class AppState extends ChangeNotifier {
   BeadsService? get currentService => _currentService;
 
   @visibleForTesting
-  set currentServiceForTesting(BeadsService? service) => _currentService = service;
+  set currentServiceForTesting(BeadsService? service) =>
+      _currentService = service;
 
   int syncIntervalMinutes = 5; // Default to 5 minutes. 0 means disabled.
   int heartbeatIntervalSeconds =
@@ -262,7 +263,8 @@ class AppState extends ChangeNotifier {
 
     while (current != null) {
       String? parentId;
-      final hasExplicit = current.dependencies?.any((d) => d.type == 'parent-child') ?? false;
+      final hasExplicit =
+          current.dependencies?.any((d) => d.type == 'parent-child') ?? false;
       if (hasExplicit) {
         parentId = current.dependencies!
             .firstWhere((d) => d.type == 'parent-child')
@@ -893,11 +895,15 @@ class AppState extends ChangeNotifier {
 
   Future<void> _checkUpstreamVersion() async {
     try {
-      final response = await http.get(
-        Uri.parse(
-          'https://api.github.com/repos/steveyegge/beads/releases/latest',
-        ),
-      );
+      // REL-04 (r1f.10): bound the request so a degraded/offline network can't
+      // leak a background socket indefinitely.
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.github.com/repos/steveyegge/beads/releases/latest',
+            ),
+          )
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         upstreamVersion = data['tag_name'] as String?;

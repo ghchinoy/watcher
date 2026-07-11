@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/issue.dart';
 import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
+import 'priority_badge.dart';
 
 class TreeNode extends StatefulWidget {
   final Issue issue;
@@ -116,8 +117,7 @@ class _TreeNodeState extends State<TreeNode> {
                       dragged.id,
                       parent: widget.issue.id,
                     );
-                    if (!context.mounted ||
-                        result == MutationResult.success) {
+                    if (!context.mounted || result == MutationResult.success) {
                       return;
                     }
                     await DialogUtils.showError(
@@ -134,22 +134,25 @@ class _TreeNodeState extends State<TreeNode> {
                   },
                   builder: (context, candidateData, rejectedData) {
                     final isHovered = candidateData.isNotEmpty;
-                    final isSelected = appState.selectedIssue?.id == widget.issue.id;
+                    final isSelected =
+                        appState.selectedIssue?.id == widget.issue.id;
                     return Container(
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? MacosTheme.of(context).primaryColor.withValues(alpha: 0.15)
+                            ? MacosTheme.of(
+                                context,
+                              ).primaryColor.withValues(alpha: 0.15)
                             : (isHovered
-                                ? MacosTheme.of(
-                                    context,
-                                  ).primaryColor.withValues(alpha: 0.1)
-                                : null),
+                                  ? MacosTheme.of(
+                                      context,
+                                    ).primaryColor.withValues(alpha: 0.1)
+                                  : null),
                         borderRadius: BorderRadius.circular(4),
                         border: isSelected
                             ? Border.all(
-                                color: MacosTheme.of(context)
-                                    .primaryColor
-                                    .withValues(alpha: 0.3),
+                                color: MacosTheme.of(
+                                  context,
+                                ).primaryColor.withValues(alpha: 0.3),
                                 width: 1,
                               )
                             : null,
@@ -323,48 +326,9 @@ class _TreeNodeState extends State<TreeNode> {
     }
   }
 
-  Widget _buildPriorityBadge(int priority, BuildContext context) {
-    Color baseColor;
-    switch (priority) {
-      case 0:
-        baseColor = MacosColors.systemRedColor;
-        break;
-      case 1:
-        baseColor = MacosColors.systemOrangeColor;
-        break;
-      case 2:
-        baseColor = MacosColors.systemYellowColor;
-        break;
-      case 3:
-        baseColor = MacosColors.systemBlueColor;
-        break;
-      default:
-        baseColor = MacosColors.systemGrayColor;
-    }
-    final resolvedColor = MacosDynamicColor.resolve(baseColor, context);
-
-    return MacosTooltip(
-      message: 'Priority $priority',
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: resolvedColor.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: resolvedColor.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          'P$priority',
-          style: TextStyle(
-            fontSize: 10,
-            color: resolvedColor,
-            fontWeight: FontWeight.w600,
-            height: 1.0,
-          ),
-        ),
-      ),
-    );
-  }
+  // UI-01 (r1f.4): delegates to the shared PriorityBadge widget.
+  Widget _buildPriorityBadge(int priority, BuildContext context) =>
+      PriorityBadge(priority: priority);
 
   /// Shows a small "↑N" chip when this issue is blocking N others,
   /// surfacing it as a hub that others depend on.

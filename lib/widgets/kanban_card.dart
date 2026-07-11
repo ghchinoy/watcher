@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import 'priority_badge.dart';
 
 class KanbanCard extends StatelessWidget {
   final Issue issue;
@@ -40,6 +41,9 @@ class KanbanCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
+                      // UI-01 (r1f.4): surface priority on Kanban cards too.
+                      PriorityBadge(priority: issue.priority, compact: true),
+                      const SizedBox(width: 6),
                       Text(
                         issue.id,
                         style: MacosTheme.of(context).typography.footnote

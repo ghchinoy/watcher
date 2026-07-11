@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' show Material, Colors;
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import 'priority_badge.dart';
 
 class CommandPalette extends StatefulWidget {
   const CommandPalette({super.key});
@@ -17,10 +18,7 @@ class CommandPalette extends StatefulWidget {
       transitionDuration: const Duration(milliseconds: 150),
       pageBuilder: (context, animation, secondaryAnimation) {
         return ScaleTransition(
-          scale: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutQuad,
-          ),
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutQuad),
           child: const CommandPalette(),
         );
       },
@@ -45,7 +43,7 @@ class _CommandPaletteState extends State<CommandPalette> {
     super.initState();
     _filteredIssues = appState.currentIssues;
     _searchController.addListener(_onSearchChanged);
-    
+
     // Request focus on next frame to ensure text field gets keyboard focus
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -71,11 +69,14 @@ class _CommandPaletteState extends State<CommandPalette> {
         _filteredIssues = appState.currentIssues.where((issue) {
           final idMatch = issue.id.toLowerCase().contains(query);
           final titleMatch = issue.title.toLowerCase().contains(query);
-          final descMatch = issue.description?.toLowerCase().contains(query) ?? false;
+          final descMatch =
+              issue.description?.toLowerCase().contains(query) ?? false;
           final typeMatch = issue.issueType.toLowerCase().contains(query);
           final statusMatch = issue.status.toLowerCase().contains(query);
-          final ownerMatch = issue.owner?.toLowerCase().contains(query) ?? false;
-          final assigneeMatch = issue.assignee?.toLowerCase().contains(query) ?? false;
+          final ownerMatch =
+              issue.owner?.toLowerCase().contains(query) ?? false;
+          final assigneeMatch =
+              issue.assignee?.toLowerCase().contains(query) ?? false;
 
           return idMatch ||
               titleMatch ||
@@ -86,7 +87,7 @@ class _CommandPaletteState extends State<CommandPalette> {
               assigneeMatch;
         }).toList();
       }
-      
+
       // Keep selection within bounds
       if (_filteredIssues.isEmpty) {
         _selectedIndex = 0;
@@ -103,14 +104,14 @@ class _CommandPaletteState extends State<CommandPalette> {
 
   void _scrollSelectedIntoView() {
     if (_filteredIssues.isEmpty || !_scrollController.hasClients) return;
-    
+
     const itemHeight = 54.0;
     final viewportHeight = _scrollController.position.viewportDimension;
     final currentOffset = _scrollController.offset;
-    
+
     final selectedTop = _selectedIndex * itemHeight;
     final selectedBottom = selectedTop + itemHeight;
-    
+
     if (selectedTop < currentOffset) {
       _scrollController.animateTo(
         selectedTop,
@@ -123,21 +124,6 @@ class _CommandPaletteState extends State<CommandPalette> {
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeOut,
       );
-    }
-  }
-
-  Color _getPriorityColor(int priority) {
-    switch (priority) {
-      case 0:
-        return MacosColors.systemRedColor;
-      case 1:
-        return MacosColors.systemOrangeColor;
-      case 2:
-        return MacosColors.systemYellowColor;
-      case 3:
-        return MacosColors.systemBlueColor;
-      default:
-        return MacosColors.systemGrayColor;
     }
   }
 
@@ -183,351 +169,376 @@ class _CommandPaletteState extends State<CommandPalette> {
       node: _focusScopeNode,
       child: FocusTraversalGroup(
         child: Focus(
-      focusNode: _focusNode,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            if (_filteredIssues.isNotEmpty) {
-              setState(() {
-                _selectedIndex = (_selectedIndex + 1) % _filteredIssues.length;
-              });
-              _scrollSelectedIntoView();
-            }
-            return KeyEventResult.handled;
-          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-            if (_filteredIssues.isNotEmpty) {
-              setState(() {
-                _selectedIndex =
-                    (_selectedIndex - 1 + _filteredIssues.length) %
+          focusNode: _focusNode,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                if (_filteredIssues.isNotEmpty) {
+                  setState(() {
+                    _selectedIndex =
+                        (_selectedIndex + 1) % _filteredIssues.length;
+                  });
+                  _scrollSelectedIntoView();
+                }
+                return KeyEventResult.handled;
+              } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                if (_filteredIssues.isNotEmpty) {
+                  setState(() {
+                    _selectedIndex =
+                        (_selectedIndex - 1 + _filteredIssues.length) %
                         _filteredIssues.length;
-              });
-              _scrollSelectedIntoView();
+                  });
+                  _scrollSelectedIntoView();
+                }
+                return KeyEventResult.handled;
+              } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+                if (_filteredIssues.isNotEmpty &&
+                    _selectedIndex >= 0 &&
+                    _selectedIndex < _filteredIssues.length) {
+                  _selectIssue(_filteredIssues[_selectedIndex]);
+                }
+                return KeyEventResult.handled;
+              } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+                Navigator.of(context).pop();
+                return KeyEventResult.handled;
+              }
             }
-            return KeyEventResult.handled;
-          } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-            if (_filteredIssues.isNotEmpty &&
-                _selectedIndex >= 0 &&
-                _selectedIndex < _filteredIssues.length) {
-              _selectIssue(_filteredIssues[_selectedIndex]);
-            }
-            return KeyEventResult.handled;
-          } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-            Navigator.of(context).pop();
-            return KeyEventResult.handled;
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.only(top: 80),
-          alignment: Alignment.topCenter,
-          child: Material(
-            color: Colors.transparent,
+            return KeyEventResult.ignored;
+          },
+          child: Center(
             child: Container(
-              width: 600,
-              height: 400,
-              decoration: BoxDecoration(
-                color: dialogBackground,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-                border: Border.all(
-                  color: isDark
-                      ? const Color(0xFF333333)
-                      : const Color(0xFFE0E0E0),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Search Input Header
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      children: [
-                        const MacosIcon(
-                          CupertinoIcons.search,
-                          color: MacosColors.systemGrayColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: MacosTextField(
-                            controller: _searchController,
-                            placeholder: 'Search issues by ID, title, description, assignee...',
-                            decoration: const BoxDecoration(),
-                            focusedDecoration: const BoxDecoration(),
-                            style: theme.typography.title3,
-                            autofocus: true,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF3A333A)
-                                : const Color(0xFFE8E3E8),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'ESC',
-                            style: theme.typography.caption2.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.typography.caption1.color,
-                            ),
-                          ),
-                        ),
-                      ],
+              margin: const EdgeInsets.only(top: 80),
+              alignment: Alignment.topCenter,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 600,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    color: dialogBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF333333)
+                          : const Color(0xFFE0E0E0),
                     ),
                   ),
-                  Container(
-                    height: 1,
-                    color: isDark
-                        ? const Color(0xFF333333)
-                        : const Color(0xFFE0E0E0),
-                  ),
-                  // Results List
-                  Expanded(
-                    child: _filteredIssues.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const MacosIcon(
-                                    CupertinoIcons.search_circle,
-                                    size: 48,
-                                    color: MacosColors.systemGrayColor,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'No issues found',
-                                    style: theme.typography.headline.copyWith(
-                                      color: MacosColors.systemGrayColor,
-                                    ),
-                                  ),
-                                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Search Input Header
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            const MacosIcon(
+                              CupertinoIcons.search,
+                              color: MacosColors.systemGrayColor,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: MacosTextField(
+                                controller: _searchController,
+                                placeholder:
+                                    'Search issues by ID, title, description, assignee...',
+                                decoration: const BoxDecoration(),
+                                focusedDecoration: const BoxDecoration(),
+                                style: theme.typography.title3,
+                                autofocus: true,
                               ),
                             ),
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            itemCount: _filteredIssues.length,
-                            padding: const EdgeInsets.all(6),
-                            itemBuilder: (context, index) {
-                              final issue = _filteredIssues[index];
-                              final isSelected = index == _selectedIndex;
-
-                              final itemBackground = isSelected
-                                  ? theme.primaryColor.withValues(alpha: 0.15)
-                                  : Colors.transparent;
-
-                              return MouseRegion(
-                                onEnter: (_) {
-                                  setState(() {
-                                    _selectedIndex = index;
-                                  });
-                                },
-                                child: Semantics(
-                                  button: true,
-                                  label: 'Open issue ${issue.id}: ${issue.title}',
-                                  child: GestureDetector(
-                                  onTap: () => _selectIssue(issue),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: itemBackground,
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: isSelected
-                                          ? Border.all(
-                                              color: theme.primaryColor
-                                                  .withValues(alpha: 0.4),
-                                              width: 1,
-                                            )
-                                          : Border.all(
-                                              color: Colors.transparent,
-                                              width: 1,
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF3A333A)
+                                    : const Color(0xFFE8E3E8),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'ESC',
+                                style: theme.typography.caption2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.typography.caption1.color,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 1,
+                        color: isDark
+                            ? const Color(0xFF333333)
+                            : const Color(0xFFE0E0E0),
+                      ),
+                      // Results List
+                      Expanded(
+                        child: _filteredIssues.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const MacosIcon(
+                                        CupertinoIcons.search_circle,
+                                        size: 48,
+                                        color: MacosColors.systemGrayColor,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'No issues found',
+                                        style: theme.typography.headline
+                                            .copyWith(
+                                              color:
+                                                  MacosColors.systemGrayColor,
                                             ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Priority indicator dot
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: _getPriorityColor(
-                                              issue.priority,
-                                            ),
-                                            shape: BoxShape.circle,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _filteredIssues.length,
+                                padding: const EdgeInsets.all(6),
+                                itemBuilder: (context, index) {
+                                  final issue = _filteredIssues[index];
+                                  final isSelected = index == _selectedIndex;
+
+                                  final itemBackground = isSelected
+                                      ? theme.primaryColor.withValues(
+                                          alpha: 0.15,
+                                        )
+                                      : Colors.transparent;
+
+                                  return MouseRegion(
+                                    onEnter: (_) {
+                                      setState(() {
+                                        _selectedIndex = index;
+                                      });
+                                    },
+                                    child: Semantics(
+                                      button: true,
+                                      label:
+                                          'Open issue ${issue.id}: ${issue.title}',
+                                      child: GestureDetector(
+                                        onTap: () => _selectIssue(issue),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
                                           ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        // ID & Title
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                alignmentStyle(context),
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: itemBackground,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            border: isSelected
+                                                ? Border.all(
+                                                    color: theme.primaryColor
+                                                        .withValues(alpha: 0.4),
+                                                    width: 1,
+                                                  )
+                                                : Border.all(
+                                                    color: Colors.transparent,
+                                                    width: 1,
+                                                  ),
+                                          ),
+                                          child: Row(
                                             children: [
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    issue.id,
-                                                    style: theme
-                                                        .typography.body
-                                                        .copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: isSelected
-                                                          ? theme.primaryColor
-                                                          : null,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 5,
-                                                      vertical: 1.5,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: _getStatusColor(
-                                                        issue.status,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        4,
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      issue.status.toUpperCase(),
-                                                      style: theme
-                                                          .typography.caption2
-                                                          .copyWith(
-                                                        fontSize: 9,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color:
-                                                            _getStatusTextColor(
-                                                          issue.status,
+                                              // A11Y-03 (r1f.6): text priority badge
+                                              // instead of a color-only dot so
+                                              // colorblind users can read P0..P4.
+                                              PriorityBadge(
+                                                priority: issue.priority,
+                                                compact: true,
+                                              ),
+                                              const SizedBox(width: 10),
+                                              // ID & Title
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      alignmentStyle(context),
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Text(
+                                                          issue.id,
+                                                          style: theme
+                                                              .typography
+                                                              .body
+                                                              .copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color:
+                                                                    isSelected
+                                                                    ? theme
+                                                                          .primaryColor
+                                                                    : null,
+                                                              ),
                                                         ),
-                                                      ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 5,
+                                                                vertical: 1.5,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                _getStatusColor(
+                                                                  issue.status,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  4,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            issue.status
+                                                                .toUpperCase(),
+                                                            style: theme
+                                                                .typography
+                                                                .caption2
+                                                                .copyWith(
+                                                                  fontSize: 9,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color: _getStatusTextColor(
+                                                                    issue
+                                                                        .status,
+                                                                  ),
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        if (issue
+                                                                .assignee
+                                                                ?.isNotEmpty ==
+                                                            true) ...[
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
+                                                          Text(
+                                                            '@${issue.assignee}',
+                                                            style: theme
+                                                                .typography
+                                                                .caption1
+                                                                .copyWith(
+                                                                  color: MacosColors
+                                                                      .systemGrayColor,
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ],
                                                     ),
-                                                  ),
-                                                  if (issue.assignee?.isNotEmpty ==
-                                                      true) ...[
-                                                    const SizedBox(width: 8),
+                                                    const SizedBox(height: 3),
                                                     Text(
-                                                      '@${issue.assignee}',
+                                                      issue.title,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                       style: theme
-                                                          .typography.caption1
+                                                          .typography
+                                                          .caption1
                                                           .copyWith(
-                                                        color:
-                                                            MacosColors
-                                                                .systemGrayColor,
-                                                      ),
+                                                            color: isSelected
+                                                                ? theme
+                                                                      .typography
+                                                                      .body
+                                                                      .color
+                                                                : MacosColors
+                                                                      .systemGrayColor,
+                                                          ),
                                                     ),
                                                   ],
-                                                ],
-                                              ),
-                                              const SizedBox(height: 3),
-                                              Text(
-                                                issue.title,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: theme.typography.caption1
-                                                    .copyWith(
-                                                  color: isSelected
-                                                      ? theme.typography.body
-                                                          .color
-                                                      : MacosColors
-                                                          .systemGrayColor,
                                                 ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              // Issue type indicator
+                                              Text(
+                                                issue.issueType.toUpperCase(),
+                                                style: theme.typography.caption2
+                                                    .copyWith(
+                                                      fontSize: 10,
+                                                      color: MacosColors
+                                                          .systemGrayColor,
+                                                    ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        // Issue type indicator
-                                        Text(
-                                          issue.issueType.toUpperCase(),
-                                          style: theme.typography.caption2
-                                              .copyWith(
-                                            fontSize: 10,
-                                            color: MacosColors.systemGrayColor,
-                                          ),
-                                        ),
-                                       ],
-                                     ),
-                                   ),
-                                 ),
-                                 ),
-                               );
-                             },
-                           ),
-                  ),
-                  // Keyboard help footer
-                  Container(
-                    height: 1,
-                    color: isDark
-                        ? const Color(0xFF333333)
-                        : const Color(0xFFE0E0E0),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _buildKeyboardShortcutHint(
-                          context,
-                          '↑↓',
-                          'Navigate',
-                          isDark,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                      // Keyboard help footer
+                      Container(
+                        height: 1,
+                        color: isDark
+                            ? const Color(0xFF333333)
+                            : const Color(0xFFE0E0E0),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 8.0,
                         ),
-                        const SizedBox(width: 16),
-                        _buildKeyboardShortcutHint(
-                          context,
-                          '⏎',
-                          'Select',
-                          isDark,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            _buildKeyboardShortcutHint(
+                              context,
+                              '↑↓',
+                              'Navigate',
+                              isDark,
+                            ),
+                            const SizedBox(width: 16),
+                            _buildKeyboardShortcutHint(
+                              context,
+                              '⏎',
+                              'Select',
+                              isDark,
+                            ),
+                            const SizedBox(width: 16),
+                            _buildKeyboardShortcutHint(
+                              context,
+                              'ESC',
+                              'Close',
+                              isDark,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        _buildKeyboardShortcutHint(
-                          context,
-                          'ESC',
-                          'Close',
-                          isDark,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
         ),
       ),
     );
