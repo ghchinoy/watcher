@@ -6,6 +6,7 @@ import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/tree_node.dart';
 import '../widgets/create_issue_modal.dart';
 import '../widgets/error_display_view.dart';
+import '../widgets/empty_state_view.dart';
 
 class TreeViewScreen extends StatefulWidget {
   const TreeViewScreen({super.key});
@@ -228,29 +229,9 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
             ContentArea(
               builder: (context, scrollController) {
                 if (topLevelIssues.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        MacosIcon(
-                          CupertinoIcons.checkmark_seal_fill,
-                          size: 48,
-                          color: MacosTheme.of(
-                            context,
-                          ).typography.body.color?.withValues(alpha: 0.2),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No open issues found',
-                          style: MacosTheme.of(context).typography.title2
-                              .copyWith(
-                                color: MacosTheme.of(
-                                  context,
-                                ).typography.body.color?.withValues(alpha: 0.5),
-                              ),
-                        ),
-                      ],
-                    ),
+                  return const EmptyStateView(
+                    icon: CupertinoIcons.checkmark_seal_fill,
+                    title: 'No open issues found',
                   );
                 }
 

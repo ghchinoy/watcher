@@ -30,8 +30,7 @@ class PlannerService {
       '$workspacePath/.beads/$name';
 
   /// True if [path] currently exists as a symlink (link to file OR dir).
-  static bool _isSymlink(String path) =>
-      FileSystemEntity.isLinkSync(path);
+  static bool _isSymlink(String path) => FileSystemEntity.isLinkSync(path);
 
   /// Removes any pre-existing entry at [path] that is a symlink, so a subsequent
   /// write creates a fresh regular file instead of following an attacker-planted
@@ -219,9 +218,7 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
     final commands = <List<String>>[];
 
     // Join backslash line-continuations so multi-line `bd create ... \` works.
-    final logicalLines = block
-        .replaceAll('\\\n', ' ')
-        .split('\n');
+    final logicalLines = block.replaceAll('\\\n', ' ').split('\n');
 
     for (final raw in logicalLines) {
       final line = raw.trim();
@@ -451,16 +448,24 @@ $exportData
   }
 
   @visibleForTesting
-  static List<List<String>> parseBdCommands(String block) => _parseBdCommands(block);
+  static List<List<String>> parseBdCommands(String block) =>
+      _parseBdCommands(block);
 
   @visibleForTesting
   static List<String> tokenize(String input) => _tokenize(input);
 
   @visibleForTesting
-  static Future<void> writeScratchForTesting(String workspacePath, String name, String contents) => _writeScratch(workspacePath, name, contents);
+  static Future<void> writeScratchForTesting(
+    String workspacePath,
+    String name,
+    String contents,
+  ) => _writeScratch(workspacePath, name, contents);
 
   @visibleForTesting
-  static Future<void> deleteScratchForTesting(String workspacePath, String name) => _deleteScratch(workspacePath, name);
+  static Future<void> deleteScratchForTesting(
+    String workspacePath,
+    String name,
+  ) => _deleteScratch(workspacePath, name);
 
   @visibleForTesting
   static bool isSymlinkForTesting(String path) => _isSymlink(path);

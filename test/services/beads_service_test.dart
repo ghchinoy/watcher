@@ -48,8 +48,10 @@ class MockIOSink implements IOSink {
 }
 
 class MockProcess implements Process {
-  final StreamController<List<int>> stdoutController = StreamController<List<int>>();
-  final StreamController<List<int>> stderrController = StreamController<List<int>>();
+  final StreamController<List<int>> stdoutController =
+      StreamController<List<int>>();
+  final StreamController<List<int>> stderrController =
+      StreamController<List<int>>();
   final MockIOSink mockStdin = MockIOSink();
   final Completer<int> exitCodeCompleter = Completer<int>();
 
@@ -57,8 +59,12 @@ class MockProcess implements Process {
     // BeadsService listens for boot_status notifications.
     // Let's send the connecting and ready states so BeadsService finishes initialization.
     Future.microtask(() {
-      sendLine('{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database","mode":"embedded"}}');
-      sendLine('{"jsonrpc":"2.0","method":"boot_status","params":{"status":"ready","mode":"embedded"}}');
+      sendLine(
+        '{"jsonrpc":"2.0","method":"boot_status","params":{"status":"connecting_to_database","mode":"embedded"}}',
+      );
+      sendLine(
+        '{"jsonrpc":"2.0","method":"boot_status","params":{"status":"ready","mode":"embedded"}}',
+      );
     });
   }
 
@@ -186,7 +192,8 @@ void main() {
 
       // Wait for stdin to receive the command from the second process
       await Future.doWhile(() async {
-        if (mockProcesses.isNotEmpty && mockProcesses[0].mockStdin.writtenLines.isNotEmpty) {
+        if (mockProcesses.isNotEmpty &&
+            mockProcesses[0].mockStdin.writtenLines.isNotEmpty) {
           return false;
         }
         await Future.delayed(const Duration(milliseconds: 10));
@@ -198,7 +205,9 @@ void main() {
       final requestObj = jsonDecode(written);
       final reqId = requestObj['id'];
 
-      mockProcesses[0].sendLine('{"jsonrpc":"2.0","result":"1.2.3","id":$reqId}');
+      mockProcesses[0].sendLine(
+        '{"jsonrpc":"2.0","result":"1.2.3","id":$reqId}',
+      );
 
       final version = await future;
       expect(version, '1.2.3');
@@ -211,138 +220,145 @@ void main() {
       }
     });
 
-    test('force-restarts the daemon if requests time out consecutively (REL-02)', () async {
-      int spawnCount = 0;
-      final mockProcesses = <MockProcess>[];
+    test(
+      'force-restarts the daemon if requests time out consecutively (REL-02)',
+      () async {
+        int spawnCount = 0;
+        final mockProcesses = <MockProcess>[];
 
-      Future<Process> mockProcessStart(
-        String executable,
-        List<String> arguments, {
-        String? workingDirectory,
-        Map<String, String>? environment,
-        bool includeParentEnvironment = true,
-        bool runInShell = false,
-        ProcessStartMode mode = ProcessStartMode.normal,
-      }) async {
-        spawnCount++;
-        final proc = MockProcess();
-        mockProcesses.add(proc);
-        return proc;
-      }
-
-      // Initialize with a short timeout to make testing fast.
-      final service = BeadsService(
-        '/dummy/path',
-        processStart: mockProcessStart,
-        requestTimeout: const Duration(milliseconds: 10),
-      );
-
-      // Trigger first timeout. This should fail with a timeout exception.
-      await expectLater(service.getVersion(), throwsException);
-      expect(spawnCount, 1);
-
-      // Trigger second timeout. Since we are using same daemon (spawnCount remains 1), it also times out.
-      // After this second consecutive timeout, the daemon should be killed/restarted.
-      await expectLater(service.getVersion(), throwsException);
-      expect(spawnCount, 1);
-
-      // Trigger a third call. Since the previous two timed out consecutively,
-      // the daemon should have been force-terminated, so this call should try
-      // to spawn a fresh daemon process.
-      // We will let this third call succeed.
-      final future = service.getVersion();
-
-      // Wait for second mock process to be spawned.
-      await Future.doWhile(() async {
-        if (mockProcesses.length >= 2 && mockProcesses[1].mockStdin.writtenLines.isNotEmpty) {
-          return false;
+        Future<Process> mockProcessStart(
+          String executable,
+          List<String> arguments, {
+          String? workingDirectory,
+          Map<String, String>? environment,
+          bool includeParentEnvironment = true,
+          bool runInShell = false,
+          ProcessStartMode mode = ProcessStartMode.normal,
+        }) async {
+          spawnCount++;
+          final proc = MockProcess();
+          mockProcesses.add(proc);
+          return proc;
         }
-        await Future.delayed(const Duration(milliseconds: 5));
-        return true;
-      });
 
-      expect(spawnCount, 2);
-      expect(mockProcesses.length, 2);
+        // Initialize with a short timeout to make testing fast.
+        final service = BeadsService(
+          '/dummy/path',
+          processStart: mockProcessStart,
+          requestTimeout: const Duration(milliseconds: 10),
+        );
 
-      final written = mockProcesses[1].mockStdin.writtenLines.first;
-      final requestObj = jsonDecode(written);
-      final reqId = requestObj['id'];
+        // Trigger first timeout. This should fail with a timeout exception.
+        await expectLater(service.getVersion(), throwsException);
+        expect(spawnCount, 1);
 
-      mockProcesses[1].sendLine('{"jsonrpc":"2.0","result":"1.2.3","id":$reqId}');
+        // Trigger second timeout. Since we are using same daemon (spawnCount remains 1), it also times out.
+        // After this second consecutive timeout, the daemon should be killed/restarted.
+        await expectLater(service.getVersion(), throwsException);
+        expect(spawnCount, 1);
 
-      final version = await future;
-      expect(version, '1.2.3');
+        // Trigger a third call. Since the previous two timed out consecutively,
+        // the daemon should have been force-terminated, so this call should try
+        // to spawn a fresh daemon process.
+        // We will let this third call succeed.
+        final future = service.getVersion();
 
-      // Cleanup
-      service.dispose();
-      for (final proc in mockProcesses) {
-        proc.kill();
-      }
-    });
+        // Wait for second mock process to be spawned.
+        await Future.doWhile(() async {
+          if (mockProcesses.length >= 2 &&
+              mockProcesses[1].mockStdin.writtenLines.isNotEmpty) {
+            return false;
+          }
+          await Future.delayed(const Duration(milliseconds: 5));
+          return true;
+        });
 
-    test('handles daemon crash with exit code -9 (SIGKILL) gracefully (REL-05)', () async {
-      int spawnCount = 0;
-      final mockProcesses = <MockProcess>[];
+        expect(spawnCount, 2);
+        expect(mockProcesses.length, 2);
 
-      Future<Process> mockProcessStart(
-        String executable,
-        List<String> arguments, {
-        String? workingDirectory,
-        Map<String, String>? environment,
-        bool includeParentEnvironment = true,
-        bool runInShell = false,
-        ProcessStartMode mode = ProcessStartMode.normal,
-      }) async {
-        spawnCount++;
-        final proc = MockProcess();
-        mockProcesses.add(proc);
-        return proc;
-      }
+        final written = mockProcesses[1].mockStdin.writtenLines.first;
+        final requestObj = jsonDecode(written);
+        final reqId = requestObj['id'];
 
-      int? crashedCode;
-      bool? crashedWasKilled;
-      final service = BeadsService(
-        '/dummy/path',
-        processStart: mockProcessStart,
-        onCrash: (code, {required bool wasKilled}) {
-          crashedCode = code;
-          crashedWasKilled = wasKilled;
-        },
-      );
+        mockProcesses[1].sendLine(
+          '{"jsonrpc":"2.0","result":"1.2.3","id":$reqId}',
+        );
 
-      // Trigger a request. This will start the daemon.
-      final future = service.getVersion();
+        final version = await future;
+        expect(version, '1.2.3');
 
-      // Wait until mockProcess is registered
-      await Future.doWhile(() async {
-        if (mockProcesses.isNotEmpty) return false;
-        await Future.delayed(const Duration(milliseconds: 5));
-        return true;
-      });
+        // Cleanup
+        service.dispose();
+        for (final proc in mockProcesses) {
+          proc.kill();
+        }
+      },
+    );
 
-      final proc = mockProcesses[0];
+    test(
+      'handles daemon crash with exit code -9 (SIGKILL) gracefully (REL-05)',
+      () async {
+        final mockProcesses = <MockProcess>[];
 
-      // Simulate a SIGKILL (-9) crash on the daemon process before it replies.
-      proc.stdoutController.close();
-      proc.stderrController.close();
-      proc.exitCodeCompleter.complete(-9);
+        Future<Process> mockProcessStart(
+          String executable,
+          List<String> arguments, {
+          String? workingDirectory,
+          Map<String, String>? environment,
+          bool includeParentEnvironment = true,
+          bool runInShell = false,
+          ProcessStartMode mode = ProcessStartMode.normal,
+        }) async {
+          final proc = MockProcess();
+          mockProcesses.add(proc);
+          return proc;
+        }
 
-      // The pending request should throw a DaemonCrashException.
-      try {
-        await future;
-        fail('Expected DaemonCrashException');
-      } on DaemonCrashException catch (e) {
-        expect(e.code, -9);
-        expect(e.wasKilled, true);
-        expect(e.toString(), contains('stopped by the system'));
-      }
+        int? crashedCode;
+        bool? crashedWasKilled;
+        final service = BeadsService(
+          '/dummy/path',
+          processStart: mockProcessStart,
+          onCrash: (code, {required bool wasKilled}) {
+            crashedCode = code;
+            crashedWasKilled = wasKilled;
+          },
+        );
 
-      // The onCrash callback should have fired with the correct parameters.
-      expect(crashedCode, -9);
-      expect(crashedWasKilled, true);
+        // Trigger a request. This will start the daemon.
+        final future = service.getVersion();
 
-      // Cleanup
-      service.dispose();
-    });
+        // Wait until mockProcess is registered
+        await Future.doWhile(() async {
+          if (mockProcesses.isNotEmpty) return false;
+          await Future.delayed(const Duration(milliseconds: 5));
+          return true;
+        });
+
+        final proc = mockProcesses[0];
+
+        // Simulate a SIGKILL (-9) crash on the daemon process before it replies.
+        proc.stdoutController.close();
+        proc.stderrController.close();
+        proc.exitCodeCompleter.complete(-9);
+
+        // The pending request should throw a DaemonCrashException.
+        try {
+          await future;
+          fail('Expected DaemonCrashException');
+        } on DaemonCrashException catch (e) {
+          expect(e.code, -9);
+          expect(e.wasKilled, true);
+          expect(e.toString(), contains('stopped by the system'));
+        }
+
+        // The onCrash callback should have fired with the correct parameters.
+        expect(crashedCode, -9);
+        expect(crashedWasKilled, true);
+
+        // Cleanup
+        service.dispose();
+      },
+    );
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/interaction.dart';
+import '../utils/date_formatters.dart';
 
 class ActivityTicker extends StatelessWidget {
   const ActivityTicker({super.key});
@@ -52,8 +53,8 @@ class ActivityTicker extends StatelessWidget {
             Container(height: 1, color: MacosTheme.of(context).dividerColor),
         itemBuilder: (context, index) {
           final interaction = interactions[index];
-          final timeStr =
-              '${interaction.timestamp.month.toString().padLeft(2, '0')}/${interaction.timestamp.day.toString().padLeft(2, '0')} ${interaction.timestamp.hour.toString().padLeft(2, '0')}:${interaction.timestamp.minute.toString().padLeft(2, '0')}';
+          // UI-04 (r1f.9): shared formatter.
+          final timeStr = DateFormatters.short(interaction.timestamp);
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

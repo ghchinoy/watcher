@@ -200,8 +200,7 @@ class IssueIndex {
           .where((b) => b.status != 'closed')
           .toList();
 
-  List<Issue> blockingOf(String issueId) =>
-      blockingById[issueId] ?? const [];
+  List<Issue> blockingOf(String issueId) => blockingById[issueId] ?? const [];
 }
 
 /// Memoizes one [IssueIndex] per issue-list instance. `AppState.currentIssues`

@@ -20,7 +20,8 @@ class TmuxService {
   }
 
   @visibleForTesting
-  static String escapeForAppleScript(String value) => _escapeForAppleScript(value);
+  static String escapeForAppleScript(String value) =>
+      _escapeForAppleScript(value);
 
   /// Resolves the absolute path to the bd executable.
   /// [customBdPath] is an optional override from user settings; when empty

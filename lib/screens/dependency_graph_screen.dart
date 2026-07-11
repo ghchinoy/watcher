@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/error_display_view.dart';
+import '../widgets/empty_state_view.dart';
 
 /// A structured visualization of the blocks DAG — which issues are
 /// blocking which others, including chains that cross epic boundaries.
@@ -102,28 +103,11 @@ class DependencyGraphScreen extends StatelessWidget {
                   return const Center(child: ProgressCircle());
                 }
                 if (participantIds.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const MacosIcon(
-                          CupertinoIcons.arrow_branch,
-                          size: 48,
-                          color: MacosColors.systemGrayColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No dependency edges',
-                          style: MacosTheme.of(context).typography.title1,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No "blocks" relationships have been recorded yet.',
-                          style: MacosTheme.of(context).typography.body
-                              .copyWith(color: MacosColors.systemGrayColor),
-                        ),
-                      ],
-                    ),
+                  return const EmptyStateView(
+                    icon: CupertinoIcons.arrow_branch,
+                    title: 'No dependency edges',
+                    subtitle:
+                        'No "blocks" relationships have been recorded yet.',
                   );
                 }
 
