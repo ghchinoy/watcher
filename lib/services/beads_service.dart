@@ -23,6 +23,21 @@ class ConflictException implements Exception {
   String toString() => message;
 }
 
+/// Thrown to in-flight requests when the daemon process dies unexpectedly
+/// (REL-05). [wasKilled] is true for SIGKILL-style exits (code -9), which are
+/// usually transient (OS memory pressure, sleep). The daemon auto-respawns on
+/// the next call, so callers should treat this as recoverable.
+class DaemonCrashException implements Exception {
+  final int code;
+  final bool wasKilled;
+  DaemonCrashException(this.code, {required this.wasKilled});
+
+  @override
+  String toString() => wasKilled
+      ? 'The background service was stopped by the system (it will reconnect).'
+      : 'The background service stopped unexpectedly (exit code $code).';
+}
+
 class BeadsService {
   static final _log = AppLogger('BeadsService');
   final String workingDirectory;
@@ -54,6 +69,14 @@ class BeadsService {
   bool _isDisposed = false;
   Function(String)? onModeChanged;
 
+  /// REL-05: invoked when the daemon process exits UNEXPECTEDLY (non-zero exit
+  /// while the service is still in use — e.g. SIGKILL/-9 from OS memory pressure
+  /// or a sleep transition). Receives the exit [code] and whether it looks like
+  /// an external kill. The next RPC call will transparently respawn the daemon;
+  /// this hook lets the UI show a friendly "reconnecting" state instead of a raw
+  /// crash error and/or proactively re-fetch.
+  void Function(int code, {required bool wasKilled})? onCrash;
+
   final Future<Process> Function(
     String executable,
     List<String> arguments, {
@@ -69,6 +92,7 @@ class BeadsService {
   BeadsService(
     this.workingDirectory, {
     this.onModeChanged,
+    this.onCrash,
     String Function()? bdPathResolver,
     Future<Process> Function(
       String executable,
@@ -187,22 +211,33 @@ class BeadsService {
       });
 
       _daemonProcess!.exitCode.then((code) {
-        if (code != 0) {
+        final unexpected = code != 0;
+        // SIGKILL is delivered as a negative exit code (-9) by dart:io. Treat
+        // any negative code as an external kill (REL-05).
+        final wasKilled = code < 0;
+        if (unexpected) {
           _log.error('Daemon exited unexpectedly', error: 'exit code $code');
         } else {
           _log.info('Daemon exited cleanly');
         }
         _daemonProcess = null;
+
         if (!_isDisposed) {
           for (var completer in _pendingRequests.values) {
             if (!completer.isCompleted) {
               completer.completeError(
-                Exception('Daemon crashed (exit code $code)'),
+                DaemonCrashException(code, wasKilled: wasKilled),
               );
             }
           }
         }
         _pendingRequests.clear();
+
+        // REL-05: notify the app so it can reconnect gracefully instead of
+        // surfacing a raw crash. Only for unexpected exits while still in use.
+        if (unexpected && !_isDisposed) {
+          onCrash?.call(code, wasKilled: wasKilled);
+        }
       });
 
       // Initialization succeeded (daemon spawned and listeners attached).
