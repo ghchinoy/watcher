@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.10.0](https://github.com/ghchinoy/watcher/compare/agent_watcher-v0.9.0...agent_watcher-v0.10.0) (2026-07-11)
+
+
+### Features
+
+* add global Command Palette search for issues ([dc0f227](https://github.com/ghchinoy/watcher/commit/dc0f227cdbfae66ed9f444e4fc271d7cf7461935))
+* document performance, concurrency, and UI components in widget tree and architecture ([0c26658](https://github.com/ghchinoy/watcher/commit/0c26658dff51aa1d31fdc486816e4b8707a501af))
+
+
+### Bug Fixes
+
+* auto-expand and highlight focused task in Tree View (watcher-ery) ([6800880](https://github.com/ghchinoy/watcher/commit/6800880bbf130061600dfab703b19315860b3649))
+* b7o a11y+security slice — symlink-safe AI scratch files (SEC-04), semantic buttons (A11Y-01), modal focus traps (A11Y-02) ([6d3ce5c](https://github.com/ghchinoy/watcher/commit/6d3ce5c27a04e1cdeacb304c5b657dca3fba0bb6))
+* r1f concurrency slice — optimistic concurrency compare-and-swap (RACE-03) ([60f6558](https://github.com/ghchinoy/watcher/commit/60f65582549262cb4ea36c1130719ba1401219b6))
+* r1f perf slice — O(1) dependency scan (REL-03), debounced daemon export (RACE-04), and robust PATH environment ([4883f92](https://github.com/ghchinoy/watcher/commit/4883f92ab0c0049a557b271450fa6368df3fc834))
+* r1f polish batch — reusable components, contrast fixes, clean format, and test stability ([b742aab](https://github.com/ghchinoy/watcher/commit/b742aab9a8360ce5db39cca2501b0caa73508e27))
+* REL-05 — graceful daemon crash (SIGKILL/-9) recovery and tests ([7e985e9](https://github.com/ghchinoy/watcher/commit/7e985e9d36e464e4d9dbf8deafb77fdaad4353fc))
+* restore last active project on startup (watcher-w2a) ([7ca5597](https://github.com/ghchinoy/watcher/commit/7ca559719a73a1698d985de54d0a5b3f2a1953c0))
+* surface mutation failures (REL-01) and restart hung daemon (REL-02) ([24bea20](https://github.com/ghchinoy/watcher/commit/24bea20737c60819f5287ef206c454087ed882ab))
+* t60 phase 1 P0 security & concurrency blockers ([5e3df70](https://github.com/ghchinoy/watcher/commit/5e3df707a762aa87165627244bbe480c1a5d00f6))
+
 ## [0.9.0](https://github.com/ghchinoy/watcher/compare/agent_watcher-v0.8.0...agent_watcher-v0.9.0) (2026-06-30)
 
 
