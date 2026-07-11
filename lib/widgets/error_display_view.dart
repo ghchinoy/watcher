@@ -38,6 +38,22 @@ class _ErrorDisplayViewState extends State<ErrorDisplayView> {
       context,
     );
 
+    final innerBgColor = MacosDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: Color(0xFFF4F5F6),
+        darkColor: Color(0xFF28282B),
+      ),
+      context,
+    );
+
+    final innerTextColor = MacosDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: Color(0xFF1A1A1A),
+        darkColor: Color(0xFFF1F2F3),
+      ),
+      context,
+    );
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -75,10 +91,7 @@ class _ErrorDisplayViewState extends State<ErrorDisplayView> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12.0),
                 decoration: BoxDecoration(
-                  color: MacosDynamicColor.resolve(
-                    MacosColors.alternatingContentBackgroundColor,
-                    context,
-                  ),
+                  color: innerBgColor,
                   borderRadius: BorderRadius.circular(6.0),
                 ),
                 child: SelectableText(
@@ -89,10 +102,7 @@ class _ErrorDisplayViewState extends State<ErrorDisplayView> {
                   style: MacosTheme.of(context).typography.body.copyWith(
                     fontFamily: 'CupertinoSystemMonospaced',
                     fontSize: 12,
-                    color: MacosDynamicColor.resolve(
-                      MacosColors.labelColor,
-                      context,
-                    ),
+                    color: innerTextColor,
                   ),
                   textAlign: TextAlign.left,
                 ),
