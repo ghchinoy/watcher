@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
 
 class TreeNode extends StatefulWidget {
@@ -110,20 +111,26 @@ class _TreeNodeState extends State<TreeNode> {
                   },
                   onAcceptWithDetails: (details) async {
                     final dragged = details.data;
-                    // REL-01: surface a native alert if the reparent fails.
-                    final ok = await appState.updateIssue(
+                    // REL-01/RACE-03: alert on failure or concurrent-edit conflict.
+                    final result = await appState.updateIssue(
                       dragged.id,
                       parent: widget.issue.id,
                     );
-                    if (!ok && context.mounted) {
-                      await DialogUtils.showError(
-                        context,
-                        title: 'Could Not Move Issue',
-                        message:
-                            'Failed to reparent ${dragged.id} under '
-                            '${widget.issue.id}. Please try again.',
-                      );
+                    if (!context.mounted ||
+                        result == MutationResult.success) {
+                      return;
                     }
+                    await DialogUtils.showError(
+                      context,
+                      title: result == MutationResult.conflict
+                          ? 'Issue Changed by Someone Else'
+                          : 'Could Not Move Issue',
+                      message: result == MutationResult.conflict
+                          ? '${dragged.id} was updated elsewhere, so it was not '
+                                'moved. The tree has been refreshed.'
+                          : 'Failed to reparent ${dragged.id} under '
+                                '${widget.issue.id}. Please try again.',
+                    );
                   },
                   builder: (context, candidateData, rejectedData) {
                     final isHovered = candidateData.isNotEmpty;

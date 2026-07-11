@@ -16,6 +16,20 @@ import 'watcher_coordinator.dart';
 export 'settings_repository.dart' show GenerativeModelConfig, SidebarSortOrder;
 export 'project_repository.dart' show Project;
 
+/// Outcome of an issue mutation (RACE-03 / REL-01).
+enum MutationResult {
+  /// The change was applied.
+  success,
+
+  /// Rejected because the issue changed since it was loaded (optimistic
+  /// concurrency). The UI should tell the user their edit was discarded; the
+  /// data has already been refreshed.
+  conflict,
+
+  /// A generic failure (daemon error, timeout, etc.).
+  failure,
+}
+
 class AppState extends ChangeNotifier {
   List<Project> projects = [];
   Project? selectedProject;
@@ -600,10 +614,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Updates an issue. Returns `true` on success, `false` on failure.
-  /// REL-01: callers awaiting this can surface a native alert on `false`; the
-  /// error is also recorded in [projectErrors] for the sidebar indicator.
-  Future<bool> updateIssue(
+  /// Updates an issue.
+  ///
+  /// RACE-03: passes the issue's current `updatedAt` as an optimistic-concurrency
+  /// token. If the issue was changed by someone else in the meantime the daemon
+  /// rejects the write; we auto-refresh and return [MutationResult.conflict] so
+  /// the UI can tell the user their edit was discarded.
+  /// REL-01: returns [MutationResult.failure] on generic errors (also recorded
+  /// in [projectErrors] for the sidebar indicator); [MutationResult.success]
+  /// otherwise.
+  Future<MutationResult> updateIssue(
     String id, {
     String? status,
     int? priority,
@@ -611,42 +631,43 @@ class AppState extends ChangeNotifier {
     String? assignee,
     String? parent,
   }) async {
-    if (selectedProject == null) return false;
+    if (selectedProject == null) return MutationResult.failure;
+    if (_currentService == null) return MutationResult.failure;
 
-    // Optimistically update the selected issue if it matches
-    if (selectedIssue?.id == id) {
-      // Create a copy with the new values
-      // Note: we can't easily construct a new Issue without all properties,
-      // but since we only need UI to be snappy, we'll let the watcher handle it,
-      // or we can set a flag. Actually, letting the watcher handle it is fine since it's 500ms.
-      // But for maximum responsiveness, let's just wait for the file watcher.
-    }
+    // RACE-03: the updated_at the UI currently sees for this issue.
+    final known = currentIssues.where((i) => i.id == id).firstOrNull;
+    final expectedUpdatedAt = known?.updatedAt;
 
     try {
-      if (_currentService != null) {
-        await _currentService!.updateIssue(
-          id,
-          status: status,
-          priority: priority,
-          owner: owner,
-          assignee: assignee,
-          parent: parent,
-          actor: actorName,
-        );
+      await _currentService!.updateIssue(
+        id,
+        status: status,
+        priority: priority,
+        owner: owner,
+        assignee: assignee,
+        parent: parent,
+        actor: actorName,
+        expectedUpdatedAt: expectedUpdatedAt,
+      );
 
-        // If closing, trigger background summarization (Task watcher-v2n.4 / b2n.2)
-        if (status == 'closed') {
-          final issue = currentIssues.where((i) => i.id == id).firstOrNull;
-          if (issue != null) {
-            _summarizeResolution(issue);
-          }
+      // If closing, trigger background summarization (Task watcher-v2n.4 / b2n.2)
+      if (status == 'closed') {
+        final issue = currentIssues.where((i) => i.id == id).firstOrNull;
+        if (issue != null) {
+          _summarizeResolution(issue);
         }
       }
-      return true;
+      return MutationResult.success;
+    } on ConflictException catch (e) {
+      // RACE-03: someone changed this issue first. Discard this edit and refresh
+      // so the user sees the current values.
+      _log.info('Update conflict on $id: $e');
+      await _refreshData();
+      return MutationResult.conflict;
     } catch (e) {
       projectErrors[selectedProject!.path] = 'Failed to update issue: $e';
       notifyListeners();
-      return false;
+      return MutationResult.failure;
     }
   }
 

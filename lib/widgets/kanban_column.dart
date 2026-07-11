@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
 import 'kanban_card.dart';
 
@@ -25,17 +26,20 @@ class KanbanColumn extends StatelessWidget {
       },
       onAcceptWithDetails: (details) async {
         final issue = details.data;
-        // REL-01: surface a native alert if the drag-to-move fails, rather than
-        // silently reverting on the next refresh.
-        final ok = await appState.updateIssue(issue.id, status: statusKey);
-        if (!ok && context.mounted) {
-          await DialogUtils.showError(
-            context,
-            title: 'Could Not Move Issue',
-            message:
-                'Failed to change ${issue.id} to "$title". Please try again.',
-          );
-        }
+        // REL-01/RACE-03: surface a native alert if the drag-to-move fails or
+        // conflicts, rather than silently reverting on the next refresh.
+        final result = await appState.updateIssue(issue.id, status: statusKey);
+        if (!context.mounted || result == MutationResult.success) return;
+        await DialogUtils.showError(
+          context,
+          title: result == MutationResult.conflict
+              ? 'Issue Changed by Someone Else'
+              : 'Could Not Move Issue',
+          message: result == MutationResult.conflict
+              ? '${issue.id} was updated elsewhere, so it was not moved. The '
+                    'board has been refreshed with the latest state.'
+              : 'Failed to change ${issue.id} to "$title". Please try again.',
+        );
       },
       builder: (context, candidateData, rejectedData) {
         return Container(
