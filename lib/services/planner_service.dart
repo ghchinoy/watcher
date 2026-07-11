@@ -196,7 +196,7 @@ Do NOT use markdown TODOs or other tracking methods, ONLY output the bd commands
         bdPath,
         args,
         workingDirectory: workspacePath,
-        environment: {'PATH': macosDefaultPath},
+        environment: macosPathEnv,
       );
       if (result.exitCode != 0) {
         failures.add('bd ${args.join(' ')} -> ${result.stderr}'.trim());

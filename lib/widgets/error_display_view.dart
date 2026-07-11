@@ -30,6 +30,14 @@ class _ErrorDisplayViewState extends State<ErrorDisplayView> {
 
   @override
   Widget build(BuildContext context) {
+    final errorColor = MacosDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: Color(0xFFC92A2A),
+        darkColor: Color(0xFFFF8787),
+      ),
+      context,
+    );
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -43,22 +51,23 @@ class _ErrorDisplayViewState extends State<ErrorDisplayView> {
             ),
             borderRadius: BorderRadius.circular(8.0),
             border: Border.all(
-              color: MacosColors.systemRedColor.withValues(alpha: 0.3),
+              color: errorColor.withValues(alpha: 0.3),
             ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const MacosIcon(
+              MacosIcon(
                 CupertinoIcons.exclamationmark_triangle_fill,
                 size: 36,
-                color: MacosColors.systemRedColor,
+                color: errorColor,
               ),
               const SizedBox(height: 12),
               Text(
                 'An Error Occurred',
                 style: MacosTheme.of(context).typography.headline.copyWith(
-                  color: MacosColors.systemRedColor,
+                  color: errorColor,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),

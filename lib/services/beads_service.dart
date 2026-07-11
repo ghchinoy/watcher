@@ -7,7 +7,17 @@ import '../utils/app_logger.dart';
 
 const macosDefaultPath =
     '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
-const macosPathEnv = {'PATH': macosDefaultPath};
+
+Map<String, String> _buildPathEnv() {
+  final env = Map<String, String>.from(Platform.environment);
+  final parentPath = env['PATH'] ?? '';
+  env['PATH'] = parentPath.isEmpty
+      ? macosDefaultPath
+      : '$parentPath:$macosDefaultPath';
+  return env;
+}
+
+final Map<String, String> macosPathEnv = _buildPathEnv();
 
 /// JSON-RPC error code the daemon returns when an optimistic-concurrency check
 /// fails (RACE-03). Kept in sync with `conflictErrorCode` in daemon/main.go.

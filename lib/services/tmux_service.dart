@@ -5,7 +5,7 @@ import '../utils/app_logger.dart';
 
 class TmuxService {
   static final _log = AppLogger('TmuxService');
-  static const _env = macosPathEnv;
+  static final _env = macosPathEnv;
 
   /// Escapes a value for safe interpolation inside an AppleScript double-quoted
   /// string literal (SEC-02, defense-in-depth).
