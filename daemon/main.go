@@ -371,15 +371,50 @@ func handleAddComment(ctx context.Context, storage beads.Storage, req Request) {
 	})
 }
 
+// conflictErrorCode is returned by handleUpdateIssue when optimistic
+// concurrency control detects that the issue changed since the client last read
+// it (RACE-03). The Dart client maps this code to a "changed by someone else"
+// alert + refresh rather than a generic failure.
+const conflictErrorCode = -32001
+
 func handleUpdateIssue(ctx context.Context, storage beads.Storage, req Request) {
 	var params struct {
 		ID      string                 `json:"id"`
 		Updates map[string]interface{} `json:"updates"`
 		Actor   string                 `json:"actor"`
+		// ExpectedUpdatedAt is the updated_at the client last saw (RFC3339).
+		// When present, the daemon performs a compare-and-swap: if the stored
+		// issue's updated_at differs, the write is rejected as a conflict.
+		// Empty/absent => no check (backward compatible).
+		ExpectedUpdatedAt string `json:"expected_updated_at"`
 	}
 	if err := json.Unmarshal(req.Params, &params); err != nil {
 		sendError(req.ID, -32602, "Invalid params")
 		return
+	}
+
+	// RACE-03: optimistic concurrency control. Reject the write if the issue was
+	// modified (by a background agent, teammate, or CLI) since the client read it.
+	if params.ExpectedUpdatedAt != "" {
+		expected, perr := time.Parse(time.RFC3339, params.ExpectedUpdatedAt)
+		current, gerr := storage.GetIssue(ctx, params.ID)
+		if perr == nil && gerr == nil && current != nil &&
+			!current.UpdatedAt.Equal(expected) {
+			sendError(
+				req.ID,
+				conflictErrorCode,
+				fmt.Sprintf(
+					"conflict: %s was modified since you loaded it "+
+						"(expected updated_at %s, found %s)",
+					params.ID,
+					expected.UTC().Format(time.RFC3339),
+					current.UpdatedAt.UTC().Format(time.RFC3339),
+				),
+			)
+			return
+		}
+		// If we couldn't parse/fetch, fall through to a normal write rather than
+		// blocking the user on an inconclusive check.
 	}
 
 	err := storage.UpdateIssue(ctx, params.ID, params.Updates, params.Actor)

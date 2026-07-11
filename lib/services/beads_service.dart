@@ -9,6 +9,20 @@ const macosDefaultPath =
     '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
 const macosPathEnv = {'PATH': macosDefaultPath};
 
+/// JSON-RPC error code the daemon returns when an optimistic-concurrency check
+/// fails (RACE-03). Kept in sync with `conflictErrorCode` in daemon/main.go.
+const int kRpcConflictCode = -32001;
+
+/// Thrown by [BeadsService] when a mutation is rejected because the issue was
+/// modified since the client last read it (RACE-03). Callers should refresh and
+/// inform the user rather than treating it as a generic failure.
+class ConflictException implements Exception {
+  final String message;
+  ConflictException(this.message);
+  @override
+  String toString() => message;
+}
+
 class BeadsService {
   static final _log = AppLogger('BeadsService');
   final String workingDirectory;
@@ -145,8 +159,14 @@ class BeadsService {
                 // is alive and responsive, so the hang streak is broken.
                 _consecutiveTimeouts = 0;
                 if (response['error'] != null) {
+                  final err = response['error'];
+                  final message = err['message']?.toString() ?? 'Unknown error';
+                  // RACE-03: map the conflict code to a typed exception so
+                  // callers can refresh + alert instead of a generic failure.
                   _pendingRequests[id]!.completeError(
-                    Exception(response['error']['message']),
+                    err['code'] == kRpcConflictCode
+                        ? ConflictException(message)
+                        : Exception(message),
                   );
                 } else {
                   _pendingRequests[id]!.complete(response['result']);
@@ -300,6 +320,9 @@ class BeadsService {
     return issues;
   }
 
+  /// Updates an issue. When [expectedUpdatedAt] is provided (the `updatedAt` the
+  /// client last saw), the daemon performs an optimistic-concurrency check and
+  /// throws [ConflictException] if the issue changed in the meantime (RACE-03).
   Future<void> updateIssue(
     String id, {
     String? status,
@@ -308,6 +331,7 @@ class BeadsService {
     String? assignee,
     String? parent,
     required String actor,
+    DateTime? expectedUpdatedAt,
   }) async {
     final Map<String, dynamic> updates = {};
     if (status != null) updates['status'] = status;
@@ -322,6 +346,8 @@ class BeadsService {
       'id': id,
       'updates': updates,
       'actor': actor,
+      if (expectedUpdatedAt != null)
+        'expected_updated_at': expectedUpdatedAt.toUtc().toIso8601String(),
     });
   }
 

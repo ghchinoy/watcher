@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
 
 class IssueInspector extends StatefulWidget {
@@ -27,18 +28,31 @@ class _IssueInspectorState extends State<IssueInspector> {
     super.dispose();
   }
 
-  /// REL-01: run an issue mutation and show a native alert if it fails, instead
-  /// of silently swallowing the error in a fire-and-forget callback.
-  Future<void> _mutate(Future<bool> Function() action) async {
-    final ok = await action();
-    if (!ok && mounted) {
-      await DialogUtils.showError(
-        context,
-        title: 'Update Failed',
-        message:
-            'The change could not be saved. See the project error banner for '
-            'details, then try again.',
-      );
+  /// REL-01 / RACE-03: run an issue mutation and show a native alert on failure
+  /// or on a concurrent-edit conflict, instead of silently swallowing it.
+  Future<void> _mutate(Future<MutationResult> Function() action) async {
+    final result = await action();
+    if (!mounted) return;
+    switch (result) {
+      case MutationResult.success:
+        break;
+      case MutationResult.conflict:
+        await DialogUtils.showError(
+          context,
+          title: 'Issue Changed by Someone Else',
+          message:
+              'This issue was updated elsewhere while you were editing it, so '
+              'your change was not saved. It has been refreshed with the latest '
+              'values — please review and try again if needed.',
+        );
+      case MutationResult.failure:
+        await DialogUtils.showError(
+          context,
+          title: 'Update Failed',
+          message:
+              'The change could not be saved. See the project error banner for '
+              'details, then try again.',
+        );
     }
   }
 
