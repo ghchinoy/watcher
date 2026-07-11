@@ -9,12 +9,74 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/steveyegge/beads"
 )
+
+// migrationGateRe matches the error string emitted by the beads library when
+// it refuses to auto-apply schema migrations to a remote-backed database.
+// Example: "refusing to auto-apply 4 pending schema migrations to a
+// remote-backed database (v49 -> v53): migrating clones independently forks
+// the schema (#4259)"
+var migrationGateRe = regexp.MustCompile(
+	`refusing to auto-apply (\d+) pending schema migrations? to a remote-backed database \((\S+) -> (\S+)\)`,
+)
+
+// schemaMigrationNotification is the JSON-RPC notification emitted to the UI
+// when the migration gate fires. The UI renders a purpose-built panel instead
+// of the generic error box.
+type schemaMigrationNotification struct {
+	JSONRPC string                        `json:"jsonrpc"`
+	Method  string                        `json:"method"`
+	Params  schemaMigrationNotificationParams `json:"params"`
+}
+
+type schemaMigrationNotificationParams struct {
+	Pending        int      `json:"pending"`
+	CurrentVersion string   `json:"current_version"`
+	TargetVersion  string   `json:"target_version"`
+	// Ordered commands to run on the primary clone.
+	Commands []string `json:"commands"`
+}
+
+// emitSchemaMigrationNotification writes a schema_migration_required
+// notification to stdout so the Dart client can render MigrationGateView.
+func emitSchemaMigrationNotification(pending int, current, target string) {
+	notif := schemaMigrationNotification{
+		JSONRPC: "2.0",
+		Method:  "schema_migration_required",
+		Params: schemaMigrationNotificationParams{
+			Pending:        pending,
+			CurrentVersion: current,
+			TargetVersion:  target,
+			Commands: []string{
+				"BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema",
+				"bd dolt push",
+			},
+		},
+	}
+	b, _ := json.Marshal(notif)
+	fmt.Printf("%s\n", string(b))
+}
+
+// parseMigrationGateError checks whether err matches the beads remote-migrate
+// gate message. Returns (pending, current, target, true) on match.
+func parseMigrationGateError(err error) (int, string, string, bool) {
+	if err == nil {
+		return 0, "", "", false
+	}
+	m := migrationGateRe.FindStringSubmatch(err.Error())
+	if m == nil {
+		return 0, "", "", false
+	}
+	var pending int
+	fmt.Sscanf(m[1], "%d", &pending)
+	return pending, m[2], m[3], true
+}
 
 // appendDeveloperPath returns a copy of env with robust macOS developer paths
 // appended to the existing PATH environment variable (SEC-03).
@@ -621,6 +683,13 @@ func main() {
 
 	storage, err := beads.OpenFromConfig(ctx, beadsDir)
 	if err != nil {
+		// Check whether the beads library refused to auto-migrate a remote-backed
+		// database (schema version skew). If so, emit a structured notification
+		// BEFORE the error response so the UI can render MigrationGateView with
+		// actionable buttons instead of a raw error string.
+		if pending, current, target, ok := parseMigrationGateError(err); ok {
+			emitSchemaMigrationNotification(pending, current, target)
+		}
 		// Serialize the error properly so newlines in err.Error() don't break JSON structure
 		errResp := Response{
 			JSONRPC: "2.0",

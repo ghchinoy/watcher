@@ -16,6 +16,35 @@ import 'watcher_coordinator.dart';
 export 'settings_repository.dart' show GenerativeModelConfig, SidebarSortOrder;
 export 'project_repository.dart' show Project;
 
+/// Carries the structured data from a schema_migration_required notification
+/// emitted by the daemon when the beads library refuses to auto-apply pending
+/// schema migrations to a remote-backed database.
+class SchemaMigrationGate {
+  final int pending;
+  final String currentVersion;
+  final String targetVersion;
+  final List<String> commands;
+
+  const SchemaMigrationGate({
+    required this.pending,
+    required this.currentVersion,
+    required this.targetVersion,
+    required this.commands,
+  });
+
+  factory SchemaMigrationGate.fromJson(Map<String, dynamic> json) {
+    return SchemaMigrationGate(
+      pending: (json['pending'] as num?)?.toInt() ?? 0,
+      currentVersion: json['current_version'] as String? ?? '',
+      targetVersion: json['target_version'] as String? ?? '',
+      commands: (json['commands'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+  }
+}
+
 /// Outcome of an issue mutation (RACE-03 / REL-01).
 enum MutationResult {
   /// The change was applied.
@@ -69,6 +98,10 @@ class AppState extends ChangeNotifier {
   // Track errors per project path so the sidebar icon persists
   Map<String, String> projectErrors = {};
 
+  // Track schema migration gate state per project path. Non-null when the
+  // daemon emitted a schema_migration_required notification for that project.
+  Map<String, SchemaMigrationGate> projectMigrationGates = {};
+
   // Track expanded nodes in the tree view per project
   Set<String> expandedNodes = {};
 
@@ -77,6 +110,12 @@ class AppState extends ChangeNotifier {
 
   String? get error =>
       selectedProject != null ? projectErrors[selectedProject!.path] : null;
+
+  /// Non-null when the currently selected project's daemon emitted a
+  /// schema_migration_required notification. The UI renders MigrationGateView.
+  SchemaMigrationGate? get schemaMigrationGate => selectedProject != null
+      ? projectMigrationGates[selectedProject!.path]
+      : null;
 
   late final WatcherCoordinator _watcher;
   BeadsService? _currentService;
@@ -516,6 +555,7 @@ class AppState extends ChangeNotifier {
     isLoading = true;
     currentConnectionMode = null;
     projectErrors.remove(project.path);
+    projectMigrationGates.remove(project.path);
 
     projectLastViewed[project.path] = DateTime.now();
     _saveLastViewed();
@@ -534,6 +574,11 @@ class AppState extends ChangeNotifier {
         },
         onCrash: (code, {required bool wasKilled}) {
           _handleDaemonCrash(project.path, code, wasKilled: wasKilled);
+        },
+        onSchemaMigrationRequired: (params) {
+          projectMigrationGates[project.path] =
+              SchemaMigrationGate.fromJson(params);
+          notifyListeners();
         },
         bdPathResolver: () => customBdPath.isNotEmpty ? customBdPath : 'bd',
       );
@@ -860,6 +905,68 @@ class AppState extends ChangeNotifier {
   Future<void> reconnectActiveProject() async {
     if (selectedProject == null) return;
     await selectProject(selectedProject!);
+  }
+
+  /// Launches a Ghostty/preferred-terminal window with the schema migration
+  /// commands pre-loaded in a tmux session. After the terminal closes (or after
+  /// a short polling delay), retries selectProject so the UI reconnects cleanly.
+  Future<void> runSchemaMigration() async {
+    if (selectedProject == null) return;
+    final sessionName = "${selectedProject!.effectiveTmuxSessionName}_migrate";
+    final projectPath = selectedProject!.path;
+    try {
+      await TmuxService.ensureSession(sessionName, projectPath);
+      // Send the two-step migration sequence. Each command is sent separately
+      // so the user sees the first complete before the second starts, and can
+      // handle SSH auth (bd dolt push) naturally.
+      await TmuxService.sendKeys(
+        sessionName,
+        'BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema',
+        customBdPath: customBdPath,
+      );
+      await TmuxService.sendKeys(sessionName, 'bd dolt push',
+          customBdPath: customBdPath);
+      await TmuxService.attachInTerminal(
+        sessionName,
+        terminalApp: preferredTerminal,
+        ghosttyTheme: ghosttyTheme,
+        ghosttyFontFamily: ghosttyFontFamily,
+        workingDirectory: projectPath,
+      );
+      // Give the migration ~10 s to complete in the background, then reconnect.
+      // The user can also hit Retry in the UI after the terminal closes.
+      await Future.delayed(const Duration(seconds: 10));
+      if (selectedProject?.path == projectPath) {
+        await selectProject(selectedProject!);
+      }
+    } catch (e) {
+      projectErrors[selectedProject!.path] =
+          'Failed to launch migration terminal: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Opens the preferred terminal pointed at the project directory without
+  /// pre-loading commands — for users who want to inspect before migrating.
+  Future<void> openTerminalForProject() async {
+    if (selectedProject == null) return;
+    final sessionName =
+        "${selectedProject!.effectiveTmuxSessionName}_manual";
+    try {
+      await TmuxService.ensureSession(
+          sessionName, selectedProject!.path);
+      await TmuxService.attachInTerminal(
+        sessionName,
+        terminalApp: preferredTerminal,
+        ghosttyTheme: ghosttyTheme,
+        ghosttyFontFamily: ghosttyFontFamily,
+        workingDirectory: selectedProject!.path,
+      );
+    } catch (e) {
+      projectErrors[selectedProject!.path] =
+          'Failed to open terminal: $e';
+      notifyListeners();
+    }
   }
 
   Future<void> launchDoltServer() async {

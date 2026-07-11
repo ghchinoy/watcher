@@ -10,6 +10,7 @@ import '../widgets/assessment_modal.dart';
 import '../widgets/create_issue_modal.dart';
 import '../widgets/health_check_modal.dart';
 import '../widgets/error_display_view.dart';
+import '../widgets/migration_gate_view.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
@@ -121,6 +122,9 @@ class ProjectDashboard extends StatelessWidget {
         }
 
         if (appState.error != null) {
+          // If the error is a schema migration gate, render the purpose-built
+          // MigrationGateView with actionable buttons instead of a raw error box.
+          final gate = appState.schemaMigrationGate;
           return MacosScaffold(
             toolBar: ToolBar(
               title: const Text('Dashboard'),
@@ -143,14 +147,24 @@ class ProjectDashboard extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => ErrorDisplayView(
-                  error: appState.error!,
-                  onRetry: () {
-                    if (appState.selectedProject != null) {
-                      appState.selectProject(appState.selectedProject!);
-                    }
-                  },
-                ),
+                builder: (context, scrollController) => gate != null
+                    ? MigrationGateView(
+                        gate: gate,
+                        appState: appState,
+                        onRetry: () {
+                          if (appState.selectedProject != null) {
+                            appState.selectProject(appState.selectedProject!);
+                          }
+                        },
+                      )
+                    : ErrorDisplayView(
+                        error: appState.error!,
+                        onRetry: () {
+                          if (appState.selectedProject != null) {
+                            appState.selectProject(appState.selectedProject!);
+                          }
+                        },
+                      ),
               ),
             ],
           );

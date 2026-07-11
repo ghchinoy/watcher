@@ -87,6 +87,12 @@ class BeadsService {
   /// crash error and/or proactively re-fetch.
   void Function(int code, {required bool wasKilled})? onCrash;
 
+  /// Invoked when the daemon emits a schema_migration_required notification,
+  /// meaning the beads library refused to open the database because pending
+  /// schema migrations exist but a Dolt remote is configured. The callback
+  /// receives the structured gate data so the UI can render MigrationGateView.
+  void Function(Map<String, dynamic> params)? onSchemaMigrationRequired;
+
   final Future<Process> Function(
     String executable,
     List<String> arguments, {
@@ -104,6 +110,7 @@ class BeadsService {
     this.workingDirectory, {
     this.onModeChanged,
     this.onCrash,
+    this.onSchemaMigrationRequired,
     String Function()? bdPathResolver,
     Future<Process> Function(
       String executable,
@@ -186,6 +193,13 @@ class BeadsService {
                 if (params.containsKey('mode') && onModeChanged != null) {
                   onModeChanged!(params['mode'] as String);
                 }
+                return;
+              }
+
+              if (response['method'] == 'schema_migration_required') {
+                final params = response['params'] as Map<String, dynamic>;
+                _log.warning('Daemon schema_migration_required', error: params);
+                onSchemaMigrationRequired?.call(params);
                 return;
               }
 
