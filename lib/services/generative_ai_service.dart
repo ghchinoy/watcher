@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:firebase_ai/firebase_ai.dart' as fb_ai;
+import 'package:google_generative_ai/google_generative_ai.dart' as direct_ai;
 import '../models/issue.dart';
 import '../state/settings_repository.dart';
 import '../firebase_options.dart';
@@ -9,12 +10,17 @@ class GenerativeAiService {
   static final _log = AppLogger('GenerativeAiService');
   static bool _initialized = false;
 
-  static Future<void> ensureInitialized() async {
+  static Future<void> ensureInitialized({required String? gcpProjectId}) async {
     if (_initialized) return;
+    if (gcpProjectId == null || gcpProjectId.isEmpty) {
+      throw Exception('GCP Project ID is required for Vertex AI initialization.');
+    }
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.getOptions(projectId: gcpProjectId),
+        );
+      }
       _initialized = true;
     } catch (e) {
       _log.error('Failed to initialize Firebase', error: e);
@@ -22,33 +28,38 @@ class GenerativeAiService {
   }
 
   static Future<String?> summarizeIssueResolution({
+    required String? aiProvider,
     required String? gcpProjectId,
+    required String? geminiApiKey,
     required GenerativeModelConfig? defaultAiModel,
     required Issue issue,
     required List<Map<String, dynamic>> comments,
     String? gitDiff,
   }) async {
-    await ensureInitialized();
-
     final config = defaultAiModel;
-    if (gcpProjectId == null || config == null) {
+    if (config == null) {
       _log.info('AI configuration missing — skipping summarization');
       return null;
     }
 
+    final provider = aiProvider ?? 'direct_gemini';
+    if (provider == 'gcp_vertex') {
+      if (gcpProjectId == null || gcpProjectId.isEmpty) {
+        _log.info('AI configuration missing (GCP Project ID) — skipping summarization');
+        return null;
+      }
+      await ensureInitialized(gcpProjectId: gcpProjectId);
+    } else if (provider == 'direct_gemini') {
+      if (geminiApiKey == null || geminiApiKey.isEmpty) {
+        _log.info('AI configuration missing (Gemini API Key) — skipping summarization');
+        return null;
+      }
+    } else {
+      throw Exception('Unsupported AI provider: $provider');
+    }
+
     try {
-      final ai = FirebaseAI.vertexAI(location: config.region);
-
-      final model = ai.generativeModel(
-        model: config.identifier,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 250,
-          temperature: 0.2,
-        ),
-      );
-
-      final prompt = [
-        Content.text('''
+      final promptText = '''
 You are an expert software engineering assistant. 
 Summarize the resolution of the following issue in exactly one or two concise sentences. 
 Focus on *how* it was fixed based on the comments and context provided.
@@ -62,11 +73,37 @@ ${comments.map((c) => "${c['author']}: ${c['text']}").join('\n')}
 ${gitDiff != null ? "Git Diff:\n$gitDiff" : ""}
 
 Resolution Summary:
-'''),
-      ];
+''';
 
-      final response = await model.generateContent(prompt);
-      return response.text?.trim();
+      String? responseText;
+      if (provider == 'gcp_vertex') {
+        final ai = fb_ai.FirebaseAI.vertexAI(location: config.region);
+
+        final model = ai.generativeModel(
+          model: config.identifier,
+          generationConfig: fb_ai.GenerationConfig(
+            maxOutputTokens: 250,
+            temperature: 0.2,
+          ),
+        );
+
+        final response = await model.generateContent([fb_ai.Content.text(promptText)]);
+        responseText = response.text;
+      } else {
+        final model = direct_ai.GenerativeModel(
+          model: config.identifier,
+          apiKey: geminiApiKey!,
+          generationConfig: direct_ai.GenerationConfig(
+            maxOutputTokens: 250,
+            temperature: 0.2,
+          ),
+        );
+
+        final response = await model.generateContent([direct_ai.Content.text(promptText)]);
+        responseText = response.text;
+      }
+
+      return responseText?.trim();
     } catch (e) {
       _log.error('Generative AI summarization error', error: e);
       return null;
@@ -74,38 +111,42 @@ Resolution Summary:
   }
 
   static Future<String?> generateHealthInsights({
+    required String? aiProvider,
     required String? gcpProjectId,
+    required String? geminiApiKey,
     required GenerativeModelConfig? defaultAiModel,
     required List<Issue> issues,
     required List<Diagnostic> diagnostics,
   }) async {
-    await ensureInitialized();
-
     final config = defaultAiModel;
-    if (gcpProjectId == null || config == null) {
+    if (config == null) {
       _log.info('AI configuration missing — skipping insights generation');
       return null;
     }
 
+    final provider = aiProvider ?? 'direct_gemini';
+    if (provider == 'gcp_vertex') {
+      if (gcpProjectId == null || gcpProjectId.isEmpty) {
+        _log.info('AI configuration missing (GCP Project ID) — skipping insights generation');
+        return null;
+      }
+      await ensureInitialized(gcpProjectId: gcpProjectId);
+    } else if (provider == 'direct_gemini') {
+      if (geminiApiKey == null || geminiApiKey.isEmpty) {
+        _log.info('AI configuration missing (Gemini API Key) — skipping insights generation');
+        return null;
+      }
+    } else {
+      throw Exception('Unsupported AI provider: $provider');
+    }
+
     try {
-      final ai = FirebaseAI.vertexAI(location: config.region);
-
-      final model = ai.generativeModel(
-        model: config.identifier,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 2048, // HIG-FIX: expanded from 1000 to prevent JSON truncation
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        ),
-      );
-
       final issuesText = issues.map((i) => '- ID: ${i.id}, Title: ${i.title}, Status: ${i.status}, Priority: ${i.priority}, Assignee: ${i.assignee}, Owner: ${i.owner}').join('\n');
       final diagnosticsText = diagnostics.isEmpty
           ? 'None. The project is completely healthy!'
           : diagnostics.map((d) => '- Issue: ${d.issueId}, Type: ${d.type}, Message: ${d.message}, Suggested Fix: ${d.fix ?? "None"}').join('\n');
 
-      final prompt = [
-        Content.text('''
+      final promptText = '''
 You are an expert software engineering AI Assistant analyzing a project managed by a lightweight issue tracker called beads (bd).
 Your task is to analyze the project's issue list and the static diagnostics/issues produced by the structural health checker.
 Using these, generate a beautiful, qualitative health summary and a list of recommended next actions that are actionable and can be executed via mutations.
@@ -139,11 +180,39 @@ Return a JSON object matching this schema:
 }
 
 Only return valid JSON following the schema. Do not return any markdown markdown-wrapping around the JSON, just the JSON string itself.
-'''),
-      ];
+''';
 
-      final response = await model.generateContent(prompt);
-      String? text = response.text?.trim();
+      String? responseText;
+      if (provider == 'gcp_vertex') {
+        final ai = fb_ai.FirebaseAI.vertexAI(location: config.region);
+
+        final model = ai.generativeModel(
+          model: config.identifier,
+          generationConfig: fb_ai.GenerationConfig(
+            maxOutputTokens: 2048, // HIG-FIX: expanded from 1000 to prevent JSON truncation
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          ),
+        );
+
+        final response = await model.generateContent([fb_ai.Content.text(promptText)]);
+        responseText = response.text;
+      } else {
+        final model = direct_ai.GenerativeModel(
+          model: config.identifier,
+          apiKey: geminiApiKey!,
+          generationConfig: direct_ai.GenerationConfig(
+            maxOutputTokens: 2048,
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          ),
+        );
+
+        final response = await model.generateContent([direct_ai.Content.text(promptText)]);
+        responseText = response.text;
+      }
+
+      String? text = responseText?.trim();
       if (text != null) {
         if (text.startsWith('```json')) {
           text = text.substring(7);

@@ -2,13 +2,10 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'state/app_state.dart';
 import 'router.dart';
-import 'firebase_options.dart';
 import 'widgets/settings_modal.dart';
 import 'widgets/command_palette.dart';
-import 'utils/app_logger.dart';
 
 final appState = AppState();
 
@@ -17,19 +14,9 @@ Future<void> _configureMacosWindowUtils() async {
   await config.apply();
 }
 
-final _log = AppLogger('main');
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _configureMacosWindowUtils();
-
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    _log.error('Firebase initialization failed', error: e);
-  }
 
   runApp(const WatcherApp());
 }

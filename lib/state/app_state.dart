@@ -311,7 +311,9 @@ class AppState extends ChangeNotifier {
       );
 
       final assessment = await AIAssistantService.assessProjectHealth(
+        aiProvider: aiProvider,
         gcpProjectId: gcpProjectId,
+        geminiApiKey: geminiApiKey,
         defaultAiModel: defaultAiModel,
         context: context,
       );
@@ -931,7 +933,9 @@ class AppState extends ChangeNotifier {
     try {
       final comments = await _currentService!.getComments(issue.id);
       final summary = await GenerativeAiService.summarizeIssueResolution(
+        aiProvider: aiProvider,
         gcpProjectId: gcpProjectId,
+        geminiApiKey: geminiApiKey,
         defaultAiModel: defaultAiModel,
         issue: issue,
         comments: comments,
