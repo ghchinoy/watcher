@@ -216,5 +216,10 @@ class FakeBeadsService implements BeadsService {
   }
 
   @override
+  Future<HealthCheckResult> checkHealth() async {
+    return HealthCheckResult(status: 'healthy', diagnostics: []);
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
