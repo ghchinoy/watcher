@@ -8,6 +8,7 @@ import '../models/issue.dart';
 import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
 import '../utils/date_formatters.dart';
+import 'label_chip.dart';
 
 class IssueInspector extends StatefulWidget {
   final Issue issue;
@@ -812,26 +813,9 @@ class _IssueInspectorState extends State<IssueInspector> {
           Wrap(
             spacing: 4,
             runSpacing: 4,
-            children: labels.map((label) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: MacosTheme.of(context).primaryColor.withValues(
-                    alpha: 0.12,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  label,
-                  style: MacosTheme.of(context).typography.footnote.copyWith(
-                    color: MacosTheme.of(context).primaryColor,
-                  ),
-                ),
-              );
-            }).toList(),
+            children: labels
+                .map((label) => LabelChip(label: label))
+                .toList(),
           ),
         ],
       ),

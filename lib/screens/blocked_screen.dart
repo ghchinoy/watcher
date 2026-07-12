@@ -5,6 +5,7 @@ import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/priority_badge.dart';
+import '../widgets/label_chip.dart';
 import '../widgets/empty_state_view.dart';
 
 /// A list of every blocked issue with its open blockers shown inline.
@@ -172,6 +173,23 @@ class _BlockedRow extends StatelessWidget {
                               color: MacosColors.systemGrayColor,
                             ),
                           ),
+                          // UI-01 (r1f.4) sibling: compact label chips, same
+                          // conditional pattern already used for PriorityBadge.
+                          if (issue.labels?.isNotEmpty == true) ...[
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 2,
+                              children: issue.labels!
+                                  .map(
+                                    (label) => LabelChip(
+                                      label: label,
+                                      compact: true,
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
                         ],
                       ),
                     ),

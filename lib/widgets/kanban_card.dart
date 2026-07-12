@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../main.dart';
 import '../models/issue.dart';
+import 'label_chip.dart';
 import 'priority_badge.dart';
 
 class KanbanCard extends StatelessWidget {
@@ -72,6 +73,10 @@ class KanbanCard extends StatelessWidget {
                   context,
                 ).typography.body.copyWith(fontWeight: FontWeight.bold),
               ),
+              if (issue.labels?.isNotEmpty == true) ...[
+                const SizedBox(height: 6),
+                _buildLabelChips(context),
+              ],
               if (issue.assignee != null && issue.assignee!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -104,6 +109,45 @@ class KanbanCard extends StatelessWidget {
       ),
       childWhenDragging: Opacity(opacity: 0.3, child: cardContent),
       child: cardContent,
+    );
+  }
+
+  // Card width is space-constrained, so cap to the first 2 label chips plus
+  // a "+N" overflow indicator rather than wrapping an unbounded number.
+  Widget _buildLabelChips(BuildContext context) {
+    final labels = issue.labels!;
+    const maxShown = 2;
+    final shown = labels.take(maxShown);
+    final overflow = labels.length - maxShown;
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        ...shown.map((label) => LabelChip(label: label, compact: true)),
+        if (overflow > 0)
+          MacosTooltip(
+            message: labels.skip(maxShown).join(', '),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: MacosColors.systemGrayColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: MacosColors.systemGrayColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                '+$overflow',
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: MacosColors.systemGrayColor,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

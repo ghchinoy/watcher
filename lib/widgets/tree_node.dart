@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/issue.dart';
 import '../state/app_state.dart';
 import '../utils/dialog_utils.dart';
+import 'label_chip.dart';
 import 'priority_badge.dart';
 
 class TreeNode extends StatefulWidget {
@@ -245,70 +246,88 @@ class _TreeNodeState extends State<TreeNode> {
     BuildContext context, {
     required bool isRoot,
   }) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MacosIcon(
-          _getIconForType(issue.issueType),
-          color: MacosTheme.of(context).primaryColor,
-          size: 16,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            '${issue.id} - ${issue.title}',
-            style: TextStyle(
-              fontWeight: isRoot ? FontWeight.bold : FontWeight.normal,
-              fontSize: isRoot ? 14 : 13,
-              decoration: issue.status == 'closed'
-                  ? TextDecoration.lineThrough
-                  : null,
-              color: issue.status == 'closed'
-                  ? MacosColors.systemGrayColor
-                  : null,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
         Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Blocker indicator — only shown when blocked by an open dep,
-            // distinct from the status=='blocked' literal badge.
-            if (issue.isBlocked(appState.currentIssues))
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: MacosTooltip(
-                  message:
-                      'Blocked by ${issue.blockers(appState.currentIssues).length} open issue(s)',
-                  child: const MacosIcon(
-                    CupertinoIcons.exclamationmark_circle_fill,
-                    size: 12,
-                    color: MacosColors.systemRedColor,
-                  ),
+            MacosIcon(
+              _getIconForType(issue.issueType),
+              color: MacosTheme.of(context).primaryColor,
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${issue.id} - ${issue.title}',
+                style: TextStyle(
+                  fontWeight: isRoot ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isRoot ? 14 : 13,
+                  decoration: issue.status == 'closed'
+                      ? TextDecoration.lineThrough
+                      : null,
+                  color: issue.status == 'closed'
+                      ? MacosColors.systemGrayColor
+                      : null,
                 ),
               ),
-            // Hub indicator — shows how many issues depend on this one.
-            _buildDepCountChip(issue, context),
-            SizedBox(
-              width: 32,
-              height: 20,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: _buildPriorityBadge(issue.priority, context),
-              ),
             ),
-            const SizedBox(width: 4),
-            SizedBox(
-              width: 24,
-              height: 20,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: _buildStatusBadge(issue.status, context),
-              ),
+            const SizedBox(width: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Blocker indicator — only shown when blocked by an open dep,
+                // distinct from the status=='blocked' literal badge.
+                if (issue.isBlocked(appState.currentIssues))
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: MacosTooltip(
+                      message:
+                          'Blocked by ${issue.blockers(appState.currentIssues).length} open issue(s)',
+                      child: const MacosIcon(
+                        CupertinoIcons.exclamationmark_circle_fill,
+                        size: 12,
+                        color: MacosColors.systemRedColor,
+                      ),
+                    ),
+                  ),
+                // Hub indicator — shows how many issues depend on this one.
+                _buildDepCountChip(issue, context),
+                SizedBox(
+                  width: 32,
+                  height: 20,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildPriorityBadge(issue.priority, context),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 24,
+                  height: 20,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildStatusBadge(issue.status, context),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+        // UI: compact label chips under the title, same conditional pattern
+        // as PriorityBadge — only render the row when labels are present.
+        if (issue.labels?.isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.only(left: 24, top: 2),
+            child: Wrap(
+              spacing: 4,
+              runSpacing: 2,
+              children: issue.labels!
+                  .map((label) => LabelChip(label: label, compact: true))
+                  .toList(),
+            ),
+          ),
       ],
     );
   }
