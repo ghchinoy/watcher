@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/issue.dart';
+import '../models/copilot.dart';
 import '../utils/app_logger.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
 import '../services/generative_ai_service.dart';
+import '../services/copilot_service.dart';
 import '../services/tmux_service.dart';
 import 'settings_repository.dart';
 import 'project_repository.dart';
@@ -15,6 +17,8 @@ import 'watcher_coordinator.dart';
 
 export 'settings_repository.dart' show GenerativeModelConfig, SidebarSortOrder;
 export 'project_repository.dart' show Project;
+export '../models/copilot.dart'
+    show CopilotContext, CopilotAssessment, CopilotRecommendation;
 
 /// Carries the structured data from a schema_migration_required notification
 /// emitted by the daemon when the beads library refuses to auto-apply pending
@@ -37,7 +41,8 @@ class SchemaMigrationGate {
       pending: (json['pending'] as num?)?.toInt() ?? 0,
       currentVersion: json['current_version'] as String? ?? '',
       targetVersion: json['target_version'] as String? ?? '',
-      commands: (json['commands'] as List<dynamic>?)
+      commands:
+          (json['commands'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -92,6 +97,9 @@ class AppState extends ChangeNotifier {
   String? projectRequiredVersion;
   String? appVersion;
   String? currentConnectionMode;
+
+  CopilotAssessment? currentCopilotAssessment;
+  bool isAssessingProjectHealth = false;
 
   bool isLoading = false;
   bool isRefreshing = false;
@@ -167,8 +175,7 @@ class AppState extends ChangeNotifier {
           !labelFiltersAll.every(labels.contains)) {
         return false;
       }
-      if (labelFiltersAny.isNotEmpty &&
-          !labelFiltersAny.any(labels.contains)) {
+      if (labelFiltersAny.isNotEmpty && !labelFiltersAny.any(labels.contains)) {
         return false;
       }
       if (labelFiltersExclude.isNotEmpty &&
@@ -271,6 +278,40 @@ class AppState extends ChangeNotifier {
       throw Exception('No project selected');
     }
     return await _currentService!.checkHealth();
+  }
+
+  Future<CopilotAssessment?> runCopilotAssessment() async {
+    if (selectedProject == null || _currentService == null) {
+      _log.warning('No active project to assess with Copilot');
+      return null;
+    }
+
+    isAssessingProjectHealth = true;
+    notifyListeners();
+
+    try {
+      final healthCheck = await checkHealth();
+      final context = CopilotContext(
+        issues: currentIssues,
+        healthCheck: healthCheck,
+        interactions: currentInteractions,
+      );
+
+      final assessment = await CopilotService.assessProjectHealth(
+        gcpProjectId: gcpProjectId,
+        defaultAiModel: defaultAiModel,
+        context: context,
+      );
+
+      currentCopilotAssessment = assessment;
+      return assessment;
+    } catch (e) {
+      _log.error('Failed to run background Copilot assessment', error: e);
+      return null;
+    } finally {
+      isAssessingProjectHealth = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -650,6 +691,8 @@ class AppState extends ChangeNotifier {
     await _settingsRepo.saveLastSelectedProject(project.path);
     isLoading = true;
     currentConnectionMode = null;
+    currentCopilotAssessment = null;
+    isAssessingProjectHealth = false;
     projectErrors.remove(project.path);
     projectMigrationGates.remove(project.path);
 
@@ -672,8 +715,9 @@ class AppState extends ChangeNotifier {
           _handleDaemonCrash(project.path, code, wasKilled: wasKilled);
         },
         onSchemaMigrationRequired: (params) {
-          projectMigrationGates[project.path] =
-              SchemaMigrationGate.fromJson(params);
+          projectMigrationGates[project.path] = SchemaMigrationGate.fromJson(
+            params,
+          );
           notifyListeners();
         },
         bdPathResolver: () => customBdPath.isNotEmpty ? customBdPath : 'bd',
@@ -1042,8 +1086,11 @@ class AppState extends ChangeNotifier {
         'BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema',
         customBdPath: customBdPath,
       );
-      await TmuxService.sendKeys(sessionName, 'bd dolt push',
-          customBdPath: customBdPath);
+      await TmuxService.sendKeys(
+        sessionName,
+        'bd dolt push',
+        customBdPath: customBdPath,
+      );
       await TmuxService.attachInTerminal(
         sessionName,
         terminalApp: preferredTerminal,
@@ -1068,11 +1115,9 @@ class AppState extends ChangeNotifier {
   /// pre-loading commands — for users who want to inspect before migrating.
   Future<void> openTerminalForProject() async {
     if (selectedProject == null) return;
-    final sessionName =
-        "${selectedProject!.effectiveTmuxSessionName}_manual";
+    final sessionName = "${selectedProject!.effectiveTmuxSessionName}_manual";
     try {
-      await TmuxService.ensureSession(
-          sessionName, selectedProject!.path);
+      await TmuxService.ensureSession(sessionName, selectedProject!.path);
       await TmuxService.attachInTerminal(
         sessionName,
         terminalApp: preferredTerminal,
@@ -1081,8 +1126,7 @@ class AppState extends ChangeNotifier {
         workingDirectory: selectedProject!.path,
       );
     } catch (e) {
-      projectErrors[selectedProject!.path] =
-          'Failed to open terminal: $e';
+      projectErrors[selectedProject!.path] = 'Failed to open terminal: $e';
       notifyListeners();
     }
   }
