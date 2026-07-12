@@ -1,5 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show SelectableText;
+import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../models/issue.dart';
 import '../state/app_state.dart';
@@ -20,12 +23,87 @@ class IssueInspector extends StatefulWidget {
   State<IssueInspector> createState() => _IssueInspectorState();
 }
 
+// Keys for persisted collapsible section state.
+const _kCollapseDescription = 'inspector.collapse.description';
+const _kCollapseNotes       = 'inspector.collapse.notes';
+const _kCollapseDesign      = 'inspector.collapse.design';
+const _kCollapseAcceptance  = 'inspector.collapse.acceptance_criteria';
+const _kCollapseDeps        = 'inspector.collapse.dependencies';
+const _kCollapseComments    = 'inspector.collapse.comments';
+
 class _IssueInspectorState extends State<IssueInspector> {
   final _commentController = TextEditingController();
+
+  // HIG-FIX: controllers lifted to state so they survive rebuilds and don't
+  // silently discard in-progress edits when a sibling field changes.
+  late TextEditingController _ownerController;
+  late TextEditingController _assigneeController;
+
+  // Collapsible section state — expanded by default.
+  bool _descExpanded   = true;
+  bool _notesExpanded  = true;
+  bool _designExpanded = true;
+  bool _acExpanded     = true;
+  bool _depsExpanded   = true;
+  bool _commentsExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerController = TextEditingController(
+      text: widget.issue.owner ?? '',
+    );
+    _assigneeController = TextEditingController(
+      text: widget.issue.assignee ?? '',
+    );
+    _loadCollapsePrefs();
+  }
+
+  Future<void> _loadCollapsePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _descExpanded    = prefs.getBool(_kCollapseDescription) ?? true;
+      _notesExpanded   = prefs.getBool(_kCollapseNotes)       ?? true;
+      _designExpanded  = prefs.getBool(_kCollapseDesign)      ?? true;
+      _acExpanded      = prefs.getBool(_kCollapseAcceptance)  ?? true;
+      _depsExpanded    = prefs.getBool(_kCollapseDeps)        ?? true;
+      _commentsExpanded= prefs.getBool(_kCollapseComments)    ?? true;
+    });
+  }
+
+  Future<void> _toggleSection(String key, bool current) async {
+    final next = !current;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, next);
+    if (!mounted) return;
+    setState(() {
+      switch (key) {
+        case _kCollapseDescription: _descExpanded    = next;
+        case _kCollapseNotes:       _notesExpanded   = next;
+        case _kCollapseDesign:      _designExpanded  = next;
+        case _kCollapseAcceptance:  _acExpanded      = next;
+        case _kCollapseDeps:        _depsExpanded    = next;
+        case _kCollapseComments:    _commentsExpanded= next;
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(IssueInspector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When a different issue is selected, sync the controllers.
+    if (oldWidget.issue.id != widget.issue.id) {
+      _ownerController.text = widget.issue.owner ?? '';
+      _assigneeController.text = widget.issue.assignee ?? '';
+    }
+  }
 
   @override
   void dispose() {
     _commentController.dispose();
+    _ownerController.dispose();
+    _assigneeController.dispose();
     super.dispose();
   }
 
@@ -62,8 +140,9 @@ class _IssueInspectorState extends State<IssueInspector> {
     final theme = MacosTheme.of(context);
     final issue = widget.issue;
 
+    // HIG-FIX: removed hardcoded width: 300 — the Sidebar's resizable pane
+    // controls width; the inspector fills whatever it is allocated.
     return Container(
-      width: 300,
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: theme.dividerColor)),
       ),
@@ -83,15 +162,32 @@ class _IssueInspectorState extends State<IssueInspector> {
                   _buildPriorityDropdown(context),
                   _buildSection('Type', issue.issueType.toUpperCase(), context),
 
+                  // Close Reason (shown when issue is closed)
+                  if (issue.closeReason?.isNotEmpty == true)
+                    _buildSection(
+                      'Close Reason',
+                      issue.closeReason!,
+                      context,
+                    ),
+
+                  // Labels
+                  if (issue.labels?.isNotEmpty == true)
+                    _buildLabelsSection(context, issue.labels!),
+
                   // People
-                  _buildEditableField('Owner', issue.owner ?? '', context, (
-                    value,
-                  ) {
-                    _mutate(() => appState.updateIssue(issue.id, owner: value));
-                  }),
+                  _buildEditableField(
+                    'Owner',
+                    _ownerController,
+                    context,
+                    (value) {
+                      _mutate(
+                        () => appState.updateIssue(issue.id, owner: value),
+                      );
+                    },
+                  ),
                   _buildEditableField(
                     'Assignee',
-                    issue.assignee ?? '',
+                    _assigneeController,
                     context,
                     (value) {
                       _mutate(
@@ -100,51 +196,94 @@ class _IssueInspectorState extends State<IssueInspector> {
                     },
                   ),
 
-                  _buildDependenciesSection(context),
+                  // Dependencies (collapsible)
+                  _CollapsibleSection(
+                    title: 'Dependencies',
+                    expanded: _depsExpanded,
+                    onToggle: () => _toggleSection(
+                      _kCollapseDeps,
+                      _depsExpanded,
+                    ),
+                    child: _buildDependenciesContent(context),
+                  ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Container(height: 1, color: theme.dividerColor),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
 
-                  // Description
-                  Text('Description', style: theme.typography.headline),
-                  const SizedBox(height: 8),
-                  Text(
-                    issue.description?.isNotEmpty == true
-                        ? issue.description!
-                        : 'No description provided.',
-                    style: TextStyle(
-                      color: issue.description?.isNotEmpty == true
-                          ? null
-                          : MacosColors.systemGrayColor,
+                  // Description (collapsible)
+                  _CollapsibleSection(
+                    title: 'Description',
+                    expanded: _descExpanded,
+                    onToggle: () => _toggleSection(
+                      _kCollapseDescription,
+                      _descExpanded,
+                    ),
+                    child: SelectableText(
+                      issue.description?.isNotEmpty == true
+                          ? issue.description!
+                          : 'No description provided.',
+                      style: TextStyle(
+                        color: issue.description?.isNotEmpty == true
+                            ? null
+                            : MacosColors.systemGrayColor,
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 16),
-
-                  // Notes
-                  Text('Notes', style: theme.typography.headline),
-                  const SizedBox(height: 8),
-                  Text(
-                    issue.notes?.isNotEmpty == true
-                        ? issue.notes!
-                        : 'No notes provided.',
-                    style: TextStyle(
-                      color: issue.notes?.isNotEmpty == true
-                          ? null
-                          : MacosColors.systemGrayColor,
+                  // Notes (collapsible, only when non-empty)
+                  if (issue.notes?.isNotEmpty == true)
+                    _CollapsibleSection(
+                      title: 'Notes',
+                      expanded: _notesExpanded,
+                      onToggle: () => _toggleSection(
+                        _kCollapseNotes,
+                        _notesExpanded,
+                      ),
+                      child: SelectableText(issue.notes!),
                     ),
-                  ),
 
-                  // Metadata (compact)
+                  // Design (collapsible, only when non-empty)
+                  if (issue.design?.isNotEmpty == true)
+                    _CollapsibleSection(
+                      title: 'Design',
+                      expanded: _designExpanded,
+                      onToggle: () => _toggleSection(
+                        _kCollapseDesign,
+                        _designExpanded,
+                      ),
+                      child: SelectableText(issue.design!),
+                    ),
+
+                  // Acceptance Criteria (collapsible, only when non-empty)
+                  if (issue.acceptanceCriteria?.isNotEmpty == true)
+                    _CollapsibleSection(
+                      title: 'Acceptance Criteria',
+                      expanded: _acExpanded,
+                      onToggle: () => _toggleSection(
+                        _kCollapseAcceptance,
+                        _acExpanded,
+                      ),
+                      child: SelectableText(issue.acceptanceCriteria!),
+                    ),
+
+                  // Metadata (compact, always visible)
                   _buildMetadataSection(context, issue),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
                   Container(height: 1, color: theme.dividerColor),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
 
-                  // Comments
-                  _buildCommentsSection(context),
+                  // Comments (collapsible)
+                  _CollapsibleSection(
+                    title: 'Comments',
+                    expanded: _commentsExpanded,
+                    onToggle: () => _toggleSection(
+                      _kCollapseComments,
+                      _commentsExpanded,
+                    ),
+                    child: _buildCommentsContent(context),
+                  ),
                 ],
               ),
             ),
@@ -176,6 +315,12 @@ class _IssueInspectorState extends State<IssueInspector> {
               style: textStyle,
             ),
 
+          if (issue.startedAt != null)
+            Text(
+              'Started ${_formatDate(issue.startedAt!)}',
+              style: textStyle,
+            ),
+
           Text(
             'Last updated ${_formatDate(issue.updatedAt)}',
             style: textStyle,
@@ -183,7 +328,7 @@ class _IssueInspectorState extends State<IssueInspector> {
 
           if (issue.closedAt != null)
             Text(
-              'Closed on ${_formatDate(issue.closedAt!)}${issue.closeReason?.isNotEmpty == true ? ' (${issue.closeReason})' : ''}',
+              'Closed on ${_formatDate(issue.closedAt!)}',
               style: textStyle,
             ),
         ],
@@ -191,7 +336,7 @@ class _IssueInspectorState extends State<IssueInspector> {
     );
   }
 
-  Widget _buildDependenciesSection(BuildContext context) {
+  Widget _buildDependenciesContent(BuildContext context) {
     final issue = widget.issue;
     final all = appState.currentIssues;
 
@@ -215,12 +360,20 @@ class _IssueInspectorState extends State<IssueInspector> {
     final hasRelated = related.isNotEmpty;
 
     if (!hasHierarchy && !hasBlocks && !hasRelated) {
-      return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No dependencies.',
+            style: TextStyle(color: MacosColors.systemGrayColor),
+          ),
+          const SizedBox(height: 4),
+          _buildAddDependencyButton(context),
+        ],
+      );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Hierarchy section ───────────────────────────────────────────
@@ -269,40 +422,53 @@ class _IssueInspectorState extends State<IssueInspector> {
           // ── Add dependency button ───────────────────────────────────────
           _buildAddDependencyButton(context),
         ],
-      ),
-    );
+      );
   }
 
+  // HIG-FIX: wrapped in Focus so Tab navigation can reach it, and handles
+  // Enter/Space to activate — satisfying HIG keyboard-centricity requirement.
   Widget _buildAddDependencyButton(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Add dependency',
-      child: GestureDetector(
-        onTap: () => _showAddDependencySheet(context),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const MacosIcon(
-                  CupertinoIcons.plus_circle,
-                  size: 13,
-                  color: MacosColors.systemGrayColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Add dependency',
-                  style: MacosTheme.of(context).typography.footnote.copyWith(
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space ||
+                event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+          _showAddDependencySheet(context);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Semantics(
+        button: true,
+        label: 'Add dependency',
+        child: GestureDetector(
+          onTap: () => _showAddDependencySheet(context),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const MacosIcon(
+                    CupertinoIcons.plus_circle,
+                    size: 13,
                     color: MacosColors.systemGrayColor,
-                    decoration: TextDecoration.underline,
-                    decorationColor: MacosColors.systemGrayColor.withValues(
-                      alpha: 0.5,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Add dependency',
+                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                      color: MacosColors.systemGrayColor,
+                      decoration: TextDecoration.underline,
+                      decorationColor: MacosColors.systemGrayColor.withValues(
+                        alpha: 0.5,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -511,12 +677,10 @@ class _IssueInspectorState extends State<IssueInspector> {
     );
   }
 
-  Widget _buildCommentsSection(BuildContext context) {
+  Widget _buildCommentsContent(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Comments', style: MacosTheme.of(context).typography.headline),
-        const SizedBox(height: 8),
         if (appState.selectedIssueComments.isEmpty)
           Text(
             'No comments yet.',
@@ -575,7 +739,8 @@ class _IssueInspectorState extends State<IssueInspector> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(
+                    // HIG-FIX: SelectableText so comment bodies can be copied.
+                    SelectableText(
                       comment['text']?.toString() ?? '',
                       style: MacosTheme.of(
                         context,
@@ -604,25 +769,72 @@ class _IssueInspectorState extends State<IssueInspector> {
               ),
             ),
             const SizedBox(width: 8),
-            MacosIconButton(
-              icon: MacosIcon(
-                CupertinoIcons.arrow_up_circle_fill,
-                color: MacosTheme.of(context).primaryColor,
-                size: 24,
+            // HIG-FIX: tooltip on icon-only button.
+            MacosTooltip(
+              message: 'Submit comment',
+              child: MacosIconButton(
+                icon: MacosIcon(
+                  CupertinoIcons.arrow_up_circle_fill,
+                  color: MacosTheme.of(context).primaryColor,
+                  size: 24,
+                ),
+                onPressed: () {
+                  if (_commentController.text.trim().isNotEmpty) {
+                    appState.addComment(
+                      widget.issue.id,
+                      _commentController.text.trim(),
+                    );
+                    _commentController.clear();
+                  }
+                },
               ),
-              onPressed: () {
-                if (_commentController.text.trim().isNotEmpty) {
-                  appState.addComment(
-                    widget.issue.id,
-                    _commentController.text.trim(),
-                  );
-                  _commentController.clear();
-                }
-              },
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildLabelsSection(BuildContext context, List<String> labels) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Labels',
+            style: MacosTheme.of(context).typography.footnote.copyWith(
+              color: MacosColors.systemGrayColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: labels.map((label) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: MacosTheme.of(context).primaryColor.withValues(
+                    alpha: 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  label,
+                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                    color: MacosTheme.of(context).primaryColor,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -646,13 +858,14 @@ class _IssueInspectorState extends State<IssueInspector> {
     );
   }
 
+  // HIG-FIX: accepts a pre-existing controller (owned by state) instead of
+  // creating a new one on every build call.
   Widget _buildEditableField(
     String title,
-    String initialValue,
+    TextEditingController controller,
     BuildContext context,
     Function(String) onSubmitted,
   ) {
-    final controller = TextEditingController(text: initialValue);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -684,6 +897,73 @@ class _IssueInspectorState extends State<IssueInspector> {
 
   // UI-04 (r1f.9): delegates to the shared DateFormatters utility.
   String _formatDate(DateTime date) => DateFormatters.full(date);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Collapsible section header + body
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CollapsibleSection extends StatelessWidget {
+  final String title;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  const _CollapsibleSection({
+    required this.title,
+    required this.expanded,
+    required this.onToggle,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = MacosTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Disclosure header — tappable row with chevron.
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: onToggle,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  // Animated chevron.
+                  AnimatedRotation(
+                    turns: expanded ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: MacosIcon(
+                      CupertinoIcons.chevron_right,
+                      size: 11,
+                      color: MacosColors.systemGrayColor,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(title, style: theme.typography.headline),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Animated body.
+        AnimatedCrossFade(
+          firstChild: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: child,
+          ),
+          secondChild: const SizedBox.shrink(),
+          crossFadeState: expanded
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 150),
+        ),
+      ],
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
