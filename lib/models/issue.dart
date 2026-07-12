@@ -29,12 +29,24 @@ class Issue {
   final String issueType;
   final String? owner;
   final String? assignee;
+
+  // ── Content fields (bd canonical) ────────────────────────────────────────
   final String? notes;
+  final String? design;
+  final String? acceptanceCriteria;
+
+  // ── Timestamps ────────────────────────────────────────────────────────────
   final DateTime createdAt;
   final String? createdBy;
   final DateTime updatedAt;
+  final DateTime? startedAt;
   final DateTime? closedAt;
   final String? closeReason;
+
+  // ── Labels ────────────────────────────────────────────────────────────────
+  final List<String>? labels;
+
+  // ── Relational counts / data ──────────────────────────────────────────────
   final int? dependencyCount;
   final int? dependentCount;
   final int? commentCount;
@@ -50,11 +62,15 @@ class Issue {
     this.owner,
     this.assignee,
     this.notes,
+    this.design,
+    this.acceptanceCriteria,
     required this.createdAt,
     this.createdBy,
     required this.updatedAt,
+    this.startedAt,
     this.closedAt,
     this.closeReason,
+    this.labels,
     this.dependencyCount,
     this.dependentCount,
     this.commentCount,
