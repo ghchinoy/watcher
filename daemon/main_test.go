@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/steveyegge/beads"
 )
@@ -182,5 +184,121 @@ func TestCommentsFlagInjection(t *testing.T) {
 	unexpectedSub := "unknown flag"
 	if strings.Contains(resp.Error.Message, unexpectedSub) {
 		t.Errorf("Flag injection occurred! Error message contained %q, output: %q", unexpectedSub, resp.Error.Message)
+	}
+}
+
+func TestCheckHealthCaching(t *testing.T) {
+	// 1. Create a temporary directory
+	tempDir, err := os.MkdirTemp("", "beads-test-")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create .beads subdirectory
+	beadsDir := filepath.Join(tempDir, ".beads")
+	if err := os.Mkdir(beadsDir, 0755); err != nil {
+		t.Fatalf("failed to create .beads dir: %v", err)
+	}
+
+	// Create a dummy issues.jsonl
+	jsonlPath := filepath.Join(beadsDir, "issues.jsonl")
+	if err := os.WriteFile(jsonlPath, []byte(""), 0644); err != nil {
+		t.Fatalf("failed to write dummy issues.jsonl: %v", err)
+	}
+
+	// Create a dummy config.yaml so FindBeadsDir recognizes it as a valid project
+	configPath := filepath.Join(beadsDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("issue-prefix: \"watcher\""), 0644); err != nil {
+		t.Fatalf("failed to write dummy config.yaml: %v", err)
+	}
+
+	// 2. Save original CWD and change to tempDir
+	originalWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get wd: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(originalWd)
+	}()
+
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+
+	// 3. Setup mock storage & mock response captures
+	var buf bytes.Buffer
+	outputWriter = &buf
+
+	// We'll track how many times SearchIssues is called
+	searchCallCount := 0
+	mockIssues := []*beads.Issue{
+		{
+			ID:        "issue-1",
+			Title:     "Test Issue",
+			Status:    "open",
+			Priority:  1,
+			IssueType: "task",
+		},
+	}
+
+	storage := &mockStorage{
+		mockSearchIssues: func(ctx context.Context, query string, filter beads.IssueFilter) ([]*beads.Issue, error) {
+			searchCallCount++
+			return mockIssues, nil
+		},
+	}
+
+	ctx := context.Background()
+
+	// Clear/invalidate the cache before starting
+	healthCacheMu.Lock()
+	healthCacheValid = false
+	healthCacheTime = time.Time{}
+	healthCacheMu.Unlock()
+
+	// 4. First call: Cache is invalid, should call SearchIssues (searchCallCount = 1)
+	handleCheckHealth(ctx, storage, 1)
+
+	var resp1 Response
+	if err := json.Unmarshal(buf.Bytes(), &resp1); err != nil {
+		t.Fatalf("failed to unmarshal resp1: %v", err)
+	}
+	if searchCallCount != 1 {
+		t.Errorf("expected searchCallCount to be 1, got %d", searchCallCount)
+	}
+
+	buf.Reset()
+
+	// 5. Second call: Cache should be valid, should NOT call SearchIssues (searchCallCount stays 1)
+	handleCheckHealth(ctx, storage, 2)
+
+	var resp2 Response
+	if err := json.Unmarshal(buf.Bytes(), &resp2); err != nil {
+		t.Fatalf("failed to unmarshal resp2: %v", err)
+	}
+	if searchCallCount != 1 {
+		t.Errorf("expected searchCallCount to still be 1 (cached), got %d", searchCallCount)
+	}
+
+	buf.Reset()
+
+	// 6. Modify the dummy issues.jsonl (update its mod time)
+	// On some filesystems/OS, modification time resolution is coarse.
+	// We should update the mod time to at least 10 seconds in the future
+	futureTime := time.Now().Add(10 * time.Second)
+	if err := os.Chtimes(jsonlPath, futureTime, futureTime); err != nil {
+		t.Fatalf("failed to change mod time: %v", err)
+	}
+
+	// 7. Third call: Cache should detect change, call SearchIssues again (searchCallCount = 2)
+	handleCheckHealth(ctx, storage, 3)
+
+	var resp3 Response
+	if err := json.Unmarshal(buf.Bytes(), &resp3); err != nil {
+		t.Fatalf("failed to unmarshal resp3: %v", err)
+	}
+	if searchCallCount != 2 {
+		t.Errorf("expected searchCallCount to be 2 (cache bypassed), got %d", searchCallCount)
 	}
 }

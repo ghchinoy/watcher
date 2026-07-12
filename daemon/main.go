@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/steveyegge/beads"
@@ -624,7 +625,92 @@ type HealthCheckResult struct {
 	Diagnostics []Diagnostic `json:"diagnostics"`
 }
 
+var (
+	healthCacheMu    sync.RWMutex
+	healthCache      HealthCheckResult
+	healthCacheTime  time.Time
+	healthCacheValid bool
+)
+
+// getLatestModificationTime returns the maximum modification time among
+// issues.jsonl, dolt, and dolt-backup files inside beadsDir.
+func getLatestModificationTime(beadsDir string) (time.Time, error) {
+	var maxTime time.Time
+	found := false
+
+	// Check issues.jsonl
+	jsonlPath := filepath.Join(beadsDir, "issues.jsonl")
+	if info, err := os.Stat(jsonlPath); err == nil {
+		found = true
+		if info.ModTime().After(maxTime) {
+			maxTime = info.ModTime()
+		}
+	}
+
+	// Check dolt directory if it exists
+	doltPath := filepath.Join(beadsDir, "dolt")
+	if info, err := os.Stat(doltPath); err == nil {
+		found = true
+		if info.ModTime().After(maxTime) {
+			maxTime = info.ModTime()
+		}
+		_ = filepath.Walk(doltPath, func(path string, fileInfo os.FileInfo, walkErr error) error {
+			if walkErr == nil {
+				if fileInfo.ModTime().After(maxTime) {
+					maxTime = fileInfo.ModTime()
+				}
+			}
+			return nil
+		})
+	}
+
+	// Check dolt-backup directory if it exists
+	doltBackupPath := filepath.Join(beadsDir, "dolt-backup")
+	if info, err := os.Stat(doltBackupPath); err == nil {
+		found = true
+		if info.ModTime().After(maxTime) {
+			maxTime = info.ModTime()
+		}
+		_ = filepath.Walk(doltBackupPath, func(path string, fileInfo os.FileInfo, walkErr error) error {
+			if walkErr == nil {
+				if fileInfo.ModTime().After(maxTime) {
+					maxTime = fileInfo.ModTime()
+				}
+			}
+			return nil
+		})
+	}
+
+	if !found {
+		return time.Time{}, fmt.Errorf("no database or jsonl files found")
+	}
+
+	return maxTime, nil
+}
+
 func handleCheckHealth(ctx context.Context, storage beads.Storage, id int) {
+	beadsDir := beads.FindBeadsDir()
+	var latestMod time.Time
+	var cacheCheckErr error
+
+	if beadsDir != "" {
+		if latestMod, cacheCheckErr = getLatestModificationTime(beadsDir); cacheCheckErr == nil {
+			healthCacheMu.RLock()
+			if healthCacheValid && !latestMod.After(healthCacheTime) {
+				// Cache is valid and nothing has changed since last cache update.
+				res := healthCache
+				healthCacheMu.RUnlock()
+				sendResponse(Response{
+					JSONRPC: "2.0",
+					Result:  res,
+					ID:      id,
+				})
+				return
+			}
+			healthCacheMu.RUnlock()
+		}
+	}
+
 	// 1. Fetch all issues with dependencies
 	filter := beads.IssueFilter{
 		IncludeDependencies: true,
@@ -675,13 +761,24 @@ func handleCheckHealth(ctx context.Context, storage beads.Storage, id int) {
 		status = "issues_found"
 	}
 
+	res := HealthCheckResult{
+		Status:      status,
+		Diagnostics: diagnostics,
+	}
+
+	// Update cache if change detection was successful
+	if beadsDir != "" && cacheCheckErr == nil {
+		healthCacheMu.Lock()
+		healthCache = res
+		healthCacheTime = latestMod
+		healthCacheValid = true
+		healthCacheMu.Unlock()
+	}
+
 	sendResponse(Response{
 		JSONRPC: "2.0",
-		Result: HealthCheckResult{
-			Status:      status,
-			Diagnostics: diagnostics,
-		},
-		ID: id,
+		Result:  res,
+		ID:      id,
 	})
 }
 
