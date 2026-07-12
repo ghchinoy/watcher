@@ -13,9 +13,15 @@ digraph G {
         fontcolor="#415F91";
         
         WatcherApp -> ListenableBuilder [label="build", fontcolor="#44474E", fontsize=10];
-        ListenableBuilder -> "MacosApp.router";
+        ListenableBuilder -> PlatformMenuBar [label="menus", fontcolor="#44474E", fontsize=10];
+        PlatformMenuBar -> "MacosApp.router";
         "MacosApp.router" -> GoRouter [label="routerConfig", fontcolor="#44474E", fontsize=10];
         GoRouter -> ShellRoute [label="routes", fontcolor="#44474E", fontsize=10];
+        PlatformMenuBar -> "Menu: Watcher" [label="Cmd+,=Settings, About, Quit", fontcolor="#44474E", fontsize=10];
+        PlatformMenuBar -> "Menu: Edit" [label="Undo/Redo/Cut/Copy/Paste", fontcolor="#44474E", fontsize=10];
+        PlatformMenuBar -> "Menu: View" [label="CmdOptI=Show Inspector, Full Screen", fontcolor="#44474E", fontsize=10];
+        PlatformMenuBar -> "Menu: Window" [label="Minimize/Zoom/Arrange", fontcolor="#44474E", fontsize=10];
+        PlatformMenuBar -> "Menu: Help" [label="Watcher Help", fontcolor="#44474E", fontsize=10];
     }
 
     subgraph cluster_shell {
@@ -33,12 +39,16 @@ digraph G {
         "Sidebar (Projects)" -> MacosListTile [label="bottom", fontcolor="#44474E", fontsize=10];
         MacosListTile -> SettingsScreen [label="router.go('/settings')", fontcolor="#44474E", fontsize=10];
         
-        MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar", fontcolor="#44474E", fontsize=10];
+        MacosWindow -> "Sidebar (Issue Inspector)" [label="endSidebar (resizable 200–400pt)", fontcolor="#44474E", fontsize=10];
         "Sidebar (Issue Inspector)" -> IssueInspector [label="builder", fontcolor="#44474E", fontsize=10];
         IssueInspector -> MacosPopupButton [label="Status/Priority", fontcolor="#44474E", fontsize=10];
-        IssueInspector -> "Dependencies Section" [label="Blocked By / Blocks / Hierarchy / Related", fontcolor="#44474E", fontsize=10];
-        "Dependencies Section" -> _AddDependencySheet [label="onClick (MacosSheet)", fontcolor="#44474E", fontsize=10];
-        IssueInspector -> "Comments Section" [label="Timeline & Input", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "_CollapsibleSection (Dependencies)" [label="Blocked By / Blocks / Hierarchy / Related", fontcolor="#44474E", fontsize=10];
+        "_CollapsibleSection (Dependencies)" -> _AddDependencySheet [label="onClick (MacosSheet)", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "_CollapsibleSection (Description)" [label="SelectableText", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "_CollapsibleSection (Notes)" [label="SelectableText, if non-empty", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "_CollapsibleSection (Design)" [label="SelectableText, if non-empty", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "_CollapsibleSection (Acceptance Criteria)" [label="SelectableText, if non-empty", fontcolor="#44474E", fontsize=10];
+        IssueInspector -> "_CollapsibleSection (Comments)" [label="Timeline & Input", fontcolor="#44474E", fontsize=10];
         
         MacosWindow -> _InspectorController [label="child", fontcolor="#44474E", fontsize=10];
         _InspectorController -> ChildWidget;
