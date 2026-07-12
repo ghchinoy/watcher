@@ -20,10 +20,14 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
   String? _error;
   String? _summary;
   List<Map<String, dynamic>> _recommendations = [];
+  List<Map<String, dynamic>> _localDiagnostics = [];
+  bool _localHealthExpanded = false;
 
   @override
   void initState() {
     super.initState();
+    // Default expanded to true if AI is not configured so the user sees it immediately
+    _localHealthExpanded = !widget.appState.isAIAssistantConfigured;
     _loadInsights();
   }
 
@@ -32,6 +36,7 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
     super.didUpdateWidget(oldWidget);
     // If project path or issues count or health diagnostics changed, reload insights automatically!
     if (oldWidget.appState.selectedProject?.path != widget.appState.selectedProject?.path) {
+      _localHealthExpanded = !widget.appState.isAIAssistantConfigured;
       _loadInsights();
     }
   }
@@ -43,48 +48,50 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
     });
 
     try {
-      // Run static checkHealth or use cached one
+      // 1. Always load static structural diagnostics
       HealthCheckResult? health = widget.appState.selectedProjectHealth;
       if (health == null && widget.appState.selectedProject != null) {
         health = await widget.appState.checkHealth();
       }
       health ??= HealthCheckResult(status: 'healthy', diagnostics: []);
 
-      if (!widget.appState.isAIAssistantConfigured) {
-        // Local-only Structural Health fallback branch
-        final mappedDiagnostics = health.diagnostics.map((diag) {
-          Map<String, dynamic> payload = {'id': diag.issueId};
-          String actionType = 'updateIssue';
-          if (diag.fix != null && diag.fix!.isNotEmpty) {
-            try {
-              final decodedFix = jsonDecode(diag.fix!);
-              if (decodedFix is Map<String, dynamic>) {
-                actionType = decodedFix['actionType'] as String? ?? 'updateIssue';
-                payload = decodedFix['payload'] as Map<String, dynamic>? ?? {'id': diag.issueId};
-              }
-            } catch (_) {
-              // fallback
+      // Map the static diagnostics into our structured recommendation-button schema
+      final mappedDiagnostics = health.diagnostics.map((diag) {
+        Map<String, dynamic> payload = {'id': diag.issueId};
+        String actionType = 'updateIssue';
+        if (diag.fix != null && diag.fix!.isNotEmpty) {
+          try {
+            final decodedFix = jsonDecode(diag.fix!);
+            if (decodedFix is Map<String, dynamic>) {
+              actionType = decodedFix['actionType'] as String? ?? 'updateIssue';
+              payload = decodedFix['payload'] as Map<String, dynamic>? ?? {'id': diag.issueId};
             }
+          } catch (_) {
+            // fallback
           }
-          return {
-            'title': 'Fix Local Structural Issue: ${diag.issueId}',
-            'description': '${diag.message} (Type: ${diag.type})',
-            'actionType': actionType,
-            'payload': payload,
-          };
-        }).toList();
+        }
+        return {
+          'title': 'Fix Local Structural Issue: ${diag.issueId}',
+          'description': '${diag.message} (Type: ${diag.type})',
+          'actionType': actionType,
+          'payload': payload,
+        };
+      }).toList();
 
+      if (!widget.appState.isAIAssistantConfigured) {
+        // Local-only structural health fallback
         if (mounted) {
           setState(() {
-            _summary = 'AI Assistant is disabled or unconfigured. Displaying local structural health diagnostics.';
-            _recommendations = mappedDiagnostics;
+            _summary = null; // No AI summary
+            _recommendations = []; // No AI recommendations
+            _localDiagnostics = mappedDiagnostics;
             _isLoading = false;
           });
         }
         return;
       }
 
-      // AI-configured branch
+      // 2. AI-configured branch: load rich semantic recommendations
       final gcpId = widget.appState.gcpProjectId;
       final modelConfig = widget.appState.defaultAiModel;
 
@@ -109,6 +116,7 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
         setState(() {
           _summary = data['summary'] as String? ?? 'No narrative summary available.';
           _recommendations = rawRecs.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _localDiagnostics = mappedDiagnostics;
           _isLoading = false;
         });
       }
@@ -124,13 +132,18 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
 
   // Tracking which recommendation is currently executing a mutation to display a ProgressCircle
   final Map<int, bool> _executingIndexes = {};
+  final Map<int, bool> _executingLocalIndexes = {};
 
-  Future<void> _executeRecommendation(int index, Map<String, dynamic> rec) async {
+  Future<void> _executeRecommendation(int index, Map<String, dynamic> rec, {bool isLocal = false}) async {
     final actionType = rec['actionType'] as String?;
     final payload = rec['payload'] as Map<String, dynamic>? ?? {};
 
     setState(() {
-      _executingIndexes[index] = true;
+      if (isLocal) {
+        _executingLocalIndexes[index] = true;
+      } else {
+        _executingIndexes[index] = true;
+      }
     });
 
     try {
@@ -198,25 +211,21 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
           parent: parent,
           priority: priority,
         );
-        if (mounted) DialogUtils.showToast(context, message: 'Created new issue: "$title"');
-      } else {
-        throw Exception('Unsupported action type: $actionType');
+        if (mounted) DialogUtils.showToast(context, message: 'Created issue: $title');
       }
 
-      // Remove the executed recommendation from list on successful completion
-      if (mounted) {
-        setState(() {
-          _recommendations.removeAt(index);
-        });
-      }
+      // Reload both local diagnostics and AI insights after any success mutation
+      await _loadInsights();
     } catch (e) {
-      if (mounted) {
-        DialogUtils.showToast(context, message: e.toString(), isError: true);
-      }
+      if (mounted) DialogUtils.showToast(context, message: e.toString(), isError: true);
     } finally {
       if (mounted) {
         setState(() {
-          _executingIndexes[index] = false;
+          if (isLocal) {
+            _executingLocalIndexes[index] = false;
+          } else {
+            _executingIndexes[index] = false;
+          }
         });
       }
     }
@@ -224,7 +233,6 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic contrast colors compliant with WCAG (defined in GEMINI.md)
     final cardBgColor = MacosDynamicColor.resolve(
       CupertinoDynamicColor.withBrightness(
         color: const Color(0xFFF4F5F6), // light mode background
@@ -241,6 +249,8 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
       context,
     );
 
+    final isAiConfigured = widget.appState.isAIAssistantConfigured;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -254,16 +264,17 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Panel Header ──────────────────────────────────────────────────
           Row(
             children: [
               MacosIcon(
-                widget.appState.isAIAssistantConfigured ? CupertinoIcons.sparkles : CupertinoIcons.shield_fill,
-                color: widget.appState.isAIAssistantConfigured ? MacosColors.systemPurpleColor : MacosColors.systemBlueColor,
+                isAiConfigured ? CupertinoIcons.sparkles : CupertinoIcons.shield_fill,
+                color: isAiConfigured ? MacosColors.systemPurpleColor : MacosColors.systemBlueColor,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                widget.appState.isAIAssistantConfigured ? 'AI Assistant Insights' : 'Local Structural Health',
+                isAiConfigured ? 'AI Assistant Insights' : 'Local Structural Health',
                 style: MacosTheme.of(context).typography.title3.copyWith(
                       color: textColor,
                       fontWeight: FontWeight.bold,
@@ -286,6 +297,8 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
             ],
           ),
           const SizedBox(height: 12),
+
+          // ── Loading & Errors ──────────────────────────────────────────────
           if (_isLoading)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -294,7 +307,7 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
                   children: [
                     const ProgressCircle(),
                     const SizedBox(height: 12),
-                    Text(widget.appState.isAIAssistantConfigured
+                    Text(isAiConfigured
                         ? 'Consulting Gemini AI Assistant...'
                         : 'Checking local database health...'),
                   ],
@@ -324,111 +337,199 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
               ),
             )
           else ...[
-            if (_summary != null) ...[
-              Text(
-                _summary!,
-                style: MacosTheme.of(context).typography.body.copyWith(
-                      color: textColor,
-                      height: 1.4,
+            // ── AI Narrative & Recommendations (only if configured) ─────────
+            if (isAiConfigured) ...[
+              if (_summary != null) ...[
+                Text(
+                  _summary!,
+                  style: MacosTheme.of(context).typography.body.copyWith(
+                        color: textColor,
+                        height: 1.4,
+                      ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (_recommendations.isNotEmpty) ...[
+                Text(
+                  'Recommended Next Actions',
+                  style: MacosTheme.of(context).typography.headline.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recommendations.length,
+                  itemBuilder: (context, index) {
+                    final rec = _recommendations[index];
+                    final isExecuting = _executingIndexes[index] ?? false;
+                    return _buildActionRow(index, rec, isExecuting, isLocal: false);
+                  },
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
+                Row(
+                  children: [
+                    const MacosIcon(
+                      CupertinoIcons.checkmark_seal_fill,
+                      color: MacosColors.systemGreenColor,
+                      size: 16,
                     ),
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'No outstanding recommendations. Project is in peak health!',
+                      style: const TextStyle(
+                        color: MacosColors.systemGreenColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
             ],
-            if (_recommendations.isNotEmpty) ...[
-              Text(
-                'Recommended Next Actions',
-                style: MacosTheme.of(context).typography.headline.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _recommendations.length,
-                itemBuilder: (context, index) {
-                  final rec = _recommendations[index];
-                  final isExecuting = _executingIndexes[index] ?? false;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: MacosTheme.of(context).brightness.isDark
-                            ? const Color(0xFF1E1E1E)
-                            : MacosColors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: MacosColors.systemGrayColor.withValues(alpha: 0.15),
+
+            // ── Local Structural Health (Collapsible, Always Displayed) ──────
+            Container(
+              height: 1,
+              color: MacosTheme.of(context).dividerColor,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+            ),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _localHealthExpanded = !_localHealthExpanded;
+                });
+              },
+              behavior: HitTestBehavior.opaque,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      AnimatedRotation(
+                        turns: _localHealthExpanded ? 0.25 : 0,
+                        duration: const Duration(milliseconds: 150),
+                        child: MacosIcon(
+                          CupertinoIcons.chevron_right,
+                          size: 12,
+                          color: MacosColors.systemGrayColor,
                         ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  rec['title'] as String? ?? '',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  rec['description'] as String? ?? '',
-                                  style: TextStyle(
-                                    color: MacosColors.systemGrayColor,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
+                      const SizedBox(width: 8),
+                      Text(
+                        'Local Structural Health (${_localDiagnostics.length})',
+                        style: MacosTheme.of(context).typography.headline.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w600,
                             ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            AnimatedCrossFade(
+              firstChild: Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: _localDiagnostics.isNotEmpty
+                    ? ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _localDiagnostics.length,
+                        itemBuilder: (context, index) {
+                          final rec = _localDiagnostics[index];
+                          final isExecuting = _executingLocalIndexes[index] ?? false;
+                          return _buildActionRow(index, rec, isExecuting, isLocal: true);
+                        },
+                      )
+                    : Row(
+                        children: [
+                          const MacosIcon(
+                            CupertinoIcons.checkmark_shield_fill,
+                            color: MacosColors.systemGreenColor,
+                            size: 16,
                           ),
-                          const SizedBox(width: 12),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: PushButton(
-                              controlSize: ControlSize.regular,
-                              onPressed: isExecuting ? null : () => _executeRecommendation(index, rec),
-                              child: isExecuting
-                                  ? const ProgressCircle(radius: 8)
-                                  : const Text('Execute'),
+                          const SizedBox(width: 8),
+                          Text(
+                            'No structural issues detected. Database is in peak health!',
+                            style: const TextStyle(
+                              color: MacosColors.systemGreenColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
               ),
-            ] else ...[
-              Row(
+              secondChild: const SizedBox.shrink(),
+              crossFadeState: _localHealthExpanded
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 150),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionRow(int index, Map<String, dynamic> rec, bool isExecuting, {required bool isLocal}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: MacosTheme.of(context).brightness.isDark
+              ? const Color(0xFF1E1E1E)
+              : MacosColors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: MacosColors.systemGrayColor.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const MacosIcon(
-                    CupertinoIcons.checkmark_seal_fill,
-                    color: MacosColors.systemGreenColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
                   Text(
-                    widget.appState.isAIAssistantConfigured
-                        ? 'No outstanding recommendations. Project is in peak health!'
-                        : 'No local structural issues detected. Database is in peak health!',
+                    rec['title'] as String? ?? '',
                     style: const TextStyle(
-                      color: MacosColors.systemGreenColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    rec['description'] as String? ?? '',
+                    style: TextStyle(
+                      color: MacosColors.systemGrayColor,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
+            const SizedBox(width: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: PushButton(
+                controlSize: ControlSize.regular,
+                onPressed: isExecuting ? null : () => _executeRecommendation(index, rec, isLocal: isLocal),
+                child: isExecuting
+                    ? const ProgressCircle(radius: 8)
+                    : const Text('Execute'),
+              ),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }

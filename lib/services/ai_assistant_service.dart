@@ -11,15 +11,19 @@ class AIAssistantService {
   static final _log = AppLogger('AIAssistantService');
   static bool _initialized = false;
 
-  static Future<void> ensureInitialized() async {
+  static Future<void> ensureInitialized({required String? gcpProjectId}) async {
     if (_initialized) return;
+    if (gcpProjectId == null || gcpProjectId.isEmpty) {
+      throw Exception('GCP Project ID is required for Vertex AI initialization.');
+    }
     try {
       await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+        options: DefaultFirebaseOptions.getOptions(projectId: gcpProjectId),
       );
       _initialized = true;
     } catch (e) {
       _log.error('Failed to initialize Firebase in AIAssistantService', error: e);
+      rethrow;
     }
   }
 
@@ -88,7 +92,7 @@ Provide high-quality, actionable recommendation items. ONLY return JSON. Do not 
         );
         return null;
       }
-      await ensureInitialized();
+      await ensureInitialized(gcpProjectId: gcpProjectId);
 
       try {
         final ai = FirebaseAI.vertexAI(location: config.region);

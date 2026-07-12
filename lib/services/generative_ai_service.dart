@@ -11,15 +11,19 @@ class GenerativeAiService {
   static final _log = AppLogger('GenerativeAiService');
   static bool _initialized = false;
 
-  static Future<void> ensureInitialized() async {
+  static Future<void> ensureInitialized({required String? gcpProjectId}) async {
     if (_initialized) return;
+    if (gcpProjectId == null || gcpProjectId.isEmpty) {
+      throw Exception('GCP Project ID is required for Vertex AI initialization.');
+    }
     try {
       await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+        options: DefaultFirebaseOptions.getOptions(projectId: gcpProjectId),
       );
       _initialized = true;
     } catch (e) {
       _log.error('Failed to initialize Firebase', error: e);
+      rethrow;
     }
   }
 
@@ -62,7 +66,7 @@ Resolution Summary:
         _log.info('AI configuration missing — skipping summarization');
         return null;
       }
-      await ensureInitialized();
+      await ensureInitialized(gcpProjectId: gcpProjectId);
 
       try {
         final ai = FirebaseAI.vertexAI(location: config.region);
@@ -201,7 +205,7 @@ Only return valid JSON following the schema. Do not return any markdown markdown
         _log.info('AI configuration missing — skipping insights generation');
         return null;
       }
-      await ensureInitialized();
+      await ensureInitialized(gcpProjectId: gcpProjectId);
 
       try {
         final ai = FirebaseAI.vertexAI(location: config.region);
