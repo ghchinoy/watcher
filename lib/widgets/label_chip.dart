@@ -22,7 +22,18 @@ class LabelChip extends StatelessWidget {
   /// rows like Tree nodes, Kanban cards, and Ready/Blocked list rows.
   final bool compact;
 
-  const LabelChip({super.key, required this.label, this.compact = false});
+  /// Optional remove affordance: when provided, a small "x" glyph is shown
+  /// after the label text and tapping it invokes this callback. Left null
+  /// (the default) in every read-only display context (Tree/Kanban/Ready/
+  /// Blocked) — only the Inspector's editable labels section passes one.
+  final VoidCallback? onRemove;
+
+  const LabelChip({
+    super.key,
+    required this.label,
+    this.compact = false,
+    this.onRemove,
+  });
 
   // A fixed, colorblind-friendly 10-color palette adapted from
   // beads_viewer's Dracula-derived LABEL_COLORS (pkg/export/viewer_assets/
@@ -81,14 +92,37 @@ class LabelChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: compact ? 9 : 10,
-              color: color,
-              fontWeight: FontWeight.w600,
-              height: 1.0,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: compact ? 9 : 10,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+              ),
+              if (onRemove != null) ...[
+                SizedBox(width: compact ? 2 : 3),
+                Semantics(
+                  button: true,
+                  label: 'Remove label $label',
+                  child: GestureDetector(
+                    onTap: onRemove,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: MacosIcon(
+                        CupertinoIcons.xmark,
+                        size: compact ? 8 : 9,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

@@ -34,11 +34,15 @@ const _kCollapseComments    = 'inspector.collapse.comments';
 
 class _IssueInspectorState extends State<IssueInspector> {
   final _commentController = TextEditingController();
+  final _labelController = TextEditingController();
 
   // HIG-FIX: controllers lifted to state so they survive rebuilds and don't
   // silently discard in-progress edits when a sibling field changes.
   late TextEditingController _ownerController;
   late TextEditingController _assigneeController;
+
+  // Whether the inline "Add label" text field is currently revealed.
+  bool _addingLabel = false;
 
   // Collapsible section state — expanded by default.
   bool _descExpanded   = true;
@@ -103,6 +107,7 @@ class _IssueInspectorState extends State<IssueInspector> {
   @override
   void dispose() {
     _commentController.dispose();
+    _labelController.dispose();
     _ownerController.dispose();
     _assigneeController.dispose();
     super.dispose();
@@ -171,9 +176,9 @@ class _IssueInspectorState extends State<IssueInspector> {
                       context,
                     ),
 
-                  // Labels
-                  if (issue.labels?.isNotEmpty == true)
-                    _buildLabelsSection(context, issue.labels!),
+                  // Labels (section always shown so the add-label affordance
+                  // is available even when the issue has no labels yet).
+                  _buildLabelsSection(context, issue.labels ?? const []),
 
                   // People
                   _buildEditableField(
@@ -810,15 +815,151 @@ class _IssueInspectorState extends State<IssueInspector> {
             ),
           ),
           const SizedBox(height: 4),
+          if (labels.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: labels
+                    .map(
+                      (label) => LabelChip(
+                        label: label,
+                        onRemove: () =>
+                            appState.removeLabel(widget.issue.id, label),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          _buildAddLabelControl(context, labels),
+        ],
+      ),
+    );
+  }
+
+  // Same small tappable-link interaction shape as _buildAddDependencyButton:
+  // a "+" link that reveals a text field, plus a simple filtered suggestion
+  // list (from AppState.allKnownLabels) to reduce label sprawl from typos
+  // (e.g. tech-debt vs tech_debt).
+  Widget _buildAddLabelControl(BuildContext context, List<String> existing) {
+    if (!_addingLabel) {
+      return Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent &&
+              (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.space ||
+                  event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+            setState(() => _addingLabel = true);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Semantics(
+          button: true,
+          label: 'Add label',
+          child: GestureDetector(
+            onTap: () => setState(() => _addingLabel = true),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const MacosIcon(
+                    CupertinoIcons.plus_circle,
+                    size: 13,
+                    color: MacosColors.systemGrayColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Add label',
+                    style: MacosTheme.of(context).typography.footnote.copyWith(
+                      color: MacosColors.systemGrayColor,
+                      decoration: TextDecoration.underline,
+                      decorationColor: MacosColors.systemGrayColor.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final issue = widget.issue;
+    final query = _labelController.text.trim().toLowerCase();
+    final suggestions = appState.allKnownLabels
+        .where((l) => !existing.contains(l))
+        .where((l) => query.isEmpty || l.toLowerCase().contains(query))
+        .take(6)
+        .toList();
+
+    void submit(String value) {
+      final label = value.trim();
+      if (label.isNotEmpty && !existing.contains(label)) {
+        appState.addLabel(issue.id, label);
+      }
+      _labelController.clear();
+      setState(() => _addingLabel = false);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Semantics(
+                textField: true,
+                label: 'Add a label',
+                child: MacosTextField(
+                  controller: _labelController,
+                  placeholder: 'New label…',
+                  autofocus: true,
+                  maxLines: 1,
+                  onSubmitted: submit,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            MacosTooltip(
+              message: 'Cancel',
+              child: MacosIconButton(
+                icon: const MacosIcon(
+                  CupertinoIcons.xmark_circle,
+                  size: 16,
+                  color: MacosColors.systemGrayColor,
+                ),
+                onPressed: () {
+                  _labelController.clear();
+                  setState(() => _addingLabel = false);
+                },
+              ),
+            ),
+          ],
+        ),
+        if (suggestions.isNotEmpty) ...[
+          const SizedBox(height: 4),
           Wrap(
             spacing: 4,
             runSpacing: 4,
-            children: labels
-                .map((label) => LabelChip(label: label))
-                .toList(),
+            children: suggestions.map((s) {
+              return GestureDetector(
+                onTap: () => submit(s),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: LabelChip(label: s),
+                ),
+              );
+            }).toList(),
           ),
         ],
-      ),
+      ],
     );
   }
 

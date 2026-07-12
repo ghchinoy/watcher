@@ -111,6 +111,16 @@ class AppState extends ChangeNotifier {
   String? get error =>
       selectedProject != null ? projectErrors[selectedProject!.path] : null;
 
+  /// All unique labels seen across the currently loaded project's issues,
+  /// sorted alphabetically. Powers the Inspector's add-label autocomplete
+  /// suggestion list (to reduce label sprawl from typos like `tech-debt` vs
+  /// `tech_debt`) and, in Phase 3, the fuzzy Label Picker.
+  List<String> get allKnownLabels {
+    final labels = currentIssues.expand((i) => i.labels ?? <String>[]).toSet();
+    final sorted = labels.toList()..sort();
+    return sorted;
+  }
+
   /// Non-null when the currently selected project's daemon emitted a
   /// schema_migration_required notification. The UI renders MigrationGateView.
   SchemaMigrationGate? get schemaMigrationGate => selectedProject != null
@@ -665,6 +675,28 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _log.warning('Failed to add comment to $issueId', error: e);
+    }
+  }
+
+  Future<void> addLabel(String issueId, String label) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      await _currentService!.addLabel(issueId, label, actor: actorName);
+      await _refreshData();
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to add label: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeLabel(String issueId, String label) async {
+    if (_currentService == null || selectedProject == null) return;
+    try {
+      await _currentService!.removeLabel(issueId, label, actor: actorName);
+      await _refreshData();
+    } catch (e) {
+      projectErrors[selectedProject!.path] = 'Failed to remove label: $e';
+      notifyListeners();
     }
   }
 

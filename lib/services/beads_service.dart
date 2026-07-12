@@ -531,6 +531,30 @@ class BeadsService {
     });
   }
 
+  Future<void> addLabel(
+    String issueId,
+    String label, {
+    required String actor,
+  }) async {
+    await _sendRpcRequest('add_label', {
+      'id': issueId,
+      'label': label,
+      'actor': actor,
+    });
+  }
+
+  Future<void> removeLabel(
+    String issueId,
+    String label, {
+    required String actor,
+  }) async {
+    await _sendRpcRequest('remove_label', {
+      'id': issueId,
+      'label': label,
+      'actor': actor,
+    });
+  }
+
   Future<List<Map<String, String>>> getPeers() async {
     final result = await _sendRpcRequest('get_peers');
     if (result == null) return [];

@@ -547,6 +547,71 @@ func handleRemoveDependency(ctx context.Context, storage beads.Storage, req Requ
 	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
 }
 
+func handleAddLabel(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		ID    string `json:"id"`
+		Label string `json:"label"`
+		Actor string `json:"actor"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+
+	// bd's label store is a many-to-many join table (not a scalar field), so
+	// unlike other mutations this shells out to the bd CLI rather than calling
+	// storage directly, mirroring handleAddComment's approach for the same
+	// reason (see AGENTS.md mutation-pattern conventions).
+	// SEC-03: terminate flag parsing with "--" so an ID or label beginning
+	// with "-" is treated as a positional, not a flag.
+	cmd := exec.Command("bd", "label", "add", "--", params.ID, params.Label)
+	// SEC-03: strip newlines/null bytes from the actor before injecting it
+	// into the process environment (see appendDeveloperPath/sanitizeEnvValue
+	// doc comments above).
+	cmd.Env = appendDeveloperPath(append(os.Environ(),
+		fmt.Sprintf("BD_ACTOR=%s", sanitizeEnvValue(params.Actor)),
+	))
+
+	if out, err := cmd.CombinedOutput(); err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to add label: %v - %s", err, string(out)))
+		return
+	}
+
+	// RACE-04: coalesced background export (see requestExport / debouncedExporter).
+	requestExport()
+
+	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
+}
+
+func handleRemoveLabel(ctx context.Context, storage beads.Storage, req Request) {
+	var params struct {
+		ID    string `json:"id"`
+		Label string `json:"label"`
+		Actor string `json:"actor"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(req.ID, -32602, "Invalid params")
+		return
+	}
+
+	// SEC-03: terminate flag parsing with "--" so an ID or label beginning
+	// with "-" is treated as a positional, not a flag.
+	cmd := exec.Command("bd", "label", "remove", "--", params.ID, params.Label)
+	cmd.Env = appendDeveloperPath(append(os.Environ(),
+		fmt.Sprintf("BD_ACTOR=%s", sanitizeEnvValue(params.Actor)),
+	))
+
+	if out, err := cmd.CombinedOutput(); err != nil {
+		sendError(req.ID, -32000, fmt.Sprintf("failed to remove label: %v - %s", err, string(out)))
+		return
+	}
+
+	// RACE-04: coalesced background export (see requestExport / debouncedExporter).
+	requestExport()
+
+	sendResponse(Response{JSONRPC: "2.0", Result: "ok", ID: req.ID})
+}
+
 type Diagnostic struct {
 	IssueID string `json:"issue_id"`
 	Type    string `json:"type"` // e.g., "inverted_hierarchy", "dangling_ref", "cycle"
@@ -752,6 +817,10 @@ func dispatchRequest(ctx context.Context, storage beads.Storage, req Request) {
 		handleAddDependency(ctx, storage, req)
 	case "remove_dependency":
 		handleRemoveDependency(ctx, storage, req)
+	case "add_label":
+		handleAddLabel(ctx, storage, req)
+	case "remove_label":
+		handleRemoveLabel(ctx, storage, req)
 	case "get_version":
 		version := "unknown"
 		if info, ok := debug.ReadBuildInfo(); ok {
