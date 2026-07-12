@@ -38,15 +38,19 @@ class _CommandPaletteState extends State<CommandPalette> {
   List<Issue> _filteredIssues = [];
   int _selectedIndex = 0;
 
+  // Dedicated FocusNode for the search text field so we can direct focus to
+  // it explicitly without stealing from the outer key-handler Focus widget.
+  final _searchFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _filteredIssues = appState.currentIssues;
     _searchController.addListener(_onSearchChanged);
 
-    // Request focus on next frame to ensure text field gets keyboard focus
+    // Direct focus to the search input, not the outer Focus wrapper.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      _searchFocusNode.requestFocus();
     });
   }
 
@@ -55,6 +59,7 @@ class _CommandPaletteState extends State<CommandPalette> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _focusNode.dispose();
+    _searchFocusNode.dispose();
     _focusScopeNode.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -248,12 +253,12 @@ class _CommandPaletteState extends State<CommandPalette> {
                             Expanded(
                               child: MacosTextField(
                                 controller: _searchController,
+                                focusNode: _searchFocusNode,
                                 placeholder:
                                     'Search issues by ID, title, description, assignee...',
                                 decoration: const BoxDecoration(),
                                 focusedDecoration: const BoxDecoration(),
                                 style: theme.typography.title3,
-                                autofocus: true,
                               ),
                             ),
                             const SizedBox(width: 8),
