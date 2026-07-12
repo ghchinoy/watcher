@@ -82,7 +82,6 @@ class LabelChip extends StatelessWidget {
       child: MacosTooltip(
         message: label,
         child: Container(
-          alignment: Alignment.center,
           padding: EdgeInsets.symmetric(
             horizontal: compact ? 4 : 6,
             vertical: compact ? 0 : 1,
