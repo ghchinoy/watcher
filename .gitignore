@@ -61,3 +61,6 @@ sample_export.jsonl
 
 # Beads / Dolt files (added by bd init)
 .beads/proxieddb/
+
+# Local Analyses
+docs/analysis/
