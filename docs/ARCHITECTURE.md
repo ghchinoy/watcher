@@ -74,13 +74,19 @@ For automated, non-interactive tasks, Watcher calls the Gemini API directly via 
 1. **The Summarization Pipeline:** When a task is closed, `AppState` triggers an asynchronous call to `GenerativeAiService`. It uses `gemini-3-flash-preview` (via Vertex AI) to summarize the resolution based on comment history and description context.
 2. **System Comments:** The resulting summary is posted back to the issue as a system comment (e.g., `🤖 Resolution Summary: ...`), ensuring the resolution intent is captured in the `interactions.jsonl` audit trail and dashboard ticker.
 
+### 3. Copilot Health, Diagnostics & AI Assistant Suite (Unified Analysis)
+Watcher unifies static database-level validation (relational compiler errors) and qualitative AI semantic evaluation into a single Dashboard-integrated copilot panel.
+1. **Factual Grounding (Feed-Forward Loop):** Instead of isolated analysis, Watcher runs database diagnostics (`checkHealth()`) instantly on project load. These diagnostics (cycles, unassigned parents, etc.) are fed directly into the Gemini prompt as factual constraints alongside the issue graph (`CopilotContext`). This completely eliminates LLM hallucination, grounding Gemini's Scrum Master critique in 100% database fact.
+2. **Click-to-Execute Recommendations:** Gemini's recommendations are structured as JSON action payloads. Instead of copy-pasting markdown scripts, recommendations render on the Dashboard as native buttons that auto-execute mutations (e.g., `updateIssue`, `addDependency`, `removeDependency`, `createIssue`) with a single click, showing instant overlay toast confirmations.
+3. **No Terminal Disruptions:** The entire copilot execution is silent and runs in the background using Vertex AI/Gemini API calls, removing the need to spawn `tmux` or terminal windows for analytical checks.
+
 ### 4. Dependency Visualization and Authoring
 Watcher now renders the full two-layer `bd` graph model:
 - **Parent-child tree** (Tree View): the hierarchical organization of epics → tasks → subtasks.
 - **Blocks DAG** (Kanban badges, Tree pips, Ready Queue, Blocked view, Dependency Graph): the execution-ordering graph. The `IssueDependencies` model extension computes `blockers()`, `blocking()`, and `isBlocked()` from the in-memory issue list using the canonical bd direction — a dependency `{depends_on_id: Y, type: 'blocks'}` on issue X means X is blocked by Y.
 - **Dependency authoring**: the `add_dependency` and `remove_dependency` RPC methods on the `watcher-daemon` (backed by `beads.Storage.AddDependency` / `RemoveDependency`) allow the UI to create and remove `blocks`, `related`, and `discovered-from` edges from the Inspector panel.
 
-### 3. Future: Watcher Live (Voice Mode)
+### 5. Future: Watcher Live (Voice Mode)
 We plan to implement a real-time, multimodal "Live" mode using `liveGenerativeModel`. This will allow bidirectional audio streaming to query the status of all local projects simultaneously using natural language (e.g., *"Which of my projects has the most P0 tasks?"*).
 
 ## macOS HIG Compliance: Outline Views
@@ -152,4 +158,12 @@ All error handling previously used bare `debugPrint` calls or silent `catch (_) 
 - In **debug builds**: all levels print to the console with emoji prefixes; visible in Flutter DevTools under the named-logger filter.
 - In **release builds**: only `WARNING` and above reach the platform console; `DEBUG`/`INFO` go to DevTools only.
 - Zero new pub dependencies — `dart:developer` is part of the Dart SDK.
+
+## Visual Architecture Diagrams
+
+For detailed visual maps of Watcher's component layout and daemon communications, refer to the following lossless `.webp` diagrams (compiled from Graphviz sources):
+
+1. **[Widget Tree Diagram](widget_tree.webp)**: Outlines the full Flutter component layout, including our ShellRoute, resizable end sidebar/inspector, view-mode segmented control, and the new Copilot/Labels sections.
+2. **[Daemon IPC Architecture Diagram](ipc_architecture.webp)**: Shows the JSON-RPC stdin/stdout sidecar pattern, database file-watcher mechanics, and concurrency safety layers.
+
 
