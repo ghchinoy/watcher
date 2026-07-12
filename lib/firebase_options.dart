@@ -18,6 +18,20 @@ class DefaultFirebaseOptions {
     String? apiKey,
     String? appId,
   }) {
+    // Restored correct hardcoded fallback for the project owner's default project
+    if (projectId == 'generative-bazaar-001') {
+      return const FirebaseOptions(
+        apiKey: 'AIzaSyCKRFcmJXLwg0p-hzpiGJeAJq80Glz-Bhk',
+        appId: '1:187783458251:ios:6735f0dc023c50eca79a4e',
+        messagingSenderId: '187783458251',
+        projectId: 'generative-bazaar-001',
+        storageBucket: 'generative-bazaar-001.firebasestorage.app',
+        iosClientId:
+            '187783458251-n1jd7jnuu445q0t4fi7vsujfqrm4vu2c.apps.googleusercontent.com',
+        iosBundleId: 'wtf.ghc.watcher',
+      );
+    }
+
     return FirebaseOptions(
       apiKey: apiKey ?? 'AIzaSyPlaceholderKey',
       appId: appId ?? '1:placeholder:ios:placeholder',
