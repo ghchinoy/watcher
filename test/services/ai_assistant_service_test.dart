@@ -23,7 +23,9 @@ void main() {
         );
 
         final result = await AIAssistantService.assessProjectHealth(
+          aiProvider: 'gcp_vertex',
           gcpProjectId: null,
+          geminiApiKey: null,
           defaultAiModel: config,
           context: context,
         );
@@ -42,8 +44,38 @@ void main() {
         );
 
         final result = await AIAssistantService.assessProjectHealth(
+          aiProvider: 'gcp_vertex',
           gcpProjectId: 'my-gcp-project',
+          geminiApiKey: null,
           defaultAiModel: null,
+          context: context,
+        );
+
+        expect(result, isNull);
+      },
+    );
+
+    test(
+      'assessProjectHealth returns null if geminiApiKey is missing on direct_gemini',
+      () async {
+        final config = GenerativeModelConfig(
+          id: 'test-model',
+          displayName: 'Test Model',
+          identifier: 'gemini-3.5-flash',
+          region: 'us-central1',
+        );
+
+        final context = AIAssistantContext(
+          issues: [],
+          healthCheck: HealthCheckResult(status: 'ok', diagnostics: []),
+          interactions: [],
+        );
+
+        final result = await AIAssistantService.assessProjectHealth(
+          aiProvider: 'direct_gemini',
+          gcpProjectId: null,
+          geminiApiKey: null,
+          defaultAiModel: config,
           context: context,
         );
 

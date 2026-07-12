@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:firebase_ai/firebase_ai.dart' as fb_ai;
+import 'package:google_generative_ai/google_generative_ai.dart' as direct_ai;
 import '../models/ai_assistant.dart';
 import '../state/settings_repository.dart';
 import '../firebase_options.dart';
@@ -10,12 +11,17 @@ class AIAssistantService {
   static final _log = AppLogger('AIAssistantService');
   static bool _initialized = false;
 
-  static Future<void> ensureInitialized() async {
+  static Future<void> ensureInitialized({required String? gcpProjectId}) async {
     if (_initialized) return;
+    if (gcpProjectId == null || gcpProjectId.isEmpty) {
+      throw Exception('GCP Project ID is required for Vertex AI initialization.');
+    }
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.getOptions(projectId: gcpProjectId),
+        );
+      }
       _initialized = true;
     } catch (e) {
       _log.error('Failed to initialize Firebase in AIAssistantService', error: e);
@@ -24,36 +30,43 @@ class AIAssistantService {
 
   /// Runs background health assessment and returns parsed AIAssistantAssessment with critique and structured recommendations.
   static Future<AIAssistantAssessment?> assessProjectHealth({
+    required String? aiProvider,
     required String? gcpProjectId,
+    required String? geminiApiKey,
     required GenerativeModelConfig? defaultAiModel,
     required AIAssistantContext context,
   }) async {
-    await ensureInitialized();
-
     final config = defaultAiModel;
-    if (gcpProjectId == null || config == null) {
+    if (config == null) {
       _log.info(
         'AI configuration missing — skipping AI Assistant background assessment',
       );
       return null;
     }
 
+    final provider = aiProvider ?? 'direct_gemini';
+    if (provider == 'gcp_vertex') {
+      if (gcpProjectId == null || gcpProjectId.isEmpty) {
+        _log.info(
+          'AI configuration missing (GCP Project ID) — skipping AI Assistant background assessment',
+        );
+        return null;
+      }
+      await ensureInitialized(gcpProjectId: gcpProjectId);
+    } else if (provider == 'direct_gemini') {
+      if (geminiApiKey == null || geminiApiKey.isEmpty) {
+        _log.info(
+          'AI configuration missing (Gemini API Key) — skipping AI Assistant background assessment',
+        );
+        return null;
+      }
+    } else {
+      throw Exception('Unsupported AI provider: $provider');
+    }
+
     try {
-      final ai = FirebaseAI.vertexAI(location: config.region);
-
-      final model = ai.generativeModel(
-        model: config.identifier,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 2048,
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        ),
-      );
-
       final contextStr = context.toPromptString();
-
-      final prompt = [
-        Content.text('''
+      final promptText = '''
 You are an expert Agile Scrum Master and Project Manager.
 Analyze the following project context and health check diagnostic data representing a software project graph.
 
@@ -88,11 +101,38 @@ For each recommendation:
 - "add_dependency" payload format: {"issue_id": "string", "depends_on_id": "string", "type": "blocks | parent-child | related | discovered-from"}
 
 Provide high-quality, actionable recommendation items. ONLY return JSON. Do not include markdown code block backticks (e.g. ```json) around the JSON output, just the raw JSON object itself.
-'''),
-      ];
+''';
 
-      final response = await model.generateContent(prompt);
-      final responseText = response.text;
+      String? responseText;
+      if (provider == 'gcp_vertex') {
+        final ai = fb_ai.FirebaseAI.vertexAI(location: config.region);
+
+        final model = ai.generativeModel(
+          model: config.identifier,
+          generationConfig: fb_ai.GenerationConfig(
+            maxOutputTokens: 2048,
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          ),
+        );
+
+        final response = await model.generateContent([fb_ai.Content.text(promptText)]);
+        responseText = response.text;
+      } else {
+        final model = direct_ai.GenerativeModel(
+          model: config.identifier,
+          apiKey: geminiApiKey!,
+          generationConfig: direct_ai.GenerationConfig(
+            maxOutputTokens: 2048,
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          ),
+        );
+
+        final response = await model.generateContent([direct_ai.Content.text(promptText)]);
+        responseText = response.text;
+      }
+
       if (responseText == null || responseText.isEmpty) {
         _log.error('Empty response from AI Assistant Gemini');
         throw Exception('AI Assistant returned an empty response.');

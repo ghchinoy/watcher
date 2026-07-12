@@ -37,12 +37,12 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
   }
 
   Future<void> _loadInsights() async {
-    final gcpId = widget.appState.gcpProjectId;
+    final isConfigured = widget.appState.isAIAssistantConfigured;
     final modelConfig = widget.appState.defaultAiModel;
 
-    if (gcpId == null || gcpId.isEmpty || modelConfig == null) {
+    if (!isConfigured || modelConfig == null) {
       setState(() {
-        _error = 'AI configuration missing. Please configure GCP Project ID and AI Model in settings.';
+        _error = 'AI Assistant is not configured or enabled. Please update your AI settings.';
         _summary = null;
         _recommendations = [];
       });
@@ -61,7 +61,9 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
 
       final issues = widget.appState.currentIssues;
       final jsonStr = await GenerativeAiService.generateHealthInsights(
-        gcpProjectId: gcpId,
+        aiProvider: widget.appState.aiProvider,
+        gcpProjectId: widget.appState.gcpProjectId,
+        geminiApiKey: widget.appState.geminiApiKey,
         defaultAiModel: modelConfig,
         issues: issues,
         diagnostics: health.diagnostics,
