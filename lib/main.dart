@@ -183,6 +183,42 @@ class WatcherApp extends StatelessWidget {
               ],
             ),
             PlatformMenu(
+              label: 'View',
+              menus: [
+                PlatformMenuItemGroup(
+                  members: [
+                    PlatformMenuItem(
+                      label: 'Show Inspector',
+                      shortcut: const SingleActivator(
+                        LogicalKeyboardKey.keyI,
+                        meta: true,
+                        alt: true,
+                      ),
+                      onSelected: () {
+                        final context = appRouter
+                            .routerDelegate
+                            .navigatorKey
+                            .currentContext;
+                        if (context == null) return;
+                        final scope = MacosWindowScope.maybeOf(context);
+                        scope?.toggleEndSidebar();
+                      },
+                    ),
+                  ],
+                ),
+                PlatformMenuItemGroup(
+                  members: [
+                    if (PlatformProvidedMenuItem.hasMenu(
+                      PlatformProvidedMenuItemType.toggleFullScreen,
+                    ))
+                      const PlatformProvidedMenuItem(
+                        type: PlatformProvidedMenuItemType.toggleFullScreen,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            PlatformMenu(
               label: 'Window',
               menus: [
                 if (PlatformProvidedMenuItem.hasMenu(
@@ -203,6 +239,19 @@ class WatcherApp extends StatelessWidget {
                   const PlatformProvidedMenuItem(
                     type: PlatformProvidedMenuItemType.arrangeWindowsInFront,
                   ),
+              ],
+            ),
+            PlatformMenu(
+              label: 'Help',
+              menus: [
+                PlatformMenuItemGroup(
+                  members: [
+                    PlatformMenuItem(
+                      label: 'Watcher Help',
+                      onSelected: null, // placeholder — no help URL yet
+                    ),
+                  ],
+                ),
               ],
             ),
           ],
