@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:agent_watcher/models/issue.dart';
 import 'package:agent_watcher/models/interaction.dart';
-import 'package:agent_watcher/models/copilot.dart';
+import 'package:agent_watcher/models/ai_assistant.dart';
 
 void main() {
-  group('CopilotContext Model Tests', () {
+  group('AIAssistantContext Model Tests', () {
     final now = DateTime.now();
 
     test('toPromptString compiles context successfully', () {
@@ -54,7 +54,7 @@ void main() {
         extra: {'comment': 'Authentication refactored fully.'},
       );
 
-      final context = CopilotContext(
+      final context = AIAssistantContext(
         issues: [issue1, issue2],
         healthCheck: health,
         interactions: [interaction],
@@ -62,7 +62,7 @@ void main() {
 
       final promptString = context.toPromptString();
 
-      expect(promptString, contains('=== COPILOT CONTEXT ==='));
+      expect(promptString, contains('=== AI ASSISTANT CONTEXT ==='));
       expect(
         promptString,
         contains('watcher-1 [bug, open, P0]: Fix a critical bug'),
@@ -89,7 +89,7 @@ void main() {
     test('toPromptString handles empty state gracefully', () {
       final health = HealthCheckResult(status: 'ok', diagnostics: []);
 
-      final context = CopilotContext(
+      final context = AIAssistantContext(
         issues: [],
         healthCheck: health,
         interactions: [],

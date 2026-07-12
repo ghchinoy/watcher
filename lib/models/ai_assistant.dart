@@ -1,12 +1,12 @@
 import 'issue.dart';
 import 'interaction.dart';
 
-class CopilotContext {
+class AIAssistantContext {
   final List<Issue> issues;
   final HealthCheckResult healthCheck;
   final List<Interaction> interactions;
 
-  CopilotContext({
+  AIAssistantContext({
     required this.issues,
     required this.healthCheck,
     required this.interactions,
@@ -16,7 +16,7 @@ class CopilotContext {
   String toPromptString() {
     final sb = StringBuffer();
 
-    sb.writeln('=== COPILOT CONTEXT ===');
+    sb.writeln('=== AI ASSISTANT CONTEXT ===');
 
     // 1. Issues (Compact Nodes)
     sb.writeln('Issues:');
@@ -93,19 +93,19 @@ class CopilotContext {
   }
 }
 
-class CopilotRecommendation {
+class AIAssistantRecommendation {
   final String title;
   final String actionType;
   final Map<String, dynamic> payload;
 
-  CopilotRecommendation({
+  AIAssistantRecommendation({
     required this.title,
     required this.actionType,
     required this.payload,
   });
 
-  factory CopilotRecommendation.fromJson(Map<String, dynamic> json) {
-    return CopilotRecommendation(
+  factory AIAssistantRecommendation.fromJson(Map<String, dynamic> json) {
+    return AIAssistantRecommendation(
       title: json['title'] as String? ?? '',
       actionType: json['action_type'] as String? ?? '',
       payload:
@@ -120,21 +120,21 @@ class CopilotRecommendation {
   };
 }
 
-class CopilotAssessment {
+class AIAssistantAssessment {
   final String narrative;
-  final List<CopilotRecommendation> recommendations;
+  final List<AIAssistantRecommendation> recommendations;
 
-  CopilotAssessment({required this.narrative, required this.recommendations});
+  AIAssistantAssessment({required this.narrative, required this.recommendations});
 
-  factory CopilotAssessment.fromJson(Map<String, dynamic> json) {
+  factory AIAssistantAssessment.fromJson(Map<String, dynamic> json) {
     final list = json['recommendations'] as List<dynamic>? ?? [];
     final recommendations = list
         .map(
           (item) =>
-              CopilotRecommendation.fromJson(item as Map<String, dynamic>),
+              AIAssistantRecommendation.fromJson(item as Map<String, dynamic>),
         )
         .toList();
-    return CopilotAssessment(
+    return AIAssistantAssessment(
       narrative: json['narrative'] as String? ?? '',
       recommendations: recommendations,
     );

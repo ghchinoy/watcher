@@ -6,16 +6,16 @@ import '../services/generative_ai_service.dart';
 import '../models/issue.dart';
 import '../utils/dialog_utils.dart';
 
-class CopilotInsightsPanel extends StatefulWidget {
+class AIAssistantInsightsPanel extends StatefulWidget {
   final AppState appState;
 
-  const CopilotInsightsPanel({super.key, required this.appState});
+  const AIAssistantInsightsPanel({super.key, required this.appState});
 
   @override
-  State<CopilotInsightsPanel> createState() => _CopilotInsightsPanelState();
+  State<AIAssistantInsightsPanel> createState() => _AIAssistantInsightsPanelState();
 }
 
-class _CopilotInsightsPanelState extends State<CopilotInsightsPanel> {
+class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
   bool _isLoading = false;
   String? _error;
   String? _summary;
@@ -28,7 +28,7 @@ class _CopilotInsightsPanelState extends State<CopilotInsightsPanel> {
   }
 
   @override
-  void didUpdateWidget(CopilotInsightsPanel oldWidget) {
+  void didUpdateWidget(AIAssistantInsightsPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     // If project path or issues count or health diagnostics changed, reload insights automatically!
     if (oldWidget.appState.selectedProject?.path != widget.appState.selectedProject?.path) {
@@ -232,7 +232,7 @@ class _CopilotInsightsPanelState extends State<CopilotInsightsPanel> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Copilot Insights',
+                'AI Assistant Insights',
                 style: MacosTheme.of(context).typography.title3.copyWith(
                       color: textColor,
                       fontWeight: FontWeight.bold,
@@ -263,7 +263,7 @@ class _CopilotInsightsPanelState extends State<CopilotInsightsPanel> {
                   children: [
                     ProgressCircle(),
                     SizedBox(height: 12),
-                    Text('Consulting Gemini Copilot...'),
+                    Text('Consulting Gemini AI Assistant...'),
                   ],
                 ),
               ),

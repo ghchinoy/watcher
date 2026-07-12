@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:agent_watcher/models/issue.dart';
-import 'package:agent_watcher/models/copilot.dart';
-import 'package:agent_watcher/services/copilot_service.dart';
+import 'package:agent_watcher/models/ai_assistant.dart';
+import 'package:agent_watcher/services/ai_assistant_service.dart';
 import 'package:agent_watcher/state/settings_repository.dart';
 
 void main() {
-  group('CopilotService Tests', () {
+  group('AIAssistantService Tests', () {
     test(
       'assessProjectHealth returns null if gcpProjectId is missing',
       () async {
@@ -16,13 +16,13 @@ void main() {
           region: 'us-central1',
         );
 
-        final context = CopilotContext(
+        final context = AIAssistantContext(
           issues: [],
           healthCheck: HealthCheckResult(status: 'ok', diagnostics: []),
           interactions: [],
         );
 
-        final result = await CopilotService.assessProjectHealth(
+        final result = await AIAssistantService.assessProjectHealth(
           gcpProjectId: null,
           defaultAiModel: config,
           context: context,
@@ -35,13 +35,13 @@ void main() {
     test(
       'assessProjectHealth returns null if defaultAiModel is missing',
       () async {
-        final context = CopilotContext(
+        final context = AIAssistantContext(
           issues: [],
           healthCheck: HealthCheckResult(status: 'ok', diagnostics: []),
           interactions: [],
         );
 
-        final result = await CopilotService.assessProjectHealth(
+        final result = await AIAssistantService.assessProjectHealth(
           gcpProjectId: 'my-gcp-project',
           defaultAiModel: null,
           context: context,

@@ -93,7 +93,7 @@ Resolution Summary:
       final model = ai.generativeModel(
         model: config.identifier,
         generationConfig: GenerationConfig(
-          maxOutputTokens: 1000,
+          maxOutputTokens: 2048, // HIG-FIX: expanded from 1000 to prevent JSON truncation
           temperature: 0.2,
           responseMimeType: 'application/json',
         ),
@@ -106,7 +106,7 @@ Resolution Summary:
 
       final prompt = [
         Content.text('''
-You are an expert software engineering Copilot analyzing a project managed by a lightweight issue tracker called beads (bd).
+You are an expert software engineering AI Assistant analyzing a project managed by a lightweight issue tracker called beads (bd).
 Your task is to analyze the project's issue list and the static diagnostics/issues produced by the structural health checker.
 Using these, generate a beautiful, qualitative health summary and a list of recommended next actions that are actionable and can be executed via mutations.
 
@@ -158,7 +158,7 @@ Only return valid JSON following the schema. Do not return any markdown markdown
       return text;
     } catch (e) {
       _log.error('Generative AI health insights error', error: e);
-      return null;
+      rethrow; // HIG-FIX: rethrow the actual exception so it bubbles up to the UI instead of swallowing it
     }
   }
 }

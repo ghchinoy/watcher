@@ -6,7 +6,7 @@ import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/activity_ticker.dart';
 import '../widgets/planner_modal.dart';
-import '../widgets/copilot_insights_panel.dart';
+import '../widgets/ai_assistant_insights_panel.dart';
 import '../widgets/create_issue_modal.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/migration_gate_view.dart';
@@ -371,7 +371,7 @@ class ProjectDashboard extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 32),
-                            CopilotInsightsPanel(appState: appState),
+                             AIAssistantInsightsPanel(appState: appState),
                             const SizedBox(height: 32),
                             Text(
                               'Federation',

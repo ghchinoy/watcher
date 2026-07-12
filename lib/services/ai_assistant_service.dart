@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
-import '../models/copilot.dart';
+import '../models/ai_assistant.dart';
 import '../state/settings_repository.dart';
 import '../firebase_options.dart';
 import '../utils/app_logger.dart';
 
-class CopilotService {
-  static final _log = AppLogger('CopilotService');
+class AIAssistantService {
+  static final _log = AppLogger('AIAssistantService');
   static bool _initialized = false;
 
   static Future<void> ensureInitialized() async {
@@ -18,22 +18,22 @@ class CopilotService {
       );
       _initialized = true;
     } catch (e) {
-      _log.error('Failed to initialize Firebase in CopilotService', error: e);
+      _log.error('Failed to initialize Firebase in AIAssistantService', error: e);
     }
   }
 
-  /// Runs background health assessment and returns parsed CopilotAssessment with critique and structured recommendations.
-  static Future<CopilotAssessment?> assessProjectHealth({
+  /// Runs background health assessment and returns parsed AIAssistantAssessment with critique and structured recommendations.
+  static Future<AIAssistantAssessment?> assessProjectHealth({
     required String? gcpProjectId,
     required GenerativeModelConfig? defaultAiModel,
-    required CopilotContext context,
+    required AIAssistantContext context,
   }) async {
     await ensureInitialized();
 
     final config = defaultAiModel;
     if (gcpProjectId == null || config == null) {
       _log.info(
-        'AI configuration missing — skipping Copilot background assessment',
+        'AI configuration missing — skipping AI Assistant background assessment',
       );
       return null;
     }
@@ -94,8 +94,8 @@ Provide high-quality, actionable recommendation items. ONLY return JSON. Do not 
       final response = await model.generateContent(prompt);
       final responseText = response.text;
       if (responseText == null || responseText.isEmpty) {
-        _log.error('Empty response from Copilot Gemini');
-        return null;
+        _log.error('Empty response from AI Assistant Gemini');
+        throw Exception('AI Assistant returned an empty response.');
       }
 
       // Clean up the response just in case the LLM still wrapped it in backticks
@@ -114,15 +114,15 @@ Provide high-quality, actionable recommendation items. ONLY return JSON. Do not 
       final dynamic decoded = jsonDecode(cleanedText);
       if (decoded is! Map<String, dynamic>) {
         _log.error(
-          'Response from Copilot Gemini is not a JSON object: $cleanedText',
+          'Response from AI Assistant Gemini is not a JSON object: $cleanedText',
         );
-        return null;
+        throw Exception('Response is not a valid JSON object.');
       }
 
-      return CopilotAssessment.fromJson(decoded);
+      return AIAssistantAssessment.fromJson(decoded);
     } catch (e) {
       _log.error('Error during background project health assessment', error: e);
-      return null;
+      rethrow;
     }
   }
 }

@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/issue.dart';
-import '../models/copilot.dart';
+import '../models/ai_assistant.dart';
 import '../utils/app_logger.dart';
 import '../models/interaction.dart';
 import '../services/beads_service.dart';
 import '../services/generative_ai_service.dart';
-import '../services/copilot_service.dart';
+import '../services/ai_assistant_service.dart';
 import '../services/tmux_service.dart';
 import 'settings_repository.dart';
 import 'project_repository.dart';
@@ -17,8 +17,8 @@ import 'watcher_coordinator.dart';
 
 export 'settings_repository.dart' show GenerativeModelConfig, SidebarSortOrder;
 export 'project_repository.dart' show Project;
-export '../models/copilot.dart'
-    show CopilotContext, CopilotAssessment, CopilotRecommendation;
+export '../models/ai_assistant.dart'
+    show AIAssistantContext, AIAssistantAssessment, AIAssistantRecommendation;
 
 /// Carries the structured data from a schema_migration_required notification
 /// emitted by the daemon when the beads library refuses to auto-apply pending
@@ -99,7 +99,7 @@ class AppState extends ChangeNotifier {
   String? appVersion;
   String? currentConnectionMode;
 
-  CopilotAssessment? currentCopilotAssessment;
+  AIAssistantAssessment? currentAIAssistantAssessment;
   bool isAssessingProjectHealth = false;
 
   bool isLoading = false;
@@ -281,9 +281,9 @@ class AppState extends ChangeNotifier {
     return await _currentService!.checkHealth();
   }
 
-  Future<CopilotAssessment?> runCopilotAssessment() async {
+  Future<AIAssistantAssessment?> runAIAssistantAssessment() async {
     if (selectedProject == null || _currentService == null) {
-      _log.warning('No active project to assess with Copilot');
+      _log.warning('No active project to assess with AI Assistant');
       return null;
     }
 
@@ -292,22 +292,22 @@ class AppState extends ChangeNotifier {
 
     try {
       final healthCheck = await checkHealth();
-      final context = CopilotContext(
+      final context = AIAssistantContext(
         issues: currentIssues,
         healthCheck: healthCheck,
         interactions: currentInteractions,
       );
 
-      final assessment = await CopilotService.assessProjectHealth(
+      final assessment = await AIAssistantService.assessProjectHealth(
         gcpProjectId: gcpProjectId,
         defaultAiModel: defaultAiModel,
         context: context,
       );
 
-      currentCopilotAssessment = assessment;
+      currentAIAssistantAssessment = assessment;
       return assessment;
     } catch (e) {
-      _log.error('Failed to run background Copilot assessment', error: e);
+      _log.error('Failed to run background AI Assistant assessment', error: e);
       return null;
     } finally {
       isAssessingProjectHealth = false;
@@ -692,7 +692,7 @@ class AppState extends ChangeNotifier {
     await _settingsRepo.saveLastSelectedProject(project.path);
     isLoading = true;
     currentConnectionMode = null;
-    currentCopilotAssessment = null;
+    currentAIAssistantAssessment = null;
     isAssessingProjectHealth = false;
     projectErrors.remove(project.path);
     projectMigrationGates.remove(project.path);
