@@ -248,8 +248,20 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  // Vertex AI Settings
+  // AI Assistant Settings
+  bool aiEnabled = false;
+  String aiProvider = 'direct_gemini'; // gcp_vertex or direct_gemini
   String? gcpProjectId;
+  String? geminiApiKey;
+
+  bool get isAIAssistantConfigured {
+    if (!aiEnabled) return false;
+    if (aiProvider == 'gcp_vertex') {
+      return gcpProjectId != null && gcpProjectId!.isNotEmpty;
+    } else {
+      return geminiApiKey != null && geminiApiKey!.isNotEmpty;
+    }
+  }
 
   static final _log = AppLogger('AppState');
 
@@ -326,7 +338,10 @@ class AppState extends ChangeNotifier {
     showClosedInTree = settings.showClosedInTree;
     customBdPath = settings.customBdPath;
     sidebarSortOrder = settings.sidebarSortOrder;
+    aiEnabled = settings.aiEnabled;
+    aiProvider = settings.aiProvider;
     gcpProjectId = settings.gcpProjectId;
+    geminiApiKey = settings.geminiApiKey;
     aiModels = settings.aiModels;
     defaultAiModelId = settings.defaultAiModelId;
     actorName = settings.actorName;
@@ -381,6 +396,24 @@ class AppState extends ChangeNotifier {
   Future<void> setGcpProjectId(String? projectId) async {
     gcpProjectId = projectId;
     await _settingsRepo.saveGcpProjectId(projectId);
+    notifyListeners();
+  }
+
+  Future<void> setAiEnabled(bool value) async {
+    aiEnabled = value;
+    await _settingsRepo.saveAiEnabled(value);
+    notifyListeners();
+  }
+
+  Future<void> setAiProvider(String provider) async {
+    aiProvider = provider;
+    await _settingsRepo.saveAiProvider(provider);
+    notifyListeners();
+  }
+
+  Future<void> setGeminiApiKey(String? key) async {
+    geminiApiKey = key;
+    await _settingsRepo.saveGeminiApiKey(key);
     notifyListeners();
   }
 

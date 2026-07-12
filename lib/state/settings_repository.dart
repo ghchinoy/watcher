@@ -52,7 +52,10 @@ class AppSettings {
   final bool showClosedInTree;
   final String customBdPath;
   final SidebarSortOrder sidebarSortOrder;
+  final bool aiEnabled;
+  final String aiProvider;
   final String? gcpProjectId;
+  final String? geminiApiKey;
   final List<GenerativeModelConfig> aiModels;
   final String? defaultAiModelId;
   final String actorName;
@@ -68,7 +71,10 @@ class AppSettings {
     required this.showClosedInTree,
     required this.customBdPath,
     required this.sidebarSortOrder,
+    required this.aiEnabled,
+    required this.aiProvider,
     this.gcpProjectId,
+    this.geminiApiKey,
     required this.aiModels,
     this.defaultAiModelId,
     required this.actorName,
@@ -136,7 +142,10 @@ class SettingsRepository {
     final sidebarSortOrder = sortOrderStr == 'activity'
         ? SidebarSortOrder.activity
         : SidebarSortOrder.alphabetical;
+    final aiEnabled = prefs.getBool('ai_enabled') ?? false;
+    final aiProvider = prefs.getString('ai_provider') ?? 'direct_gemini';
     final gcpProjectId = prefs.getString('gcp_project_id');
+    final geminiApiKey = prefs.getString('gemini_api_key');
 
     final (aiModels, defaultAiModelId) = await _loadAiModels(prefs);
 
@@ -158,7 +167,10 @@ class SettingsRepository {
       showClosedInTree: showClosedInTree,
       customBdPath: customBdPath,
       sidebarSortOrder: sidebarSortOrder,
+      aiEnabled: aiEnabled,
+      aiProvider: aiProvider,
       gcpProjectId: gcpProjectId,
+      geminiApiKey: geminiApiKey,
       aiModels: aiModels,
       defaultAiModelId: defaultAiModelId,
       actorName: actorName,
@@ -318,6 +330,25 @@ class SettingsRepository {
       await prefs.setString('gcp_project_id', projectId);
     } else {
       await prefs.remove('gcp_project_id');
+    }
+  }
+
+  Future<void> saveAiEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('ai_enabled', value);
+  }
+
+  Future<void> saveAiProvider(String provider) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ai_provider', provider);
+  }
+
+  Future<void> saveGeminiApiKey(String? key) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (key != null && key.isNotEmpty) {
+      await prefs.setString('gemini_api_key', key);
+    } else {
+      await prefs.remove('gemini_api_key');
     }
   }
 
