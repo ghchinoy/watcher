@@ -88,6 +88,7 @@ class AppState extends ChangeNotifier {
 
   List<Issue> currentIssues = [];
   List<Interaction> currentInteractions = [];
+  HealthCheckResult? selectedProjectHealth;
   List<Map<String, String>> currentPeers = [];
   Issue? selectedIssue;
   List<Map<String, dynamic>> selectedIssueComments = [];
@@ -734,6 +735,12 @@ class AppState extends ChangeNotifier {
       currentInteractions = await _currentService!.getInteractions();
       currentPeers = await _currentService!.getPeers();
 
+      try {
+        selectedProjectHealth = await checkHealth();
+      } catch (e) {
+        _log.error('Failed to run initial health check', error: e);
+      }
+
       if (currentPeers.isNotEmpty) {
         _startSyncTimer();
       }
@@ -971,6 +978,13 @@ class AppState extends ChangeNotifier {
       currentIssues = newIssues;
       currentInteractions = newInteractions;
       currentPeers = newPeers;
+
+      try {
+        selectedProjectHealth = await checkHealth();
+      } catch (e) {
+        _log.error('Failed to run refresh health check', error: e);
+      }
+
       projectErrors.remove(projectPath);
 
       projectLastViewed[projectPath] = DateTime.now();

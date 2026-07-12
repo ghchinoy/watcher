@@ -81,4 +81,83 @@ class DialogUtils {
       ),
     );
   }
+
+  /// Shows a native-looking temporary success or error toast overlay.
+  static void showToast(
+    BuildContext context, {
+    required String message,
+    bool isError = false,
+  }) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          bottom: 40,
+          left: 0,
+          right: 0,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isError
+                    ? const Color(0xFFE53935)
+                    : MacosTheme.of(context).brightness.isDark
+                        ? const Color(0xFF28282B)
+                        : const Color(0xFFF4F5F6),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: MacosColors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: isError
+                      ? const Color(0xFFD32F2F)
+                      : MacosColors.systemGrayColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  MacosIcon(
+                    isError
+                        ? CupertinoIcons.exclamationmark_triangle_fill
+                        : CupertinoIcons.checkmark_circle_fill,
+                    color: isError ? MacosColors.white : MacosColors.systemGreenColor,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: isError
+                          ? MacosColors.white
+                          : MacosTheme.of(context).brightness.isDark
+                              ? const Color(0xFFF1F2F3)
+                              : const Color(0xFF1A1A1A),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (entry.mounted) {
+        entry.remove();
+      }
+    });
+  }
 }

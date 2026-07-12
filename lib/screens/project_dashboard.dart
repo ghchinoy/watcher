@@ -6,9 +6,8 @@ import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/activity_ticker.dart';
 import '../widgets/planner_modal.dart';
-import '../widgets/assessment_modal.dart';
+import '../widgets/copilot_insights_panel.dart';
 import '../widgets/create_issue_modal.dart';
-import '../widgets/health_check_modal.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/migration_gate_view.dart';
 import '../widgets/label_picker.dart';
@@ -17,31 +16,11 @@ import '../widgets/filter_chip_bar.dart';
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
 
-  void _showHealthCheck(BuildContext context) {
-    showMacosSheet(
-      context: context,
-      builder: (context) =>
-          MacosSheet(child: HealthCheckModal(appState: appState)),
-    );
-  }
-
   void _showPlanner(BuildContext context) {
     showMacosSheet(
       context: context,
       builder: (context) => MacosSheet(
         child: PlannerModal(
-          project: appState.selectedProject!,
-          appState: appState,
-        ),
-      ),
-    );
-  }
-
-  void _showAssessment(BuildContext context) {
-    showMacosSheet(
-      context: context,
-      builder: (context) => MacosSheet(
-        child: AssessmentModal(
           project: appState.selectedProject!,
           appState: appState,
         ),
@@ -213,20 +192,6 @@ class ProjectDashboard extends StatelessWidget {
                 showLabel: false,
                 tooltipMessage: 'Create Issue',
                 onPressed: () => _showCreateIssue(context),
-              ),
-              ToolBarIconButton(
-                label: 'Project Health Check',
-                icon: const MacosIcon(CupertinoIcons.heart_fill),
-                showLabel: false,
-                tooltipMessage: 'Project Health Check',
-                onPressed: () => _showHealthCheck(context),
-              ),
-              ToolBarIconButton(
-                label: 'AI Health Assessment',
-                icon: const MacosIcon(CupertinoIcons.heart),
-                showLabel: false,
-                tooltipMessage: 'AI Health Assessment',
-                onPressed: () => _showAssessment(context),
               ),
               ToolBarIconButton(
                 label: 'AI Planner',
@@ -405,6 +370,8 @@ class ProjectDashboard extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 32),
+                            CopilotInsightsPanel(appState: appState),
                             const SizedBox(height: 32),
                             Text(
                               'Federation',
