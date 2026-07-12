@@ -314,6 +314,8 @@ class AppState extends ChangeNotifier {
         gcpProjectId: gcpProjectId,
         defaultAiModel: defaultAiModel,
         context: context,
+        aiProvider: aiProvider,
+        geminiApiKey: geminiApiKey,
       );
 
       currentAIAssistantAssessment = assessment;
@@ -935,6 +937,8 @@ class AppState extends ChangeNotifier {
         defaultAiModel: defaultAiModel,
         issue: issue,
         comments: comments,
+        aiProvider: aiProvider,
+        geminiApiKey: geminiApiKey,
       );
 
       if (summary != null && summary.isNotEmpty) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../models/ai_assistant.dart';
@@ -27,37 +28,25 @@ class AIAssistantService {
     required String? gcpProjectId,
     required GenerativeModelConfig? defaultAiModel,
     required AIAssistantContext context,
+    String? aiProvider,
+    String? geminiApiKey,
+    http.Client? client,
   }) async {
-    await ensureInitialized();
-
     final config = defaultAiModel;
-    if (gcpProjectId == null || config == null) {
+    if (config == null) {
       _log.info(
         'AI configuration missing — skipping AI Assistant background assessment',
       );
       return null;
     }
 
-    try {
-      final ai = FirebaseAI.vertexAI(location: config.region);
+    final provider = aiProvider ?? 'direct_gemini';
 
-      final model = ai.generativeModel(
-        model: config.identifier,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 2048,
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        ),
-      );
-
-      final contextStr = context.toPromptString();
-
-      final prompt = [
-        Content.text('''
+    final promptText = '''
 You are an expert Agile Scrum Master and Project Manager.
 Analyze the following project context and health check diagnostic data representing a software project graph.
 
-$contextStr
+${context.toPromptString()}
 
 Please perform a qualitative "Health Assessment" critique. Look for:
 1. **Priority Inversions**: P2/P3 tasks blocking P0/P1 tasks.
@@ -88,41 +77,125 @@ For each recommendation:
 - "add_dependency" payload format: {"issue_id": "string", "depends_on_id": "string", "type": "blocks | parent-child | related | discovered-from"}
 
 Provide high-quality, actionable recommendation items. ONLY return JSON. Do not include markdown code block backticks (e.g. ```json) around the JSON output, just the raw JSON object itself.
-'''),
-      ];
+''';
 
-      final response = await model.generateContent(prompt);
-      final responseText = response.text;
-      if (responseText == null || responseText.isEmpty) {
-        _log.error('Empty response from AI Assistant Gemini');
-        throw Exception('AI Assistant returned an empty response.');
-      }
+    String responseText;
 
-      // Clean up the response just in case the LLM still wrapped it in backticks
-      var cleanedText = responseText.trim();
-      if (cleanedText.startsWith('```')) {
-        final firstNewline = cleanedText.indexOf('\n');
-        if (firstNewline != -1) {
-          cleanedText = cleanedText.substring(firstNewline + 1);
-        }
-        if (cleanedText.endsWith('```')) {
-          cleanedText = cleanedText.substring(0, cleanedText.length - 3);
-        }
-        cleanedText = cleanedText.trim();
-      }
-
-      final dynamic decoded = jsonDecode(cleanedText);
-      if (decoded is! Map<String, dynamic>) {
-        _log.error(
-          'Response from AI Assistant Gemini is not a JSON object: $cleanedText',
+    if (provider == 'gcp_vertex') {
+      if (gcpProjectId == null || gcpProjectId.isEmpty) {
+        _log.info(
+          'AI configuration missing — skipping AI Assistant background assessment',
         );
-        throw Exception('Response is not a valid JSON object.');
+        return null;
+      }
+      await ensureInitialized();
+
+      try {
+        final ai = FirebaseAI.vertexAI(location: config.region);
+
+        final model = ai.generativeModel(
+          model: config.identifier,
+          generationConfig: GenerationConfig(
+            maxOutputTokens: 2048,
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          ),
+        );
+
+        final response = await model.generateContent([Content.text(promptText)]);
+        final resText = response.text;
+        if (resText == null || resText.isEmpty) {
+          _log.error('Empty response from AI Assistant Gemini');
+          throw Exception('AI Assistant returned an empty response.');
+        }
+        responseText = resText;
+      } catch (e) {
+        _log.error('Error during background project health assessment via Vertex', error: e);
+        rethrow;
+      }
+    } else {
+      // direct_gemini
+      if (geminiApiKey == null || geminiApiKey.isEmpty) {
+        _log.info(
+          'AI configuration missing — skipping AI Assistant background assessment',
+        );
+        return null;
       }
 
-      return AIAssistantAssessment.fromJson(decoded);
-    } catch (e) {
-      _log.error('Error during background project health assessment', error: e);
-      rethrow;
+      final httpClient = client ?? http.Client();
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/${config.identifier}:generateContent?key=$geminiApiKey',
+        );
+        final response = await httpClient.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': promptText}
+                ]
+              }
+            ],
+            'generationConfig': {
+              'responseMimeType': 'application/json',
+              'temperature': 0.2,
+              'maxOutputTokens': 2048,
+            }
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('Gemini API call failed with status: ${response.statusCode}, body: ${response.body}');
+        }
+
+        final responseData = jsonDecode(response.body);
+        final candidates = responseData['candidates'] as List?;
+        if (candidates == null || candidates.isEmpty) {
+          throw Exception('No candidates returned from Gemini API');
+        }
+        final content = candidates[0]['content'];
+        final parts = content?['parts'] as List?;
+        if (parts == null || parts.isEmpty) {
+          throw Exception('No parts returned in Gemini content');
+        }
+        final resText = parts[0]['text'] as String?;
+        if (resText == null || resText.isEmpty) {
+          throw Exception('Gemini API returned an empty response text.');
+        }
+        responseText = resText;
+      } catch (e) {
+        _log.error('Error during background project health assessment via direct Gemini', error: e);
+        rethrow;
+      } finally {
+        if (client == null) {
+          httpClient.close();
+        }
+      }
     }
+
+    // Clean up the response just in case the LLM still wrapped it in backticks
+    var cleanedText = responseText.trim();
+    if (cleanedText.startsWith('```')) {
+      final firstNewline = cleanedText.indexOf('\n');
+      if (firstNewline != -1) {
+        cleanedText = cleanedText.substring(firstNewline + 1);
+      }
+      if (cleanedText.endsWith('```')) {
+        cleanedText = cleanedText.substring(0, cleanedText.length - 3);
+      }
+      cleanedText = cleanedText.trim();
+    }
+
+    final dynamic decoded = jsonDecode(cleanedText);
+    if (decoded is! Map<String, dynamic>) {
+      _log.error(
+        'Response from AI Assistant Gemini is not a JSON object: $cleanedText',
+      );
+      throw Exception('Response is not a valid JSON object.');
+    }
+
+    return AIAssistantAssessment.fromJson(decoded);
   }
 }

@@ -37,18 +37,6 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
   }
 
   Future<void> _loadInsights() async {
-    final gcpId = widget.appState.gcpProjectId;
-    final modelConfig = widget.appState.defaultAiModel;
-
-    if (gcpId == null || gcpId.isEmpty || modelConfig == null) {
-      setState(() {
-        _error = 'AI configuration missing. Please configure GCP Project ID and AI Model in settings.';
-        _summary = null;
-        _recommendations = [];
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _error = null;
@@ -57,7 +45,48 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
     try {
       // Run static checkHealth or use cached one
       HealthCheckResult? health = widget.appState.selectedProjectHealth;
-      health ??= await widget.appState.checkHealth();
+      if (health == null && widget.appState.selectedProject != null) {
+        health = await widget.appState.checkHealth();
+      }
+      health ??= HealthCheckResult(status: 'healthy', diagnostics: []);
+
+      if (!widget.appState.isAIAssistantConfigured) {
+        // Local-only Structural Health fallback branch
+        final mappedDiagnostics = health.diagnostics.map((diag) {
+          Map<String, dynamic> payload = {'id': diag.issueId};
+          String actionType = 'updateIssue';
+          if (diag.fix != null && diag.fix!.isNotEmpty) {
+            try {
+              final decodedFix = jsonDecode(diag.fix!);
+              if (decodedFix is Map<String, dynamic>) {
+                actionType = decodedFix['actionType'] as String? ?? 'updateIssue';
+                payload = decodedFix['payload'] as Map<String, dynamic>? ?? {'id': diag.issueId};
+              }
+            } catch (_) {
+              // fallback
+            }
+          }
+          return {
+            'title': 'Fix Local Structural Issue: ${diag.issueId}',
+            'description': '${diag.message} (Type: ${diag.type})',
+            'actionType': actionType,
+            'payload': payload,
+          };
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _summary = 'AI Assistant is disabled or unconfigured. Displaying local structural health diagnostics.';
+            _recommendations = mappedDiagnostics;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // AI-configured branch
+      final gcpId = widget.appState.gcpProjectId;
+      final modelConfig = widget.appState.defaultAiModel;
 
       final issues = widget.appState.currentIssues;
       final jsonStr = await GenerativeAiService.generateHealthInsights(
@@ -65,6 +94,8 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
         defaultAiModel: modelConfig,
         issues: issues,
         diagnostics: health.diagnostics,
+        aiProvider: widget.appState.aiProvider,
+        geminiApiKey: widget.appState.geminiApiKey,
       );
 
       if (jsonStr == null || jsonStr.isEmpty) {
@@ -225,14 +256,14 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
         children: [
           Row(
             children: [
-              const MacosIcon(
-                CupertinoIcons.sparkles,
-                color: MacosColors.systemPurpleColor,
+              MacosIcon(
+                widget.appState.isAIAssistantConfigured ? CupertinoIcons.sparkles : CupertinoIcons.shield_fill,
+                color: widget.appState.isAIAssistantConfigured ? MacosColors.systemPurpleColor : MacosColors.systemBlueColor,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                'AI Assistant Insights',
+                widget.appState.isAIAssistantConfigured ? 'AI Assistant Insights' : 'Local Structural Health',
                 style: MacosTheme.of(context).typography.title3.copyWith(
                       color: textColor,
                       fontWeight: FontWeight.bold,
@@ -256,14 +287,16 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
           ),
           const SizedBox(height: 12),
           if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.0),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
               child: Center(
                 child: Column(
                   children: [
-                    ProgressCircle(),
-                    SizedBox(height: 12),
-                    Text('Consulting Gemini AI Assistant...'),
+                    const ProgressCircle(),
+                    const SizedBox(height: 12),
+                    Text(widget.appState.isAIAssistantConfigured
+                        ? 'Consulting Gemini AI Assistant...'
+                        : 'Checking local database health...'),
                   ],
                 ),
               ),
@@ -373,17 +406,19 @@ class _AIAssistantInsightsPanelState extends State<AIAssistantInsightsPanel> {
                 },
               ),
             ] else ...[
-              const Row(
+              Row(
                 children: [
-                  MacosIcon(
+                  const MacosIcon(
                     CupertinoIcons.checkmark_seal_fill,
                     color: MacosColors.systemGreenColor,
                     size: 16,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'No outstanding recommendations. Project is in peak health!',
-                    style: TextStyle(
+                    widget.appState.isAIAssistantConfigured
+                        ? 'No outstanding recommendations. Project is in peak health!'
+                        : 'No local structural issues detected. Database is in peak health!',
+                    style: const TextStyle(
                       color: MacosColors.systemGreenColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

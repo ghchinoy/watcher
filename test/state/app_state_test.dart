@@ -187,6 +187,55 @@ void main() {
         expect(fakeService.getIssuesCount, 2);
       },
     );
+
+    group('isAIAssistantConfigured permutations', () {
+      test('is false when aiEnabled is false', () {
+        final state = AppState();
+        state.aiEnabled = false;
+        state.aiProvider = 'direct_gemini';
+        state.geminiApiKey = 'key123';
+        state.gcpProjectId = 'project123';
+        expect(state.isAIAssistantConfigured, isFalse);
+      });
+
+      test('is false when aiEnabled is true but direct_gemini and geminiApiKey is null/empty', () {
+        final state = AppState();
+        state.aiEnabled = true;
+        state.aiProvider = 'direct_gemini';
+        state.geminiApiKey = null;
+        expect(state.isAIAssistantConfigured, isFalse);
+
+        state.geminiApiKey = '';
+        expect(state.isAIAssistantConfigured, isFalse);
+      });
+
+      test('is true when aiEnabled is true, direct_gemini and geminiApiKey is configured', () {
+        final state = AppState();
+        state.aiEnabled = true;
+        state.aiProvider = 'direct_gemini';
+        state.geminiApiKey = 'valid-key';
+        expect(state.isAIAssistantConfigured, isTrue);
+      });
+
+      test('is false when aiEnabled is true but gcp_vertex and gcpProjectId is null/empty', () {
+        final state = AppState();
+        state.aiEnabled = true;
+        state.aiProvider = 'gcp_vertex';
+        state.gcpProjectId = null;
+        expect(state.isAIAssistantConfigured, isFalse);
+
+        state.gcpProjectId = '';
+        expect(state.isAIAssistantConfigured, isFalse);
+      });
+
+      test('is true when aiEnabled is true, gcp_vertex and gcpProjectId is configured', () {
+        final state = AppState();
+        state.aiEnabled = true;
+        state.aiProvider = 'gcp_vertex';
+        state.gcpProjectId = 'valid-project-id';
+        expect(state.isAIAssistantConfigured, isTrue);
+      });
+    });
   });
 }
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../models/issue.dart';
@@ -27,28 +29,19 @@ class GenerativeAiService {
     required Issue issue,
     required List<Map<String, dynamic>> comments,
     String? gitDiff,
+    String? aiProvider,
+    String? geminiApiKey,
+    http.Client? client,
   }) async {
-    await ensureInitialized();
-
     final config = defaultAiModel;
-    if (gcpProjectId == null || config == null) {
+    if (config == null) {
       _log.info('AI configuration missing — skipping summarization');
       return null;
     }
 
-    try {
-      final ai = FirebaseAI.vertexAI(location: config.region);
+    final provider = aiProvider ?? 'direct_gemini';
 
-      final model = ai.generativeModel(
-        model: config.identifier,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 250,
-          temperature: 0.2,
-        ),
-      );
-
-      final prompt = [
-        Content.text('''
+    final promptText = '''
 You are an expert software engineering assistant. 
 Summarize the resolution of the following issue in exactly one or two concise sentences. 
 Focus on *how* it was fixed based on the comments and context provided.
@@ -62,14 +55,86 @@ ${comments.map((c) => "${c['author']}: ${c['text']}").join('\n')}
 ${gitDiff != null ? "Git Diff:\n$gitDiff" : ""}
 
 Resolution Summary:
-'''),
-      ];
+''';
 
-      final response = await model.generateContent(prompt);
-      return response.text?.trim();
-    } catch (e) {
-      _log.error('Generative AI summarization error', error: e);
-      return null;
+    if (provider == 'gcp_vertex') {
+      if (gcpProjectId == null || gcpProjectId.isEmpty) {
+        _log.info('AI configuration missing — skipping summarization');
+        return null;
+      }
+      await ensureInitialized();
+
+      try {
+        final ai = FirebaseAI.vertexAI(location: config.region);
+
+        final model = ai.generativeModel(
+          model: config.identifier,
+          generationConfig: GenerationConfig(
+            maxOutputTokens: 250,
+            temperature: 0.2,
+          ),
+        );
+
+        final response = await model.generateContent([Content.text(promptText)]);
+        return response.text?.trim();
+      } catch (e) {
+        _log.error('Generative AI summarization error via Vertex', error: e);
+        return null;
+      }
+    } else {
+      // direct_gemini
+      if (geminiApiKey == null || geminiApiKey.isEmpty) {
+        _log.info('AI configuration missing — skipping summarization');
+        return null;
+      }
+
+      final httpClient = client ?? http.Client();
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/${config.identifier}:generateContent?key=$geminiApiKey',
+        );
+        final response = await httpClient.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': promptText}
+                ]
+              }
+            ],
+            'generationConfig': {
+              'temperature': 0.2,
+              'maxOutputTokens': 250,
+            }
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('Gemini API call failed with status: ${response.statusCode}');
+        }
+
+        final responseData = jsonDecode(response.body);
+        final candidates = responseData['candidates'] as List?;
+        if (candidates == null || candidates.isEmpty) {
+          throw Exception('No candidates returned from Gemini API');
+        }
+        final content = candidates[0]['content'];
+        final parts = content?['parts'] as List?;
+        if (parts == null || parts.isEmpty) {
+          throw Exception('No parts returned in Gemini content');
+        }
+        final text = parts[0]['text'] as String?;
+        return text?.trim();
+      } catch (e) {
+        _log.error('Generative AI summarization error via direct Gemini', error: e);
+        return null;
+      } finally {
+        if (client == null) {
+          httpClient.close();
+        }
+      }
     }
   }
 
@@ -78,34 +143,24 @@ Resolution Summary:
     required GenerativeModelConfig? defaultAiModel,
     required List<Issue> issues,
     required List<Diagnostic> diagnostics,
+    String? aiProvider,
+    String? geminiApiKey,
+    http.Client? client,
   }) async {
-    await ensureInitialized();
-
     final config = defaultAiModel;
-    if (gcpProjectId == null || config == null) {
+    if (config == null) {
       _log.info('AI configuration missing — skipping insights generation');
       return null;
     }
 
-    try {
-      final ai = FirebaseAI.vertexAI(location: config.region);
+    final provider = aiProvider ?? 'direct_gemini';
 
-      final model = ai.generativeModel(
-        model: config.identifier,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 2048, // HIG-FIX: expanded from 1000 to prevent JSON truncation
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        ),
-      );
+    final issuesText = issues.map((i) => '- ID: ${i.id}, Title: ${i.title}, Status: ${i.status}, Priority: ${i.priority}, Assignee: ${i.assignee}, Owner: ${i.owner}').join('\n');
+    final diagnosticsText = diagnostics.isEmpty
+        ? 'None. The project is completely healthy!'
+        : diagnostics.map((d) => '- Issue: ${d.issueId}, Type: ${d.type}, Message: ${d.message}, Suggested Fix: ${d.fix ?? "None"}').join('\n');
 
-      final issuesText = issues.map((i) => '- ID: ${i.id}, Title: ${i.title}, Status: ${i.status}, Priority: ${i.priority}, Assignee: ${i.assignee}, Owner: ${i.owner}').join('\n');
-      final diagnosticsText = diagnostics.isEmpty
-          ? 'None. The project is completely healthy!'
-          : diagnostics.map((d) => '- Issue: ${d.issueId}, Type: ${d.type}, Message: ${d.message}, Suggested Fix: ${d.fix ?? "None"}').join('\n');
-
-      final prompt = [
-        Content.text('''
+    final promptText = '''
 You are an expert software engineering AI Assistant analyzing a project managed by a lightweight issue tracker called beads (bd).
 Your task is to analyze the project's issue list and the static diagnostics/issues produced by the structural health checker.
 Using these, generate a beautiful, qualitative health summary and a list of recommended next actions that are actionable and can be executed via mutations.
@@ -139,26 +194,112 @@ Return a JSON object matching this schema:
 }
 
 Only return valid JSON following the schema. Do not return any markdown markdown-wrapping around the JSON, just the JSON string itself.
-'''),
-      ];
+''';
 
-      final response = await model.generateContent(prompt);
-      String? text = response.text?.trim();
-      if (text != null) {
-        if (text.startsWith('```json')) {
-          text = text.substring(7);
-        } else if (text.startsWith('```')) {
-          text = text.substring(3);
-        }
-        if (text.endsWith('```')) {
-          text = text.substring(0, text.length - 3);
-        }
-        text = text.trim();
+    if (provider == 'gcp_vertex') {
+      if (gcpProjectId == null || gcpProjectId.isEmpty) {
+        _log.info('AI configuration missing — skipping insights generation');
+        return null;
       }
-      return text;
-    } catch (e) {
-      _log.error('Generative AI health insights error', error: e);
-      rethrow; // HIG-FIX: rethrow the actual exception so it bubbles up to the UI instead of swallowing it
+      await ensureInitialized();
+
+      try {
+        final ai = FirebaseAI.vertexAI(location: config.region);
+
+        final model = ai.generativeModel(
+          model: config.identifier,
+          generationConfig: GenerationConfig(
+            maxOutputTokens: 2048, // HIG-FIX: expanded from 1000 to prevent JSON truncation
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          ),
+        );
+
+        final response = await model.generateContent([Content.text(promptText)]);
+        String? text = response.text?.trim();
+        if (text != null) {
+          if (text.startsWith('```json')) {
+            text = text.substring(7);
+          } else if (text.startsWith('```')) {
+            text = text.substring(3);
+          }
+          if (text.endsWith('```')) {
+            text = text.substring(0, text.length - 3);
+          }
+          text = text.trim();
+        }
+        return text;
+      } catch (e) {
+        _log.error('Generative AI health insights error via Vertex', error: e);
+        rethrow; // HIG-FIX: rethrow the actual exception so it bubbles up to the UI instead of swallowing it
+      }
+    } else {
+      // direct_gemini
+      if (geminiApiKey == null || geminiApiKey.isEmpty) {
+        _log.info('AI configuration missing — skipping insights generation');
+        return null;
+      }
+
+      final httpClient = client ?? http.Client();
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/${config.identifier}:generateContent?key=$geminiApiKey',
+        );
+        final response = await httpClient.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': promptText}
+                ]
+              }
+            ],
+            'generationConfig': {
+              'responseMimeType': 'application/json',
+              'temperature': 0.2,
+              'maxOutputTokens': 2048,
+            }
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('Gemini API call failed with status: ${response.statusCode}');
+        }
+
+        final responseData = jsonDecode(response.body);
+        final candidates = responseData['candidates'] as List?;
+        if (candidates == null || candidates.isEmpty) {
+          throw Exception('No candidates returned from Gemini API');
+        }
+        final content = candidates[0]['content'];
+        final parts = content?['parts'] as List?;
+        if (parts == null || parts.isEmpty) {
+          throw Exception('No parts returned in Gemini content');
+        }
+        String? text = parts[0]['text'] as String?;
+        if (text != null) {
+          text = text.trim();
+          if (text.startsWith('```json')) {
+            text = text.substring(7);
+          } else if (text.startsWith('```')) {
+            text = text.substring(3);
+          }
+          if (text.endsWith('```')) {
+            text = text.substring(0, text.length - 3);
+          }
+          text = text.trim();
+        }
+        return text;
+      } catch (e) {
+        _log.error('Generative AI health insights error via direct Gemini', error: e);
+        rethrow;
+      } finally {
+        if (client == null) {
+          httpClient.close();
+        }
+      }
     }
   }
 }
