@@ -5,6 +5,8 @@ import '../models/issue.dart';
 import '../widgets/view_mode_segmented_control.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/label_picker.dart';
+import '../widgets/filter_chip_bar.dart';
 
 /// A structured visualization of the blocks DAG — which issues are
 /// blocking which others, including chains that cross epic boundaries.
@@ -20,7 +22,7 @@ class DependencyGraphScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: appState,
       builder: (context, _) {
-        final all = appState.currentIssues;
+        final all = appState.filteredIssues;
 
         // Collect every issue that participates in a blocks relationship.
         final participantIds = <String>{};
@@ -67,6 +69,9 @@ class DependencyGraphScreen extends StatelessWidget {
                   : 'Dependency Graph',
             ),
             actions: [
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => const LabelPickerButton(),
+              ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
@@ -86,98 +91,115 @@ class DependencyGraphScreen extends StatelessWidget {
           children: [
             ContentArea(
               builder: (context, scrollController) {
-                if (appState.selectedProject == null) {
-                  return const Center(child: Text('No project selected.'));
-                }
-                if (appState.error != null) {
-                  return ErrorDisplayView(
-                    error: appState.error!,
-                    onRetry: () {
-                      if (appState.selectedProject != null) {
-                        appState.selectProject(appState.selectedProject!);
-                      }
-                    },
-                  );
-                }
-                if (appState.isLoading) {
-                  return const Center(child: ProgressCircle());
-                }
-                if (participantIds.isEmpty) {
-                  return const EmptyStateView(
-                    icon: CupertinoIcons.arrow_branch,
-                    title: 'No dependency edges',
-                    subtitle:
-                        'No "blocks" relationships have been recorded yet.',
-                  );
-                }
+                // Wraps the original body in an IIFE so a FilterChipBar can
+                // be inserted as a fixed row above it (GEMINI.md: filter
+                // chips live between ToolBar and ContentArea, not inside it
+                // unstyled) without restructuring every early return below.
+                final body = (() {
+                  if (appState.selectedProject == null) {
+                    return const Center(child: Text('No project selected.'));
+                  }
+                  if (appState.error != null) {
+                    return ErrorDisplayView(
+                      error: appState.error!,
+                      onRetry: () {
+                        if (appState.selectedProject != null) {
+                          appState.selectProject(appState.selectedProject!);
+                        }
+                      },
+                    );
+                  }
+                  if (appState.isLoading) {
+                    return const Center(child: ProgressCircle());
+                  }
+                  if (participantIds.isEmpty) {
+                    return const EmptyStateView(
+                      icon: CupertinoIcons.arrow_branch,
+                      title: 'No dependency edges',
+                      subtitle:
+                          'No "blocks" relationships have been recorded yet.',
+                    );
+                  }
 
-                return ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // Summary header
-                    _SummaryBar(
-                      chainCount: chainCount,
-                      blockedCount: blockedCount,
-                    ),
-                    const SizedBox(height: 20),
-                    if (roots.isNotEmpty) ...[
-                      Text(
-                        'Blocking chains',
-                        style: MacosTheme.of(context).typography.headline,
+                  return ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // Summary header
+                      _SummaryBar(
+                        chainCount: chainCount,
+                        blockedCount: blockedCount,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Completing issues at the top of each chain unblocks those below.',
-                        style: MacosTheme.of(context).typography.footnote
-                            .copyWith(color: MacosColors.systemGrayColor),
-                      ),
-                      const SizedBox(height: 12),
-                      ...roots.map(
-                        (root) => _ChainCard(root: root, allIssues: all),
-                      ),
+                      const SizedBox(height: 20),
+                      if (roots.isNotEmpty) ...[
+                        Text(
+                          'Blocking chains',
+                          style: MacosTheme.of(context).typography.headline,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Completing issues at the top of each chain unblocks those below.',
+                          style: MacosTheme.of(context).typography.footnote
+                              .copyWith(color: MacosColors.systemGrayColor),
+                        ),
+                        const SizedBox(height: 12),
+                        ...roots.map(
+                          (root) => _ChainCard(root: root, allIssues: all),
+                        ),
+                      ],
+                      // Isolated blocked issues (blocked by things not in roots —
+                      // e.g. their blockers are themselves blocked).
+                      () {
+                        final isolated =
+                            all
+                                .where(
+                                  (i) =>
+                                      participantIds.contains(i.id) &&
+                                      i.isBlocked(all) &&
+                                      i
+                                          .blockers(all)
+                                          .every(
+                                            (b) =>
+                                                !roots.any((r) => r.id == b.id),
+                                          ),
+                                )
+                                .toList()
+                              ..sort(
+                                (a, b) => a.priority.compareTo(b.priority),
+                              );
+                        if (isolated.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            Text(
+                              'Indirect impediments',
+                              style: MacosTheme.of(context).typography.headline,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Blocked by issues that are themselves blocked.',
+                              style: MacosTheme.of(context).typography.footnote
+                                  .copyWith(color: MacosColors.systemGrayColor),
+                            ),
+                            const SizedBox(height: 12),
+                            ...isolated.map(
+                              (i) => _IssueChip(
+                                issue: i,
+                                allIssues: all,
+                                indent: 0,
+                              ),
+                            ),
+                          ],
+                        );
+                      }(),
                     ],
-                    // Isolated blocked issues (blocked by things not in roots —
-                    // e.g. their blockers are themselves blocked).
-                    () {
-                      final isolated =
-                          all
-                              .where(
-                                (i) =>
-                                    participantIds.contains(i.id) &&
-                                    i.isBlocked(all) &&
-                                    i
-                                        .blockers(all)
-                                        .every(
-                                          (b) =>
-                                              !roots.any((r) => r.id == b.id),
-                                        ),
-                              )
-                              .toList()
-                            ..sort((a, b) => a.priority.compareTo(b.priority));
-                      if (isolated.isEmpty) return const SizedBox.shrink();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 20),
-                          Text(
-                            'Indirect impediments',
-                            style: MacosTheme.of(context).typography.headline,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Blocked by issues that are themselves blocked.',
-                            style: MacosTheme.of(context).typography.footnote
-                                .copyWith(color: MacosColors.systemGrayColor),
-                          ),
-                          const SizedBox(height: 12),
-                          ...isolated.map(
-                            (i) =>
-                                _IssueChip(issue: i, allIssues: all, indent: 0),
-                          ),
-                        ],
-                      );
-                    }(),
+                  );
+                })();
+                return Column(
+                  children: [
+                    const FilterChipBar(),
+                    Expanded(child: body),
                   ],
                 );
               },

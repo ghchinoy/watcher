@@ -7,6 +7,8 @@ import '../widgets/error_display_view.dart';
 import '../widgets/priority_badge.dart';
 import '../widgets/label_chip.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/label_picker.dart';
+import '../widgets/filter_chip_bar.dart';
 
 /// A list of every blocked issue with its open blockers shown inline.
 /// Mirrors `bd blocked` — the triage counterpart to the Ready Queue.
@@ -18,7 +20,7 @@ class BlockedScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: appState,
       builder: (context, _) {
-        final all = appState.currentIssues;
+        final all = appState.filteredIssues;
         final blocked =
             all
                 .where(
@@ -45,6 +47,9 @@ class BlockedScreen extends StatelessWidget {
                   : 'Blocked Issues',
             ),
             actions: [
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => const LabelPickerButton(),
+              ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
@@ -63,47 +68,61 @@ class BlockedScreen extends StatelessWidget {
           ),
           children: [
             ContentArea(
-              builder: (context, scrollController) {
-                if (appState.selectedProject == null) {
-                  return const Center(child: Text('No project selected.'));
-                }
-                if (appState.error != null) {
-                  return ErrorDisplayView(
-                    error: appState.error!,
-                    onRetry: () {
-                      if (appState.selectedProject != null) {
-                        appState.selectProject(appState.selectedProject!);
-                      }
-                    },
-                  );
-                }
-                if (appState.isLoading) {
-                  return const Center(child: ProgressCircle());
-                }
-                if (blocked.isEmpty) {
-                  return const EmptyStateView(
-                    icon: CupertinoIcons.checkmark_shield,
-                    iconColor: MacosColors.systemGreenColor,
-                    title: 'No impediments!',
-                    subtitle: 'No open issues are currently blocked.',
-                  );
-                }
-                return ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: blocked.length,
-                  itemBuilder: (context, index) {
-                    final issue = blocked[index];
-                    return _BlockedRow(issue: issue, allIssues: all);
-                  },
-                );
-              },
+              builder: (context, scrollController) => Column(
+                children: [
+                  const FilterChipBar(),
+                  Expanded(
+                    child: _buildBody(context, scrollController, blocked, all),
+                  ),
+                ],
+              ),
             ),
           ],
         );
       },
     );
   }
+}
+
+Widget _buildBody(
+  BuildContext context,
+  ScrollController scrollController,
+  List<Issue> blocked,
+  List<Issue> all,
+) {
+  if (appState.selectedProject == null) {
+    return const Center(child: Text('No project selected.'));
+  }
+  if (appState.error != null) {
+    return ErrorDisplayView(
+      error: appState.error!,
+      onRetry: () {
+        if (appState.selectedProject != null) {
+          appState.selectProject(appState.selectedProject!);
+        }
+      },
+    );
+  }
+  if (appState.isLoading) {
+    return const Center(child: ProgressCircle());
+  }
+  if (blocked.isEmpty) {
+    return const EmptyStateView(
+      icon: CupertinoIcons.checkmark_shield,
+      iconColor: MacosColors.systemGreenColor,
+      title: 'No impediments!',
+      subtitle: 'No open issues are currently blocked.',
+    );
+  }
+  return ListView.builder(
+    controller: scrollController,
+    padding: const EdgeInsets.all(16),
+    itemCount: blocked.length,
+    itemBuilder: (context, index) {
+      final issue = blocked[index];
+      return _BlockedRow(issue: issue, allIssues: all);
+    },
+  );
 }
 
 class _BlockedRow extends StatelessWidget {
@@ -182,10 +201,8 @@ class _BlockedRow extends StatelessWidget {
                               runSpacing: 2,
                               children: issue.labels!
                                   .map(
-                                    (label) => LabelChip(
-                                      label: label,
-                                      compact: true,
-                                    ),
+                                    (label) =>
+                                        LabelChip(label: label, compact: true),
                                   )
                                   .toList(),
                             ),

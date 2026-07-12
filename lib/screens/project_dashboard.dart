@@ -11,6 +11,8 @@ import '../widgets/create_issue_modal.dart';
 import '../widgets/health_check_modal.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/migration_gate_view.dart';
+import '../widgets/label_picker.dart';
+import '../widgets/filter_chip_bar.dart';
 
 class ProjectDashboard extends StatelessWidget {
   const ProjectDashboard({super.key});
@@ -170,7 +172,7 @@ class ProjectDashboard extends StatelessWidget {
           );
         }
 
-        final issues = appState.currentIssues;
+        final issues = appState.filteredIssues;
         final openCount = issues.where((i) => i.status == 'open').length;
         final openP1Count = issues
             .where((i) => i.status == 'open' && i.priority == 1)
@@ -233,6 +235,9 @@ class ProjectDashboard extends StatelessWidget {
                 tooltipMessage: 'AI Planner',
                 onPressed: () => _showPlanner(context),
               ),
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => const LabelPickerButton(),
+              ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
@@ -252,299 +257,328 @@ class ProjectDashboard extends StatelessWidget {
           children: [
             ContentArea(
               builder: (context, scrollController) {
-                return SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Project Overview',
-                        style: MacosTheme.of(context).typography.largeTitle,
-                      ),
-                      const SizedBox(height: 20),
-                      if (appState.projectRequiredVersion != null &&
-                          appState.daemonVersion != null &&
-                          appState.projectRequiredVersion !=
-                              appState.daemonVersion)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 20.0),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: MacosColors.systemRedColor.withValues(
-                                alpha: 0.1,
-                              ),
-                              border: Border.all(
-                                color: MacosColors.systemRedColor,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
+                return Column(
+                  children: [
+                    const FilterChipBar(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Project Overview',
+                              style: MacosTheme.of(
+                                context,
+                              ).typography.largeTitle,
                             ),
-                            child: Row(
-                              children: [
-                                const MacosIcon(
-                                  CupertinoIcons.exclamationmark_octagon_fill,
-                                  color: MacosColors.systemRedColor,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Incompatible Version: This project requires beads version ${appState.projectRequiredVersion}, but your Watcher daemon is running ${appState.daemonVersion}. Some features may be broken or unreadable.',
-                                    style: MacosTheme.of(
-                                      context,
-                                    ).typography.body,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (appState.currentConnectionMode == 'embedded')
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 20.0),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: MacosColors.systemOrangeColor.withValues(
-                                alpha: 0.1,
-                              ),
-                              border: Border.all(
-                                color: MacosColors.systemOrangeColor,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                const MacosIcon(
-                                  CupertinoIcons.info_circle_fill,
-                                  color: MacosColors.systemOrangeColor,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Dolt Embedded Mode: This project is running in single-writer mode. To avoid lock contention with background AI agents, we recommended running "bd dolt server" in your terminal.',
-                                    style: MacosTheme.of(
-                                      context,
-                                    ).typography.body,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                PushButton(
-                                  controlSize: ControlSize.small,
-                                  secondary: true,
-                                  onPressed: () => appState.launchDoltServer(),
-                                  child: const Text('Start Server'),
-                                ),
-                                const SizedBox(width: 8),
-                                PushButton(
-                                  controlSize: ControlSize.small,
-                                  secondary: true,
-                                  onPressed: () =>
-                                      appState.reconnectActiveProject(),
-                                  child: const Text('Reconnect'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      Row(
-                        children: [
-                          SimpleStatCard(
-                            title: 'Open',
-                            value: openCount.toString(),
-                          ),
-                          const SizedBox(width: 16),
-                          PriorityStatCard(
-                            p0Count: issues
-                                .where(
-                                  (i) => i.status == 'open' && i.priority == 0,
-                                )
-                                .length,
-                            p1Count: openP1Count,
-                            p2Count: openP2Count,
-                            p3Count: openP3Count,
-                          ),
-                          const SizedBox(width: 16),
-                          SimpleStatCard(
-                            title: 'In Progress',
-                            value: inProgressCount.toString(),
-                          ),
-                          const SizedBox(width: 16),
-                          SimpleStatCard(
-                            title: 'Closed',
-                            value: closedCount.toString(),
-                          ),
-                          const SizedBox(width: 16),
-                          SimpleStatCard(
-                            title: 'Total',
-                            value: issues.length.toString(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          ReadinessStatCard(
-                            readyCount: readyCount,
-                            blockedCount: blockedCount,
-                            onReadyTap: () => context.go('/ready'),
-                            onBlockedTap: () => context.go('/blocked'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Federation',
-                        style: MacosTheme.of(context).typography.title2,
-                      ),
-                      const SizedBox(height: 12),
-                      if (appState.currentPeers.isEmpty)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: MacosDynamicColor.resolve(
-                              MacosTheme.of(context).brightness.isDark
-                                  ? MacosColors
-                                        .alternatingContentBackgroundColor
-                                  : MacosColors.controlBackgroundColor,
-                              context,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: MacosColors.systemGrayColor.withValues(
-                                alpha: MacosTheme.of(context).brightness.isDark
-                                    ? 0.1
-                                    : 0.2,
-                              ),
-                            ),
-                          ),
-
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'No peers configured',
-                                  style: MacosTheme.of(
-                                    context,
-                                  ).typography.headline,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'This project only exists locally.',
-                                  style: MacosTheme.of(context).typography.body,
-                                ),
-
-                                const SizedBox(height: 12),
-                                PushButton(
-                                  controlSize: ControlSize.regular,
-                                  child: const Text('Configure Federation...'),
-                                  onPressed: () {
-                                    context.go('/project/settings');
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          decoration: BoxDecoration(
-                            color: MacosDynamicColor.resolve(
-                              MacosTheme.of(context).brightness.isDark
-                                  ? MacosColors
-                                        .alternatingContentBackgroundColor
-                                  : MacosColors.controlBackgroundColor,
-                              context,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: MacosColors.systemGrayColor.withValues(
-                                alpha: MacosTheme.of(context).brightness.isDark
-                                    ? 0.1
-                                    : 0.2,
-                              ),
-                            ),
-                          ),
-
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      '${appState.currentPeers.length} Peers Configured',
-                                      style: MacosTheme.of(
-                                        context,
-                                      ).typography.headline,
+                            const SizedBox(height: 20),
+                            if (appState.projectRequiredVersion != null &&
+                                appState.daemonVersion != null &&
+                                appState.projectRequiredVersion !=
+                                    appState.daemonVersion)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: MacosColors.systemRedColor
+                                        .withValues(alpha: 0.1),
+                                    border: Border.all(
+                                      color: MacosColors.systemRedColor,
                                     ),
-                                    PushButton(
-                                      controlSize: ControlSize.regular,
-                                      secondary: true,
-                                      onPressed: () {
-                                        appState.syncPeer();
-                                      },
-                                      child: const Text('Sync All'),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                ...appState.currentPeers.map(
-                                  (peer) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Row(
-                                      children: [
-                                        const MacosIcon(
-                                          CupertinoIcons.cloud,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          peer['name'] ?? '',
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const MacosIcon(
+                                        CupertinoIcons
+                                            .exclamationmark_octagon_fill,
+                                        color: MacosColors.systemRedColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Incompatible Version: This project requires beads version ${appState.projectRequiredVersion}, but your Watcher daemon is running ${appState.daemonVersion}. Some features may be broken or unreadable.',
                                           style: MacosTheme.of(
                                             context,
-                                          ).typography.headline,
+                                          ).typography.body,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          peer['url'] ?? '',
-                                          style: MacosTheme.of(context)
-                                              .typography
-                                              .footnote
-                                              .copyWith(
-                                                color:
-                                                    MacosColors.systemGrayColor,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                PushButton(
-                                  controlSize: ControlSize.regular,
-                                  child: const Text('Configure Federation...'),
-                                  onPressed: () {
-                                    context.go('/project/settings');
-                                  },
+                              ),
+                            if (appState.currentConnectionMode == 'embedded')
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: MacosColors.systemOrangeColor
+                                        .withValues(alpha: 0.1),
+                                    border: Border.all(
+                                      color: MacosColors.systemOrangeColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const MacosIcon(
+                                        CupertinoIcons.info_circle_fill,
+                                        color: MacosColors.systemOrangeColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Dolt Embedded Mode: This project is running in single-writer mode. To avoid lock contention with background AI agents, we recommended running "bd dolt server" in your terminal.',
+                                          style: MacosTheme.of(
+                                            context,
+                                          ).typography.body,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      PushButton(
+                                        controlSize: ControlSize.small,
+                                        secondary: true,
+                                        onPressed: () =>
+                                            appState.launchDoltServer(),
+                                        child: const Text('Start Server'),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      PushButton(
+                                        controlSize: ControlSize.small,
+                                        secondary: true,
+                                        onPressed: () =>
+                                            appState.reconnectActiveProject(),
+                                        child: const Text('Reconnect'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            Row(
+                              children: [
+                                SimpleStatCard(
+                                  title: 'Open',
+                                  value: openCount.toString(),
+                                ),
+                                const SizedBox(width: 16),
+                                PriorityStatCard(
+                                  p0Count: issues
+                                      .where(
+                                        (i) =>
+                                            i.status == 'open' &&
+                                            i.priority == 0,
+                                      )
+                                      .length,
+                                  p1Count: openP1Count,
+                                  p2Count: openP2Count,
+                                  p3Count: openP3Count,
+                                ),
+                                const SizedBox(width: 16),
+                                SimpleStatCard(
+                                  title: 'In Progress',
+                                  value: inProgressCount.toString(),
+                                ),
+                                const SizedBox(width: 16),
+                                SimpleStatCard(
+                                  title: 'Closed',
+                                  value: closedCount.toString(),
+                                ),
+                                const SizedBox(width: 16),
+                                SimpleStatCard(
+                                  title: 'Total',
+                                  value: issues.length.toString(),
                                 ),
                               ],
                             ),
-                          ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                ReadinessStatCard(
+                                  readyCount: readyCount,
+                                  blockedCount: blockedCount,
+                                  onReadyTap: () => context.go('/ready'),
+                                  onBlockedTap: () => context.go('/blocked'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+                            Text(
+                              'Federation',
+                              style: MacosTheme.of(context).typography.title2,
+                            ),
+                            const SizedBox(height: 12),
+                            if (appState.currentPeers.isEmpty)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: MacosDynamicColor.resolve(
+                                    MacosTheme.of(context).brightness.isDark
+                                        ? MacosColors
+                                              .alternatingContentBackgroundColor
+                                        : MacosColors.controlBackgroundColor,
+                                    context,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: MacosColors.systemGrayColor
+                                        .withValues(
+                                          alpha:
+                                              MacosTheme.of(
+                                                context,
+                                              ).brightness.isDark
+                                              ? 0.1
+                                              : 0.2,
+                                        ),
+                                  ),
+                                ),
+
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'No peers configured',
+                                        style: MacosTheme.of(
+                                          context,
+                                        ).typography.headline,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'This project only exists locally.',
+                                        style: MacosTheme.of(
+                                          context,
+                                        ).typography.body,
+                                      ),
+
+                                      const SizedBox(height: 12),
+                                      PushButton(
+                                        controlSize: ControlSize.regular,
+                                        child: const Text(
+                                          'Configure Federation...',
+                                        ),
+                                        onPressed: () {
+                                          context.go('/project/settings');
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: MacosDynamicColor.resolve(
+                                    MacosTheme.of(context).brightness.isDark
+                                        ? MacosColors
+                                              .alternatingContentBackgroundColor
+                                        : MacosColors.controlBackgroundColor,
+                                    context,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: MacosColors.systemGrayColor
+                                        .withValues(
+                                          alpha:
+                                              MacosTheme.of(
+                                                context,
+                                              ).brightness.isDark
+                                              ? 0.1
+                                              : 0.2,
+                                        ),
+                                  ),
+                                ),
+
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${appState.currentPeers.length} Peers Configured',
+                                            style: MacosTheme.of(
+                                              context,
+                                            ).typography.headline,
+                                          ),
+                                          PushButton(
+                                            controlSize: ControlSize.regular,
+                                            secondary: true,
+                                            onPressed: () {
+                                              appState.syncPeer();
+                                            },
+                                            child: const Text('Sync All'),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ...appState.currentPeers.map(
+                                        (peer) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 8.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const MacosIcon(
+                                                CupertinoIcons.cloud,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                peer['name'] ?? '',
+                                                style: MacosTheme.of(
+                                                  context,
+                                                ).typography.headline,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                peer['url'] ?? '',
+                                                style: MacosTheme.of(context)
+                                                    .typography
+                                                    .footnote
+                                                    .copyWith(
+                                                      color: MacosColors
+                                                          .systemGrayColor,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      PushButton(
+                                        controlSize: ControlSize.regular,
+                                        child: const Text(
+                                          'Configure Federation...',
+                                        ),
+                                        onPressed: () {
+                                          context.go('/project/settings');
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 32),
+                            Text(
+                              'Recent Activity',
+                              style: MacosTheme.of(context).typography.title2,
+                            ),
+                            const SizedBox(height: 12),
+                            const ActivityTicker(),
+                          ],
                         ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Recent Activity',
-                        style: MacosTheme.of(context).typography.title2,
                       ),
-                      const SizedBox(height: 12),
-                      const ActivityTicker(),
-                    ],
-                  ),
+                    ),
+                  ],
                 );
               },
             ),

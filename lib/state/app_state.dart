@@ -45,6 +45,20 @@ class SchemaMigrationGate {
   }
 }
 
+/// Which set a label filter belongs to when toggled via
+/// [AppState.toggleLabelFilter] — mirrors bd CLI's own filter semantics
+/// (`--label`/`--label-any`/`--exclude-label`).
+enum LabelFilterMode {
+  /// AND: the issue must have every label in [AppState.labelFiltersAll].
+  all,
+
+  /// OR: the issue must have at least one label in [AppState.labelFiltersAny].
+  any,
+
+  /// EXCLUDE: the issue must have none of [AppState.labelFiltersExclude].
+  exclude,
+}
+
 /// Outcome of an issue mutation (RACE-03 / REL-01).
 enum MutationResult {
   /// The change was applied.
@@ -114,11 +128,83 @@ class AppState extends ChangeNotifier {
   /// All unique labels seen across the currently loaded project's issues,
   /// sorted alphabetically. Powers the Inspector's add-label autocomplete
   /// suggestion list (to reduce label sprawl from typos like `tech-debt` vs
-  /// `tech_debt`) and, in Phase 3, the fuzzy Label Picker.
+  /// `tech_debt`) and the fuzzy Label Picker.
   List<String> get allKnownLabels {
     final labels = currentIssues.expand((i) => i.labels ?? <String>[]).toSet();
     final sorted = labels.toList()..sort();
     return sorted;
+  }
+
+  // ── Label filtering (Phase 3) ─────────────────────────────────────────
+  // Session-scoped only (deliberately NOT persisted to SharedPreferences,
+  // unlike showClosedInTree) to avoid a confusing "why is my board empty"
+  // moment on next launch. Modeled as three sets mirroring bd CLI's own
+  // --label/--label-any/--exclude-label filter semantics.
+
+  /// AND: issues must have every label in this set.
+  final Set<String> labelFiltersAll = {};
+
+  /// OR: issues must have at least one label in this set.
+  final Set<String> labelFiltersAny = {};
+
+  /// EXCLUDE: issues must have none of the labels in this set.
+  final Set<String> labelFiltersExclude = {};
+
+  bool get hasActiveLabelFilters =>
+      labelFiltersAll.isNotEmpty ||
+      labelFiltersAny.isNotEmpty ||
+      labelFiltersExclude.isNotEmpty;
+
+  /// [currentIssues] narrowed by the active label filters (AND ∩ OR ∖
+  /// EXCLUDE). Screens should read from this instead of [currentIssues]
+  /// directly, then apply their own status/blocked-ness `.where()` chains on
+  /// top, same as they did before.
+  List<Issue> get filteredIssues {
+    if (!hasActiveLabelFilters) return currentIssues;
+    return currentIssues.where((issue) {
+      final labels = issue.labels?.toSet() ?? const <String>{};
+      if (labelFiltersAll.isNotEmpty &&
+          !labelFiltersAll.every(labels.contains)) {
+        return false;
+      }
+      if (labelFiltersAny.isNotEmpty &&
+          !labelFiltersAny.any(labels.contains)) {
+        return false;
+      }
+      if (labelFiltersExclude.isNotEmpty &&
+          labelFiltersExclude.any(labels.contains)) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  /// Toggles [label] in the given filter [mode]'s set. A label can only be
+  /// active in one set at a time (AND/OR/EXCLUDE are mutually exclusive per
+  /// label) to avoid contradictory states like a label being simultaneously
+  /// required and excluded.
+  void toggleLabelFilter(String label, LabelFilterMode mode) {
+    final targetSet = switch (mode) {
+      LabelFilterMode.all => labelFiltersAll,
+      LabelFilterMode.any => labelFiltersAny,
+      LabelFilterMode.exclude => labelFiltersExclude,
+    };
+    if (targetSet.contains(label)) {
+      targetSet.remove(label);
+    } else {
+      labelFiltersAll.remove(label);
+      labelFiltersAny.remove(label);
+      labelFiltersExclude.remove(label);
+      targetSet.add(label);
+    }
+    notifyListeners();
+  }
+
+  void clearLabelFilters() {
+    labelFiltersAll.clear();
+    labelFiltersAny.clear();
+    labelFiltersExclude.clear();
+    notifyListeners();
   }
 
   /// Non-null when the currently selected project's daemon emitted a

@@ -6,6 +6,8 @@ import '../widgets/kanban_column.dart';
 import '../widgets/create_issue_modal.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/label_picker.dart';
+import '../widgets/filter_chip_bar.dart';
 
 class KanbanScreen extends StatelessWidget {
   const KanbanScreen({super.key});
@@ -89,7 +91,7 @@ class KanbanScreen extends StatelessWidget {
           );
         }
 
-        final issues = appState.currentIssues;
+        final issues = appState.filteredIssues;
         final openIssues = issues.where((i) => i.status == 'open').toList();
         final inProgressIssues = issues
             .where((i) => i.status == 'in_progress')
@@ -116,6 +118,9 @@ class KanbanScreen extends StatelessWidget {
                 tooltipMessage: 'Create Issue',
                 onPressed: () => _showCreateIssue(context),
               ),
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => const LabelPickerButton(),
+              ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
@@ -135,36 +140,43 @@ class KanbanScreen extends StatelessWidget {
           children: [
             ContentArea(
               builder: (context, scrollController) {
+                Widget body;
                 if (issues.isEmpty) {
-                  return const EmptyStateView(
+                  body = const EmptyStateView(
                     icon: CupertinoIcons.checkmark_seal_fill,
                     title: 'No issues found',
                   );
+                } else {
+                  body = SingleChildScrollView(
+                    controller: scrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        KanbanColumn(
+                          title: 'Open',
+                          statusKey: 'open',
+                          issues: openIssues,
+                        ),
+                        KanbanColumn(
+                          title: 'In Progress',
+                          statusKey: 'in_progress',
+                          issues: inProgressIssues,
+                        ),
+                        KanbanColumn(
+                          title: 'Closed',
+                          statusKey: 'closed',
+                          issues: closedIssues,
+                        ),
+                      ],
+                    ),
+                  );
                 }
-
-                return SingleChildScrollView(
-                  controller: scrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      KanbanColumn(
-                        title: 'Open',
-                        statusKey: 'open',
-                        issues: openIssues,
-                      ),
-                      KanbanColumn(
-                        title: 'In Progress',
-                        statusKey: 'in_progress',
-                        issues: inProgressIssues,
-                      ),
-                      KanbanColumn(
-                        title: 'Closed',
-                        statusKey: 'closed',
-                        issues: closedIssues,
-                      ),
-                    ],
-                  ),
+                return Column(
+                  children: [
+                    const FilterChipBar(),
+                    Expanded(child: body),
+                  ],
                 );
               },
             ),

@@ -7,6 +7,8 @@ import '../widgets/tree_node.dart';
 import '../widgets/create_issue_modal.dart';
 import '../widgets/error_display_view.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/label_picker.dart';
+import '../widgets/filter_chip_bar.dart';
 
 class TreeViewScreen extends StatefulWidget {
   const TreeViewScreen({super.key});
@@ -148,7 +150,7 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
           );
         }
 
-        final issues = appState.currentIssues;
+        final issues = appState.filteredIssues;
 
         // Find all top-level issues (those without a parent-child dependency)
         // and filter out closed issues by default, UNLESS they have open children.
@@ -209,6 +211,9 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
                     : 'Show Closed Issues',
                 onPressed: appState.toggleShowClosedInTree,
               ),
+              CustomToolbarItem(
+                inToolbarBuilder: (context) => const LabelPickerButton(),
+              ),
               ToolBarIconButton(
                 label: 'Toggle Inspector',
                 icon: const MacosIcon(CupertinoIcons.sidebar_right),
@@ -228,25 +233,32 @@ class _TreeViewScreenState extends State<TreeViewScreen> {
           children: [
             ContentArea(
               builder: (context, scrollController) {
+                Widget body;
                 if (topLevelIssues.isEmpty) {
-                  return const EmptyStateView(
+                  body = const EmptyStateView(
                     icon: CupertinoIcons.checkmark_seal_fill,
                     title: 'No open issues found',
                   );
+                } else {
+                  body = ListView.builder(
+                    key: _treeKey,
+                    controller: scrollController,
+                    itemCount: topLevelIssues.length,
+                    itemBuilder: (context, index) {
+                      return TreeNode(
+                        issue: topLevelIssues[index],
+                        allIssues: issues,
+                        depth: 0,
+                        defaultExpanded: _defaultExpanded,
+                      );
+                    },
+                  );
                 }
-
-                return ListView.builder(
-                  key: _treeKey,
-                  controller: scrollController,
-                  itemCount: topLevelIssues.length,
-                  itemBuilder: (context, index) {
-                    return TreeNode(
-                      issue: topLevelIssues[index],
-                      allIssues: issues,
-                      depth: 0,
-                      defaultExpanded: _defaultExpanded,
-                    );
-                  },
+                return Column(
+                  children: [
+                    const FilterChipBar(),
+                    Expanded(child: body),
+                  ],
                 );
               },
             ),
