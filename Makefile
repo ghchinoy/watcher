@@ -1,4 +1,4 @@
-.PHONY: help build install clean run update-bd
+.PHONY: help build install clean run update-bd prune
 
 APP_NAME = Watcher.app
 # Use absolute path for the build directory so the symlink resolves correctly from anywhere
@@ -21,6 +21,14 @@ build: build-daemon ## Build the macOS release app and embed the daemon
 	@cp daemon/watcher-daemon $(BUILD_DIR)/$(APP_NAME)/Contents/Resources/watcher-daemon
 	@echo "Re-signing the app bundle..."
 	codesign --force --deep --sign - $(BUILD_DIR)/$(APP_NAME)
+	@$(MAKE) prune
+
+prune: ## Prune intermediate build files to save space
+	@echo "Pruning intermediate build artifacts..."
+	@rm -rf build/macos/Build/Intermediates.noindex
+	@rm -rf build/macos/ModuleCache.noindex
+	@rm -rf build/macos/Build/Products/Release/FlutterMacOS.framework.dSYM
+	@find build/macos/Build/Products/Release -maxdepth 1 -not -name "Watcher.app" -not -name "Release" -exec rm -rf {} + 2>/dev/null || true
 
 build-daemon: ## Build the Go daemon
 	@echo "Building watcher-daemon..."

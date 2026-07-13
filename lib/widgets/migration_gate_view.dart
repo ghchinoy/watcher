@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show SelectableText;
 import 'package:flutter/services.dart';
@@ -32,6 +33,25 @@ class MigrationGateView extends StatefulWidget {
 class _MigrationGateViewState extends State<MigrationGateView> {
   bool _launching = false;
   bool _copied = false;
+
+  String? _extractSemver(String? versionString) {
+    if (versionString == null) return null;
+    final match = RegExp(r'(\d+)\.(\d+)\.(\d+)').firstMatch(versionString);
+    return match?.group(0);
+  }
+
+  bool _isCliOutdated() {
+    final cli = _extractSemver(widget.appState.cliVersion);
+    final daemon = _extractSemver(widget.appState.daemonVersion);
+    if (cli == null || daemon == null) return false;
+    final cliParts = cli.split('.').map(int.parse).toList();
+    final daemonParts = daemon.split('.').map(int.parse).toList();
+    for (int i = 0; i < 3; i++) {
+      if (cliParts[i] < daemonParts[i]) return true;
+      if (cliParts[i] > daemonParts[i]) return false;
+    }
+    return false;
+  }
 
   Future<void> _runMigration() async {
     setState(() => _launching = true);
@@ -68,6 +88,14 @@ class _MigrationGateViewState extends State<MigrationGateView> {
       const CupertinoDynamicColor.withBrightness(
         color: Color(0xFFB45309),
         darkColor: Color(0xFFFBBF24),
+      ),
+      context,
+    );
+
+    final errorColor = MacosDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: Color(0xFFDC2626),
+        darkColor: Color(0xFFFCA5A5),
       ),
       context,
     );
@@ -198,6 +226,91 @@ class _MigrationGateViewState extends State<MigrationGateView> {
                   ],
                 ),
               ),
+              if (_isCliOutdated()) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: errorColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: errorColor.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MacosIcon(
+                        CupertinoIcons.exclamationmark_octagon_fill,
+                        size: 14,
+                        color: errorColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Outdated beads CLI Detected',
+                              style: MacosTheme.of(context)
+                                  .typography
+                                  .footnote
+                                  .copyWith(
+                                    color: errorColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Watcher\'s engine expects beads version ${widget.appState.daemonVersion ?? "unknown"}, '
+                              'but your CLI is at ${widget.appState.cliVersion ?? "unknown"}. '
+                              'Running the migration now will fail or be a no-op because your CLI does not know how to apply schema version ${gate.targetVersion}. '
+                              'Please upgrade your CLI first.',
+                              style: MacosTheme.of(context)
+                                  .typography
+                                  .footnote
+                                  .copyWith(color: errorColor),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Upgrade command:',
+                              style: MacosTheme.of(context)
+                                  .typography
+                                  .footnote
+                                  .copyWith(
+                                    color: errorColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            const SizedBox(height: 3),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: innerBgColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: SelectableText(
+                                Platform.isMacOS
+                                    ? 'CGO_CFLAGS="-I\$(brew --prefix icu4c)/include" CGO_LDFLAGS="-L\$(brew --prefix icu4c)/lib" CGO_CXXFLAGS="-std=c++17 -I\$(brew --prefix icu4c)/include" go install github.com/steveyegge/beads/cmd/bd@latest'
+                                    : 'go install github.com/steveyegge/beads/cmd/bd@latest',
+                                style: MacosTheme.of(context)
+                                    .typography
+                                    .footnote
+                                    .copyWith(
+                                      fontFamily: 'CupertinoSystemMonospaced',
+                                      fontSize: 10,
+                                      color: innerTextColor,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // Commands block
