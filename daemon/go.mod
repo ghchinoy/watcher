@@ -2,7 +2,7 @@ module github.com/ghchinoy/watcher-daemon
 
 go 1.26.2
 
-require github.com/steveyegge/beads v1.1.0
+require github.com/steveyegge/beads v1.1.1-0.20260711070917-64a136d56e8a
 
 require (
 	cel.dev/expr v0.25.1 // indirect
