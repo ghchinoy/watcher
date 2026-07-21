@@ -34,8 +34,8 @@ build-daemon: ## Build the Go daemon
 	@echo "Building watcher-daemon..."
 	cd daemon && CGO_CFLAGS="-I$$(brew --prefix icu4c)/include" CGO_LDFLAGS="-L$$(brew --prefix icu4c)/lib" CGO_CXXFLAGS="-std=c++17 -I$$(brew --prefix icu4c)/include" go build -o watcher-daemon
 
-update-bd: ## Update the embedded beads dependency to the latest upstream release
-	@echo "Updating github.com/steveyegge/beads to @latest..."
+update-bd: ## Update the embedded beads dependency to the latest stable release
+	@echo "Updating github.com/steveyegge/beads to @latest stable release..."
 	@cd daemon && go get github.com/steveyegge/beads@latest && go mod tidy
 	@LATEST=$$(cd daemon && go list -m github.com/steveyegge/beads | awk '{print $$2}'); \
 	echo "Successfully updated to version $$LATEST."; \
