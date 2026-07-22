@@ -93,6 +93,10 @@ class BeadsService {
   /// receives the structured gate data so the UI can render MigrationGateView.
   void Function(Map<String, dynamic> params)? onSchemaMigrationRequired;
 
+  /// Invoked when the daemon emits a schema_version_mismatch notification,
+  /// meaning the database schema version differs from what the binary supports.
+  void Function(Map<String, dynamic> params)? onSchemaVersionMismatch;
+
   final Future<Process> Function(
     String executable,
     List<String> arguments, {
@@ -111,6 +115,7 @@ class BeadsService {
     this.onModeChanged,
     this.onCrash,
     this.onSchemaMigrationRequired,
+    this.onSchemaVersionMismatch,
     String Function()? bdPathResolver,
     Future<Process> Function(
       String executable,
@@ -200,6 +205,13 @@ class BeadsService {
                 final params = response['params'] as Map<String, dynamic>;
                 _log.warning('Daemon schema_migration_required', error: params);
                 onSchemaMigrationRequired?.call(params);
+                return;
+              }
+
+              if (response['method'] == 'schema_version_mismatch') {
+                final params = response['params'] as Map<String, dynamic>;
+                _log.warning('Daemon schema_version_mismatch', error: params);
+                onSchemaVersionMismatch?.call(params);
                 return;
               }
 

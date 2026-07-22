@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -133,6 +134,17 @@ func TestSanitizeEnvValue(t *testing.T) {
 		if got != tc.expected {
 			t.Errorf("sanitizeEnvValue(%q) = %q; want %q", tc.input, got, tc.expected)
 		}
+	}
+}
+
+func TestParseSchemaVersionMismatchError(t *testing.T) {
+	err := fmt.Errorf("schema version mismatch: database is at v54, binary knows up to v53 (1 migration ahead)")
+	dbVer, binVer, ok := parseSchemaVersionMismatchError(err)
+	if !ok {
+		t.Fatalf("expected parseSchemaVersionMismatchError to succeed")
+	}
+	if dbVer != "v54" || binVer != "v53" {
+		t.Errorf("expected dbVer v54, binVer v53, got dbVer %s, binVer %s", dbVer, binVer)
 	}
 }
 

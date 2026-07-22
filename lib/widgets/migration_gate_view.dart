@@ -429,3 +429,119 @@ class _MigrationGateViewState extends State<MigrationGateView> {
     );
   }
 }
+
+class SchemaVersionMismatchView extends StatelessWidget {
+  final SchemaVersionMismatch mismatch;
+  final AppState appState;
+  final VoidCallback? onRetry;
+
+  const SchemaVersionMismatchView({
+    super.key,
+    required this.mismatch,
+    required this.appState,
+    this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final warningColor = MacosDynamicColor.resolve(
+      const CupertinoDynamicColor.withBrightness(
+        color: Color(0xFFB45309),
+        darkColor: Color(0xFFFBBF24),
+      ),
+      context,
+    );
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 560),
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(
+            color: MacosDynamicColor.resolve(
+              MacosColors.controlBackgroundColor,
+              context,
+            ),
+            borderRadius: BorderRadius.circular(10.0),
+            border: Border.all(
+              color: warningColor.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  MacosIcon(
+                    CupertinoIcons.exclamationmark_triangle_fill,
+                    size: 28,
+                    color: warningColor,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Schema Version Mismatch',
+                      style: MacosTheme.of(context).typography.headline.copyWith(
+                            color: warningColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: warningColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: warningColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  'Database: ${mismatch.databaseVersion} | Binary supports up to: ${mismatch.binaryVersion}',
+                  style: MacosTheme.of(context).typography.footnote.copyWith(
+                        fontFamily: 'CupertinoSystemMonospaced',
+                        color: warningColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'The database in this project requires a different schema version than supported by the Watcher daemon.',
+                style: MacosTheme.of(context).typography.body,
+              ),
+              const SizedBox(height: 12),
+              if (mismatch.recommendation.isNotEmpty) ...[
+                Text(
+                  'Recommendation: ${mismatch.recommendation}',
+                  style: MacosTheme.of(context).typography.body.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (onRetry != null)
+                    PushButton(
+                      controlSize: ControlSize.regular,
+                      secondary: true,
+                      onPressed: onRetry,
+                      child: const Text('Retry Connection'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

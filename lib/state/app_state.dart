@@ -50,6 +50,26 @@ class SchemaMigrationGate {
   }
 }
 
+class SchemaVersionMismatch {
+  final String databaseVersion;
+  final String binaryVersion;
+  final String recommendation;
+
+  const SchemaVersionMismatch({
+    required this.databaseVersion,
+    required this.binaryVersion,
+    required this.recommendation,
+  });
+
+  factory SchemaVersionMismatch.fromJson(Map<String, dynamic> json) {
+    return SchemaVersionMismatch(
+      databaseVersion: json['database_version'] as String? ?? '',
+      binaryVersion: json['binary_version'] as String? ?? '',
+      recommendation: json['recommendation'] as String? ?? '',
+    );
+  }
+}
+
 /// Which set a label filter belongs to when toggled via
 /// [AppState.toggleLabelFilter] — mirrors bd CLI's own filter semantics
 /// (`--label`/`--label-any`/`--exclude-label`).
@@ -124,6 +144,7 @@ class AppState extends ChangeNotifier {
   // Track schema migration gate state per project path. Non-null when the
   // daemon emitted a schema_migration_required notification for that project.
   Map<String, SchemaMigrationGate> projectMigrationGates = {};
+  Map<String, SchemaVersionMismatch> projectSchemaVersionMismatches = {};
 
   // Track expanded nodes in the tree view per project
   Set<String> expandedNodes = {};
@@ -219,6 +240,12 @@ class AppState extends ChangeNotifier {
   /// schema_migration_required notification. The UI renders MigrationGateView.
   SchemaMigrationGate? get schemaMigrationGate => selectedProject != null
       ? projectMigrationGates[selectedProject!.path]
+      : null;
+
+  /// Non-null when the currently selected project's daemon emitted a
+  /// schema_version_mismatch notification.
+  SchemaVersionMismatch? get schemaVersionMismatch => selectedProject != null
+      ? projectSchemaVersionMismatches[selectedProject!.path]
       : null;
 
   late final WatcherCoordinator _watcher;
@@ -731,6 +758,7 @@ class AppState extends ChangeNotifier {
     isAssessingProjectHealth = false;
     projectErrors.remove(project.path);
     projectMigrationGates.remove(project.path);
+    projectSchemaVersionMismatches.remove(project.path);
 
     projectLastViewed[project.path] = DateTime.now();
     _saveLastViewed();
@@ -754,6 +782,11 @@ class AppState extends ChangeNotifier {
           projectMigrationGates[project.path] = SchemaMigrationGate.fromJson(
             params,
           );
+          notifyListeners();
+        },
+        onSchemaVersionMismatch: (params) {
+          projectSchemaVersionMismatches[project.path] =
+              SchemaVersionMismatch.fromJson(params);
           notifyListeners();
         },
         bdPathResolver: () => customBdPath.isNotEmpty ? customBdPath : 'bd',

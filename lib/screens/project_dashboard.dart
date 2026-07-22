@@ -103,9 +103,9 @@ class ProjectDashboard extends StatelessWidget {
         }
 
         if (appState.error != null) {
-          // If the error is a schema migration gate, render the purpose-built
-          // MigrationGateView with actionable buttons instead of a raw error box.
+          // If the error is a schema migration gate or mismatch, render purpose-built views.
           final gate = appState.schemaMigrationGate;
+          final mismatch = appState.schemaVersionMismatch;
           return MacosScaffold(
             toolBar: ToolBar(
               title: const Text('Dashboard'),
@@ -128,24 +128,38 @@ class ProjectDashboard extends StatelessWidget {
             ),
             children: [
               ContentArea(
-                builder: (context, scrollController) => gate != null
-                    ? MigrationGateView(
-                        gate: gate,
-                        appState: appState,
-                        onRetry: () {
-                          if (appState.selectedProject != null) {
-                            appState.selectProject(appState.selectedProject!);
-                          }
-                        },
-                      )
-                    : ErrorDisplayView(
-                        error: appState.error!,
-                        onRetry: () {
-                          if (appState.selectedProject != null) {
-                            appState.selectProject(appState.selectedProject!);
-                          }
-                        },
-                      ),
+                builder: (context, scrollController) {
+                  if (gate != null) {
+                    return MigrationGateView(
+                      gate: gate,
+                      appState: appState,
+                      onRetry: () {
+                        if (appState.selectedProject != null) {
+                          appState.selectProject(appState.selectedProject!);
+                        }
+                      },
+                    );
+                  }
+                  if (mismatch != null) {
+                    return SchemaVersionMismatchView(
+                      mismatch: mismatch,
+                      appState: appState,
+                      onRetry: () {
+                        if (appState.selectedProject != null) {
+                          appState.selectProject(appState.selectedProject!);
+                        }
+                      },
+                    );
+                  }
+                  return ErrorDisplayView(
+                    error: appState.error!,
+                    onRetry: () {
+                      if (appState.selectedProject != null) {
+                        appState.selectProject(appState.selectedProject!);
+                      }
+                    },
+                  );
+                },
               ),
             ],
           );

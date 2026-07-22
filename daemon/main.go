@@ -27,6 +27,13 @@ var migrationGateRe = regexp.MustCompile(
 	`refusing to auto-apply (\d+) pending schema migrations? to a remote-backed database \((\S+) -> (\S+)\)`,
 )
 
+// schemaVersionMismatchRe matches error string emitted when the database schema
+// version differs from what the beads binary supports.
+// Example: "schema version mismatch: database is at v54, binary knows up to v53 (1 migration ahead)"
+var schemaVersionMismatchRe = regexp.MustCompile(
+	`schema version mismatch: database is at (v?\d+), binary knows up to (v?\d+)`,
+)
+
 // schemaMigrationNotification is the JSON-RPC notification emitted to the UI
 // when the migration gate fires. The UI renders a purpose-built panel instead
 // of the generic error box.
@@ -42,6 +49,18 @@ type schemaMigrationNotificationParams struct {
 	TargetVersion  string   `json:"target_version"`
 	// Ordered commands to run on the primary clone.
 	Commands []string `json:"commands"`
+}
+
+type schemaVersionMismatchNotification struct {
+	JSONRPC string                                  `json:"jsonrpc"`
+	Method  string                                  `json:"method"`
+	Params  schemaVersionMismatchNotificationParams `json:"params"`
+}
+
+type schemaVersionMismatchNotificationParams struct {
+	DatabaseVersion string `json:"database_version"`
+	BinaryVersion   string `json:"binary_version"`
+	Recommendation  string `json:"recommendation"`
 }
 
 // emitSchemaMigrationNotification writes a schema_migration_required
@@ -64,6 +83,21 @@ func emitSchemaMigrationNotification(pending int, current, target string) {
 	fmt.Printf("%s\n", string(b))
 }
 
+func emitSchemaVersionMismatchNotification(dbVer, binVer string) {
+	recommendation := "Run 'make update-bd && make install' to upgrade Watcher daemon"
+	notif := schemaVersionMismatchNotification{
+		JSONRPC: "2.0",
+		Method:  "schema_version_mismatch",
+		Params: schemaVersionMismatchNotificationParams{
+			DatabaseVersion: dbVer,
+			BinaryVersion:   binVer,
+			Recommendation:  recommendation,
+		},
+	}
+	b, _ := json.Marshal(notif)
+	fmt.Printf("%s\n", string(b))
+}
+
 // parseMigrationGateError checks whether err matches the beads remote-migrate
 // gate message. Returns (pending, current, target, true) on match.
 func parseMigrationGateError(err error) (int, string, string, bool) {
@@ -77,6 +111,17 @@ func parseMigrationGateError(err error) (int, string, string, bool) {
 	var pending int
 	fmt.Sscanf(m[1], "%d", &pending)
 	return pending, m[2], m[3], true
+}
+
+func parseSchemaVersionMismatchError(err error) (string, string, bool) {
+	if err == nil {
+		return "", "", false
+	}
+	m := schemaVersionMismatchRe.FindStringSubmatch(err.Error())
+	if m == nil {
+		return "", "", false
+	}
+	return m[1], m[2], true
 }
 
 // appendDeveloperPath returns a copy of env with robust macOS developer paths
@@ -851,6 +896,8 @@ func main() {
 		// actionable buttons instead of a raw error string.
 		if pending, current, target, ok := parseMigrationGateError(err); ok {
 			emitSchemaMigrationNotification(pending, current, target)
+		} else if dbVer, binVer, ok := parseSchemaVersionMismatchError(err); ok {
+			emitSchemaVersionMismatchNotification(dbVer, binVer)
 		}
 		// Serialize the error properly so newlines in err.Error() don't break JSON structure
 		errResp := Response{

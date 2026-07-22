@@ -30,9 +30,18 @@ prune: ## Prune intermediate build files to save space
 	@rm -rf build/macos/Build/Products/Release/FlutterMacOS.framework.dSYM
 	@find build/macos/Build/Products/Release -maxdepth 1 -not -name "Watcher.app" -not -name "Release" -exec rm -rf {} + 2>/dev/null || true
 
-build-daemon: ## Build the Go daemon
+build-daemon: check-bd-skew ## Build the Go daemon
 	@echo "Building watcher-daemon..."
 	cd daemon && CGO_CFLAGS="-I$$(brew --prefix icu4c)/include" CGO_LDFLAGS="-L$$(brew --prefix icu4c)/lib" CGO_CXXFLAGS="-std=c++17 -I$$(brew --prefix icu4c)/include" go build -o watcher-daemon
+
+check-bd-skew: ## Check for version skew between installed bd CLI and embedded beads dependency
+	@CLI_VER=$$(bd version 2>/dev/null | head -n 1 | awk '{print $$3}' || echo "unknown"); \
+	EMBEDDED_VER=$$(cd daemon && go list -m github.com/steveyegge/beads | awk '{print $$2}'); \
+	echo "Installed bd CLI version: $$CLI_VER"; \
+	echo "Embedded daemon beads version: $$EMBEDDED_VER"; \
+	if [ "$$CLI_VER" != "$$EMBEDDED_VER" ] && [ "$$CLI_VER" != "unknown" ]; then \
+		echo "Notice: Version info — bd CLI ($$CLI_VER) vs daemon beads ($$EMBEDDED_VER)."; \
+	fi
 
 update-bd: ## Update the embedded beads dependency to the latest stable release
 	@echo "Updating github.com/steveyegge/beads to @latest stable release..."
