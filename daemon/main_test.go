@@ -148,6 +148,30 @@ func TestParseSchemaVersionMismatchError(t *testing.T) {
 	}
 }
 
+func TestFormatDatabaseOpenError(t *testing.T) {
+	var buf bytes.Buffer
+	outputWriter = &buf
+
+	err := fmt.Errorf("schema version mismatch: database is at v55, binary knows up to v54 (1 migration ahead)")
+	msg := formatDatabaseOpenError(err)
+
+	expectedRec := "Please rebuild Watcher ('make update-bd && make install') or obtain a newer version of Watcher."
+	if !strings.Contains(msg, expectedRec) {
+		t.Errorf("Expected msg to contain recommendation %q, got %q", expectedRec, msg)
+	}
+
+	var notif schemaVersionMismatchNotification
+	if err := json.Unmarshal(buf.Bytes(), &notif); err != nil {
+		t.Fatalf("Failed to unmarshal notification: %v. Output: %q", err, buf.String())
+	}
+	if notif.Method != "schema_version_mismatch" {
+		t.Errorf("Expected method schema_version_mismatch, got %s", notif.Method)
+	}
+	if !strings.Contains(notif.Params.Recommendation, "obtain a newer version of Watcher") {
+		t.Errorf("Expected recommendation in notification to mention newer version, got %q", notif.Params.Recommendation)
+	}
+}
+
 func TestCommentsFlagInjection(t *testing.T) {
 	originalWd, err := os.Getwd()
 	if err != nil {
@@ -205,7 +229,7 @@ func TestCheckHealthCaching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Create .beads subdirectory
 	beadsDir := filepath.Join(tempDir, ".beads")

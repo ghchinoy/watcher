@@ -80,11 +80,11 @@ func emitSchemaMigrationNotification(pending int, current, target string) {
 		},
 	}
 	b, _ := json.Marshal(notif)
-	fmt.Printf("%s\n", string(b))
+	_, _ = fmt.Fprintf(outputWriter, "%s\n", string(b))
 }
 
 func emitSchemaVersionMismatchNotification(dbVer, binVer string) {
-	recommendation := "Run 'make update-bd && make install' to upgrade Watcher daemon"
+	recommendation := "Rebuild Watcher ('make update-bd && make install') or obtain a newer version of Watcher to support this database schema."
 	notif := schemaVersionMismatchNotification{
 		JSONRPC: "2.0",
 		Method:  "schema_version_mismatch",
@@ -95,7 +95,7 @@ func emitSchemaVersionMismatchNotification(dbVer, binVer string) {
 		},
 	}
 	b, _ := json.Marshal(notif)
-	fmt.Printf("%s\n", string(b))
+	_, _ = fmt.Fprintf(outputWriter, "%s\n", string(b))
 }
 
 // parseMigrationGateError checks whether err matches the beads remote-migrate
@@ -109,7 +109,7 @@ func parseMigrationGateError(err error) (int, string, string, bool) {
 		return 0, "", "", false
 	}
 	var pending int
-	fmt.Sscanf(m[1], "%d", &pending)
+	_, _ = fmt.Sscanf(m[1], "%d", &pending)
 	return pending, m[2], m[3], true
 }
 
@@ -122,6 +122,19 @@ func parseSchemaVersionMismatchError(err error) (string, string, bool) {
 		return "", "", false
 	}
 	return m[1], m[2], true
+}
+
+// formatDatabaseOpenError produces an informative error message when database connection fails,
+// appending recovery guidance if a schema version mismatch is identified.
+func formatDatabaseOpenError(err error) string {
+	if dbVer, binVer, ok := parseSchemaVersionMismatchError(err); ok {
+		emitSchemaVersionMismatchNotification(dbVer, binVer)
+		return fmt.Sprintf("Failed to open beads database: %v. Please rebuild Watcher ('make update-bd && make install') or obtain a newer version of Watcher.", err)
+	}
+	if pending, current, target, ok := parseMigrationGateError(err); ok {
+		emitSchemaMigrationNotification(pending, current, target)
+	}
+	return fmt.Sprintf("Failed to open beads database: %v", err)
 }
 
 // appendDeveloperPath returns a copy of env with robust macOS developer paths
@@ -891,25 +904,19 @@ func main() {
 	storage, err := beads.OpenFromConfig(ctx, beadsDir)
 	if err != nil {
 		// Check whether the beads library refused to auto-migrate a remote-backed
-		// database (schema version skew). If so, emit a structured notification
-		// BEFORE the error response so the UI can render MigrationGateView with
-		// actionable buttons instead of a raw error string.
-		if pending, current, target, ok := parseMigrationGateError(err); ok {
-			emitSchemaMigrationNotification(pending, current, target)
-		} else if dbVer, binVer, ok := parseSchemaVersionMismatchError(err); ok {
-			emitSchemaVersionMismatchNotification(dbVer, binVer)
-		}
-		// Serialize the error properly so newlines in err.Error() don't break JSON structure
+		// database (schema version skew) or if there's a schema version mismatch.
+		// Emit structured notifications BEFORE the error response so the UI can render
+		// purpose-built views instead of a raw error string.
 		errResp := Response{
 			JSONRPC: "2.0",
 			Error: &Error{
 				Code:    -32000,
-				Message: fmt.Sprintf("Failed to open beads database: %v", err),
+				Message: formatDatabaseOpenError(err),
 			},
 			ID: 1,
 		}
 		bytes, _ := json.Marshal(errResp)
-		fmt.Printf("%s\n", string(bytes))
+		_, _ = fmt.Fprintf(outputWriter, "%s\n", string(bytes))
 		os.Exit(0)
 	}
 	defer func() {
