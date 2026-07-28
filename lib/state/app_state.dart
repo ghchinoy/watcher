@@ -22,17 +22,19 @@ export '../models/ai_assistant.dart'
 
 /// Carries the structured data from a schema_migration_required notification
 /// emitted by the daemon when the beads library refuses to auto-apply pending
-/// schema migrations to a remote-backed database.
+/// schema migrations to a remote-backed or local database.
 class SchemaMigrationGate {
   final int pending;
   final String currentVersion;
   final String targetVersion;
+  final String mode;
   final List<String> commands;
 
   const SchemaMigrationGate({
     required this.pending,
     required this.currentVersion,
     required this.targetVersion,
+    required this.mode,
     required this.commands,
   });
 
@@ -41,6 +43,7 @@ class SchemaMigrationGate {
       pending: (json['pending'] as num?)?.toInt() ?? 0,
       currentVersion: json['current_version'] as String? ?? '',
       targetVersion: json['target_version'] as String? ?? '',
+      mode: json['mode'] as String? ?? 'remote',
       commands:
           (json['commands'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -1158,23 +1161,20 @@ class AppState extends ChangeNotifier {
   /// a short polling delay), retries selectProject so the UI reconnects cleanly.
   Future<void> runSchemaMigration() async {
     if (selectedProject == null) return;
+    final gate = schemaMigrationGate;
+    if (gate == null) return;
     final sessionName = "${selectedProject!.effectiveTmuxSessionName}_migrate";
     final projectPath = selectedProject!.path;
     try {
       await TmuxService.ensureSession(sessionName, projectPath);
-      // Send the two-step migration sequence. Each command is sent separately
-      // so the user sees the first complete before the second starts, and can
-      // handle SSH auth (bd dolt push) naturally.
-      await TmuxService.sendKeys(
-        sessionName,
-        'BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema',
-        customBdPath: customBdPath,
-      );
-      await TmuxService.sendKeys(
-        sessionName,
-        'bd dolt push',
-        customBdPath: customBdPath,
-      );
+      // Send the ordered list of commands dynamically from the gate
+      for (final cmd in gate.commands) {
+        await TmuxService.sendKeys(
+          sessionName,
+          cmd,
+          customBdPath: customBdPath,
+        );
+      }
       await TmuxService.attachInTerminal(
         sessionName,
         terminalApp: preferredTerminal,
@@ -1191,6 +1191,38 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       projectErrors[selectedProject!.path] =
           'Failed to launch migration terminal: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Launches a terminal running bd doctor --fix --yes to repair common repository
+  /// state issues (like missing leases or outdated gitignores).
+  Future<void> runDoctorFix() async {
+    if (selectedProject == null) return;
+    final sessionName = "${selectedProject!.effectiveTmuxSessionName}_doctor_fix";
+    final projectPath = selectedProject!.path;
+    try {
+      await TmuxService.ensureSession(sessionName, projectPath);
+      await TmuxService.sendKeys(
+        sessionName,
+        'bd doctor --fix --yes',
+        customBdPath: customBdPath,
+      );
+      await TmuxService.attachInTerminal(
+        sessionName,
+        terminalApp: preferredTerminal,
+        ghosttyTheme: ghosttyTheme,
+        ghosttyFontFamily: ghosttyFontFamily,
+        workingDirectory: projectPath,
+      );
+      // Let it run, then reconnect after a short delay
+      await Future.delayed(const Duration(seconds: 5));
+      if (selectedProject?.path == projectPath) {
+        await selectProject(selectedProject!);
+      }
+    } catch (e) {
+      projectErrors[selectedProject!.path] =
+          'Failed to launch doctor fix: $e';
       notifyListeners();
     }
   }

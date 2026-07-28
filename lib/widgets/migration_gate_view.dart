@@ -82,6 +82,15 @@ class _MigrationGateViewState extends State<MigrationGateView> {
     }
   }
 
+  Future<void> _runDoctorFix() async {
+    setState(() => _launching = true);
+    try {
+      await widget.appState.runDoctorFix();
+    } finally {
+      if (mounted) setState(() => _launching = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final warningColor = MacosDynamicColor.resolve(
@@ -118,6 +127,7 @@ class _MigrationGateViewState extends State<MigrationGateView> {
 
     final gate = widget.gate;
     final commandText = gate.commands.join('\n');
+    final isLocal = gate.mode == 'local';
 
     return Center(
       child: Padding(
@@ -186,9 +196,13 @@ class _MigrationGateViewState extends State<MigrationGateView> {
 
               // Explanation
               Text(
-                'This version of Watcher requires a database schema upgrade '
-                'that has not been applied yet. The upgrade must be run once '
-                'on one machine and pushed — every other clone adopts it automatically.',
+                isLocal
+                    ? 'This version of Watcher requires a database schema upgrade '
+                        'that has not been applied yet. Since this database is local, '
+                        'the upgrade will be applied to your workspace immediately.'
+                    : 'This version of Watcher requires a database schema upgrade '
+                        'that has not been applied yet. The upgrade must be run once '
+                        'on one machine and pushed — every other clone adopts it automatically.',
                 style: MacosTheme.of(context).typography.body,
               ),
               const SizedBox(height: 12),
@@ -197,30 +211,35 @@ class _MigrationGateViewState extends State<MigrationGateView> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: MacosColors.systemOrangeColor.withValues(alpha: 0.08),
+                  color: (isLocal ? MacosColors.systemBlueColor : MacosColors.systemOrangeColor)
+                      .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: MacosColors.systemOrangeColor.withValues(alpha: 0.25),
+                    color: (isLocal ? MacosColors.systemBlueColor : MacosColors.systemOrangeColor)
+                        .withValues(alpha: 0.25),
                   ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const MacosIcon(
-                      CupertinoIcons.exclamationmark_triangle,
+                    MacosIcon(
+                      isLocal ? CupertinoIcons.info_circle : CupertinoIcons.exclamationmark_triangle,
                       size: 14,
-                      color: MacosColors.systemOrangeColor,
+                      color: isLocal ? MacosColors.systemBlueColor : MacosColors.systemOrangeColor,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Only run this if no other machine is currently '
-                        'migrating the same database. Running it on two '
-                        'machines simultaneously will fork the schema.',
-                        style: MacosTheme.of(context)
-                            .typography
-                            .footnote
-                            .copyWith(color: MacosColors.systemOrangeColor),
+                        isLocal
+                            ? 'This database is local. Running the migration is completely safe and takes only a few seconds.'
+                            : 'Only run this if no other machine is currently '
+                                'migrating the same database. Running it on two '
+                                'machines simultaneously will fork the schema.',
+                        style: MacosTheme.of(context).typography.footnote.copyWith(
+                              color: isLocal
+                                  ? MacosColors.systemBlueColor
+                                  : MacosColors.systemOrangeColor,
+                            ),
                       ),
                     ),
                   ],
@@ -342,68 +361,94 @@ class _MigrationGateViewState extends State<MigrationGateView> {
 
               // Action buttons
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Primary: Run Migration in terminal
-                  PushButton(
-                    controlSize: ControlSize.regular,
-                    onPressed: _launching ? null : _runMigration,
-                    child: _launching
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: ProgressCircle(),
-                          )
-                        : const Row(
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Primary: Run Migration in terminal
+                        PushButton(
+                          controlSize: ControlSize.regular,
+                          onPressed: _launching ? null : _runMigration,
+                          child: _launching
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: ProgressCircle(),
+                                )
+                              : const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    MacosIcon(
+                                      CupertinoIcons.arrow_up_circle_fill,
+                                      size: 13,
+                                      color: MacosColors.white,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text('Run Migration'),
+                                  ],
+                                ),
+                        ),
+
+                        // Secondary: open terminal without pre-loading
+                        PushButton(
+                          controlSize: ControlSize.regular,
+                          secondary: true,
+                          onPressed: _launching ? null : _openTerminal,
+                          child: const Text('Open Terminal'),
+                        ),
+
+                        // Copy commands
+                        PushButton(
+                          controlSize: ControlSize.regular,
+                          secondary: true,
+                          onPressed: _copyCommands,
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               MacosIcon(
-                                CupertinoIcons.arrow_up_circle_fill,
+                                _copied
+                                    ? CupertinoIcons.checkmark_alt
+                                    : CupertinoIcons.doc_on_clipboard,
                                 size: 13,
-                                color: MacosColors.white,
+                                color: _copied
+                                    ? MacosColors.systemGreenColor
+                                    : MacosTheme.of(context).typography.body.color,
                               ),
-                              SizedBox(width: 6),
-                              Text('Run Migration'),
+                              const SizedBox(width: 6),
+                              Text(_copied ? 'Copied!' : 'Copy'),
                             ],
                           ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Secondary: open terminal without pre-loading
-                  PushButton(
-                    controlSize: ControlSize.regular,
-                    secondary: true,
-                    onPressed: _launching ? null : _openTerminal,
-                    child: const Text('Open Terminal'),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Copy commands
-                  PushButton(
-                    controlSize: ControlSize.regular,
-                    secondary: true,
-                    onPressed: _copyCommands,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        MacosIcon(
-                          _copied
-                              ? CupertinoIcons.checkmark_alt
-                              : CupertinoIcons.doc_on_clipboard,
-                          size: 13,
-                          color: _copied
-                              ? MacosColors.systemGreenColor
-                              : MacosTheme.of(context).typography.body.color,
                         ),
-                        const SizedBox(width: 6),
-                        Text(_copied ? 'Copied!' : 'Copy'),
+
+                        // Secondary: run bd doctor --fix --yes to fix workspace issues
+                        PushButton(
+                          controlSize: ControlSize.regular,
+                          secondary: true,
+                          onPressed: _launching ? null : _runDoctorFix,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              MacosIcon(
+                                CupertinoIcons.wrench,
+                                size: 13,
+                              ),
+                              SizedBox(width: 6),
+                              Text('Fix Common Issues'),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
 
-                  const Spacer(),
-
-                  // Retry (after user manually ran migration)
-                  if (widget.onRetry != null)
+                  // Retry (after user manually ran migration/fix)
+                  if (widget.onRetry != null) ...[
+                    const SizedBox(width: 12),
                     PushButton(
                       controlSize: ControlSize.regular,
                       secondary: true,
@@ -420,6 +465,7 @@ class _MigrationGateViewState extends State<MigrationGateView> {
                         ],
                       ),
                     ),
+                  ],
                 ],
               ),
             ],

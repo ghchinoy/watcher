@@ -236,6 +236,55 @@ void main() {
         expect(state.isAIAssistantConfigured, isTrue);
       });
     });
+
+    group('SchemaMigrationGate', () {
+      test('parses remote migration json correctly', () {
+        final jsonMap = {
+          'pending': 4,
+          'current_version': 'v49',
+          'target_version': 'v53',
+          'mode': 'remote',
+          'commands': [
+            'BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema',
+            'bd dolt push'
+          ],
+        };
+        final gate = SchemaMigrationGate.fromJson(jsonMap);
+        expect(gate.pending, 4);
+        expect(gate.currentVersion, 'v49');
+        expect(gate.targetVersion, 'v53');
+        expect(gate.mode, 'remote');
+        expect(gate.commands, [
+          'BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema',
+          'bd dolt push'
+        ]);
+      });
+
+      test('parses local migration json correctly', () {
+        final jsonMap = {
+          'pending': 2,
+          'current_version': 'v52',
+          'target_version': 'v54',
+          'mode': 'local',
+          'commands': ['bd migrate schema'],
+        };
+        final gate = SchemaMigrationGate.fromJson(jsonMap);
+        expect(gate.pending, 2);
+        expect(gate.currentVersion, 'v52');
+        expect(gate.targetVersion, 'v54');
+        expect(gate.mode, 'local');
+        expect(gate.commands, ['bd migrate schema']);
+      });
+
+      test('uses defaults for missing fields', () {
+        final gate = SchemaMigrationGate.fromJson({});
+        expect(gate.pending, 0);
+        expect(gate.currentVersion, '');
+        expect(gate.targetVersion, '');
+        expect(gate.mode, 'remote');
+        expect(gate.commands, isEmpty);
+      });
+    });
   });
 }
 

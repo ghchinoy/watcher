@@ -34,6 +34,12 @@ var schemaVersionMismatchRe = regexp.MustCompile(
 	`schema version mismatch: database is at (v?\d+), binary knows up to (v?\d+)`,
 )
 
+// schemaBehindRe matches error string emitted when the database schema is behind the binary's version on read-only open.
+// Example: "schema version mismatch: database is at v53, binary expects v54, and the read-only open cannot migrate it..."
+var schemaBehindRe = regexp.MustCompile(
+	`schema version mismatch: database is at (v?\d+), binary expects (v?\d+), and the read-only open cannot migrate it`,
+)
+
 // schemaMigrationNotification is the JSON-RPC notification emitted to the UI
 // when the migration gate fires. The UI renders a purpose-built panel instead
 // of the generic error box.
@@ -47,6 +53,7 @@ type schemaMigrationNotificationParams struct {
 	Pending        int      `json:"pending"`
 	CurrentVersion string   `json:"current_version"`
 	TargetVersion  string   `json:"target_version"`
+	Mode           string   `json:"mode"`
 	// Ordered commands to run on the primary clone.
 	Commands []string `json:"commands"`
 }
@@ -65,7 +72,18 @@ type schemaVersionMismatchNotificationParams struct {
 
 // emitSchemaMigrationNotification writes a schema_migration_required
 // notification to stdout so the Dart client can render MigrationGateView.
-func emitSchemaMigrationNotification(pending int, current, target string) {
+func emitSchemaMigrationNotification(mode string, pending int, current, target string) {
+	var cmds []string
+	if mode == "local" {
+		cmds = []string{
+			"bd migrate schema",
+		}
+	} else {
+		cmds = []string{
+			"BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema",
+			"bd dolt push",
+		}
+	}
 	notif := schemaMigrationNotification{
 		JSONRPC: "2.0",
 		Method:  "schema_migration_required",
@@ -73,10 +91,8 @@ func emitSchemaMigrationNotification(pending int, current, target string) {
 			Pending:        pending,
 			CurrentVersion: current,
 			TargetVersion:  target,
-			Commands: []string{
-				"BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema",
-				"bd dolt push",
-			},
+			Mode:           mode,
+			Commands:       cmds,
 		},
 	}
 	b, _ := json.Marshal(notif)
@@ -124,6 +140,32 @@ func parseSchemaVersionMismatchError(err error) (string, string, bool) {
 	return m[1], m[2], true
 }
 
+func parseSchemaBehindError(err error) (int, string, string, bool) {
+	if err == nil {
+		return 0, "", "", false
+	}
+	m := schemaBehindRe.FindStringSubmatch(err.Error())
+	if m == nil {
+		return 0, "", "", false
+	}
+	dbVerStr := m[1]
+	binVerStr := m[2]
+
+	dbVerClean := strings.TrimPrefix(dbVerStr, "v")
+	binVerClean := strings.TrimPrefix(binVerStr, "v")
+
+	var dbVer, binVer int
+	_, errDb := fmt.Sscanf(dbVerClean, "%d", &dbVer)
+	_, errBin := fmt.Sscanf(binVerClean, "%d", &binVer)
+
+	pending := 1
+	if errDb == nil && errBin == nil && binVer > dbVer {
+		pending = binVer - dbVer
+	}
+
+	return pending, dbVerStr, binVerStr, true
+}
+
 // formatDatabaseOpenError produces an informative error message when database connection fails,
 // appending recovery guidance if a schema version mismatch is identified.
 func formatDatabaseOpenError(err error) string {
@@ -132,7 +174,9 @@ func formatDatabaseOpenError(err error) string {
 		return fmt.Sprintf("Failed to open beads database: %v. Please rebuild Watcher ('make update-bd && make install') or obtain a newer version of Watcher.", err)
 	}
 	if pending, current, target, ok := parseMigrationGateError(err); ok {
-		emitSchemaMigrationNotification(pending, current, target)
+		emitSchemaMigrationNotification("remote", pending, current, target)
+	} else if pending, current, target, ok := parseSchemaBehindError(err); ok {
+		emitSchemaMigrationNotification("local", pending, current, target)
 	}
 	return fmt.Sprintf("Failed to open beads database: %v", err)
 }

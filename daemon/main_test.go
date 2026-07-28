@@ -148,6 +148,20 @@ func TestParseSchemaVersionMismatchError(t *testing.T) {
 	}
 }
 
+func TestParseSchemaBehindError(t *testing.T) {
+	err := fmt.Errorf("schema version mismatch: database is at v52, binary expects v54, and the read-only open cannot migrate it; run any bd write command...")
+	pending, dbVer, binVer, ok := parseSchemaBehindError(err)
+	if !ok {
+		t.Fatalf("expected parseSchemaBehindError to succeed")
+	}
+	if dbVer != "v52" || binVer != "v54" {
+		t.Errorf("expected dbVer v52, binVer v54, got dbVer %s, binVer %s", dbVer, binVer)
+	}
+	if pending != 2 {
+		t.Errorf("expected 2 pending migrations, got %d", pending)
+	}
+}
+
 func TestFormatDatabaseOpenError(t *testing.T) {
 	var buf bytes.Buffer
 	outputWriter = &buf
@@ -169,6 +183,56 @@ func TestFormatDatabaseOpenError(t *testing.T) {
 	}
 	if !strings.Contains(notif.Params.Recommendation, "obtain a newer version of Watcher") {
 		t.Errorf("Expected recommendation in notification to mention newer version, got %q", notif.Params.Recommendation)
+	}
+}
+
+func TestFormatDatabaseOpenError_BehindLocal(t *testing.T) {
+	var buf bytes.Buffer
+	outputWriter = &buf
+
+	err := fmt.Errorf("schema version mismatch: database is at v52, binary expects v54, and the read-only open cannot migrate it; run any bd write command...")
+	_ = formatDatabaseOpenError(err)
+
+	var notif schemaMigrationNotification
+	if err := json.Unmarshal(buf.Bytes(), &notif); err != nil {
+		t.Fatalf("Failed to unmarshal notification: %v. Output: %q", err, buf.String())
+	}
+	if notif.Method != "schema_migration_required" {
+		t.Errorf("Expected method schema_migration_required, got %s", notif.Method)
+	}
+	if notif.Params.Mode != "local" {
+		t.Errorf("Expected mode 'local', got %s", notif.Params.Mode)
+	}
+	if len(notif.Params.Commands) != 1 || notif.Params.Commands[0] != "bd migrate schema" {
+		t.Errorf("Expected exact single command 'bd migrate schema', got %v", notif.Params.Commands)
+	}
+	if notif.Params.Pending != 2 {
+		t.Errorf("Expected pending to be 2, got %d", notif.Params.Pending)
+	}
+}
+
+func TestFormatDatabaseOpenError_BehindRemote(t *testing.T) {
+	var buf bytes.Buffer
+	outputWriter = &buf
+
+	err := fmt.Errorf("refusing to auto-apply 4 pending schema migrations to a remote-backed database (v49 -> v53): migrating clones independently...")
+	_ = formatDatabaseOpenError(err)
+
+	var notif schemaMigrationNotification
+	if err := json.Unmarshal(buf.Bytes(), &notif); err != nil {
+		t.Fatalf("Failed to unmarshal notification: %v. Output: %q", err, buf.String())
+	}
+	if notif.Method != "schema_migration_required" {
+		t.Errorf("Expected method schema_migration_required, got %s", notif.Method)
+	}
+	if notif.Params.Mode != "remote" {
+		t.Errorf("Expected mode 'remote', got %s", notif.Params.Mode)
+	}
+	if len(notif.Params.Commands) != 2 || notif.Params.Commands[0] != "BD_ALLOW_REMOTE_MIGRATE=1 bd migrate schema" {
+		t.Errorf("Expected remote migration commands, got %v", notif.Params.Commands)
+	}
+	if notif.Params.Pending != 4 {
+		t.Errorf("Expected pending to be 4, got %d", notif.Params.Pending)
 	}
 }
 
