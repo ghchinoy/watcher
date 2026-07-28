@@ -237,6 +237,9 @@ func TestFormatDatabaseOpenError_BehindRemote(t *testing.T) {
 }
 
 func TestCommentsFlagInjection(t *testing.T) {
+	os.Setenv("BD_IGNORE_SCHEMA_SKEW", "1")
+	defer os.Unsetenv("BD_IGNORE_SCHEMA_SKEW")
+
 	originalWd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get working directory: %v", err)

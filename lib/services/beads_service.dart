@@ -458,6 +458,21 @@ class BeadsService {
     return HealthCheckResult.fromJson(result as Map<String, dynamic>);
   }
 
+  Future<Map<String, int>?> getSchemaStatus() async {
+    try {
+      final result = await _sendRpcRequest('get_schema_status', {});
+      if (result is Map) {
+        return {
+          'databaseVersion': (result['database_version'] as num?)?.toInt() ?? 0,
+          'daemonVersion': (result['daemon_version'] as num?)?.toInt() ?? 0,
+        };
+      }
+    } catch (e) {
+      _log.warning('Failed to get schema status', error: e);
+    }
+    return null;
+  }
+
   Future<String?> getVersion() async {
     final result = await _sendRpcRequest('get_version', {});
     if (result is String) {

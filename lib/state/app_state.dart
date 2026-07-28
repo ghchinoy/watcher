@@ -119,6 +119,8 @@ class AppState extends ChangeNotifier {
   String? cliVersion;
   String? upstreamVersion;
   String? projectRequiredVersion;
+  int? dbSchemaVersion;
+  int? daemonSchemaVersion;
   String? appVersion;
   String? currentConnectionMode;
 
@@ -800,6 +802,15 @@ class AppState extends ChangeNotifier {
       cliVersion = await _currentService!.getCliVersion();
       projectRequiredVersion = await _currentService!
           .getProjectRequiredVersion();
+
+      final schemaStatus = await _currentService!.getSchemaStatus();
+      if (schemaStatus != null) {
+        dbSchemaVersion = schemaStatus['databaseVersion'];
+        daemonSchemaVersion = schemaStatus['daemonVersion'];
+      } else {
+        dbSchemaVersion = null;
+        daemonSchemaVersion = null;
+      }
       _checkUpstreamVersion();
 
       currentIssues = await _currentService!.getIssues();

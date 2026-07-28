@@ -43,9 +43,9 @@ check-bd-skew: ## Check for version skew between installed bd CLI and embedded b
 		echo "Notice: Version info — bd CLI ($$CLI_VER) vs daemon beads ($$EMBEDDED_VER)."; \
 	fi
 
-update-bd: ## Update the embedded beads dependency to the latest stable release
-	@echo "Updating github.com/steveyegge/beads to @latest stable release..."
-	@cd daemon && go get github.com/steveyegge/beads@latest && go mod tidy
+update-bd: ## Update the embedded beads dependency to the latest development commit (main)
+	@echo "Updating github.com/steveyegge/beads to @main..."
+	@cd daemon && go get github.com/steveyegge/beads@main && go mod tidy
 	@LATEST=$$(cd daemon && go list -m github.com/steveyegge/beads | awk '{print $$2}'); \
 	echo "Successfully updated to version $$LATEST."; \
 	echo "Run 'make install' to rebuild Watcher."

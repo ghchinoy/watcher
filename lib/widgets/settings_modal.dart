@@ -731,6 +731,20 @@ class _SettingsModalState extends State<SettingsModal> {
                                   context,
                                 ).typography.footnote,
                               ),
+                              if (appState.daemonSchemaVersion != null)
+                                Text(
+                                  'Daemon Schema: v${appState.daemonSchemaVersion}',
+                                  style: MacosTheme.of(
+                                    context,
+                                  ).typography.footnote,
+                                ),
+                              if (appState.dbSchemaVersion != null)
+                                Text(
+                                  'Database Schema: v${appState.dbSchemaVersion}',
+                                  style: MacosTheme.of(
+                                    context,
+                                  ).typography.footnote,
+                                ),
                             ],
                           ),
                           const SizedBox(height: 16),

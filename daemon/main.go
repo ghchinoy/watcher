@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/steveyegge/beads"
+	"github.com/steveyegge/beads/schema"
 )
 
 // migrationGateRe matches the error string emitted by the beads library when
@@ -1016,6 +1018,23 @@ func dispatchRequest(ctx context.Context, storage beads.Storage, req Request) {
 		handleAddLabel(ctx, storage, req)
 	case "remove_label":
 		handleRemoveLabel(ctx, storage, req)
+	case "get_schema_status":
+		type schemaStatusResult struct {
+			DatabaseVersion int `json:"database_version"`
+			DaemonVersion   int `json:"daemon_version"`
+		}
+		res := schemaStatusResult{
+			DaemonVersion: schema.LatestVersion(),
+		}
+		type dbExposer interface {
+			DB() *sql.DB
+		}
+		if exposer, ok := storage.(dbExposer); ok {
+			if ver, err := schema.CurrentVersion(ctx, exposer.DB()); err == nil {
+				res.DatabaseVersion = ver
+			}
+		}
+		sendResponse(Response{JSONRPC: "2.0", Result: res, ID: req.ID})
 	case "get_version":
 		version := "unknown"
 		if info, ok := debug.ReadBuildInfo(); ok {
