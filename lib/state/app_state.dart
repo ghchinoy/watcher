@@ -1250,10 +1250,13 @@ class AppState extends ChangeNotifier {
     try {
       // REL-04 (r1f.10): bound the request so a degraded/offline network can't
       // leak a background socket indefinitely.
+      // Repo moved steveyegge/beads -> gastownhall/beads. The GitHub API
+      // 301-redirects the old path, which http.get does not reliably follow
+      // for the response body, so we target the canonical location directly.
       final response = await http
           .get(
             Uri.parse(
-              'https://api.github.com/repos/steveyegge/beads/releases/latest',
+              'https://api.github.com/repos/gastownhall/beads/releases/latest',
             ),
           )
           .timeout(const Duration(seconds: 5));

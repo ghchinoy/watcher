@@ -64,3 +64,6 @@ sample_export.jsonl
 
 # Local Analyses
 docs/analysis/
+
+# Beads / Dolt files (added by bd init)
+*.gate.lock*
